@@ -19,7 +19,8 @@ dynamic = ["version"]
 
 dependencies = [
     'numpy',
-    'pywavefront'
+    'matplotlib',
+    'pywavefront',
 ]
 
 [project.optional-dependencies]
