@@ -26,6 +26,8 @@ def transform_image_index_to_resample_index(image_index,image,resampled_image,tr
         Index in resampled image
 
     """
+    raise NotImplementedError("Function needs testing; don't trust yet.")
+    
     image_point = image.TransformContinuousIndexToPhysicalPoint(image_index)
     resample_point = transform.TransformPoint(image_point)
     return resampled_image.TransformPhyicalPointToIndex(resample_point)
@@ -51,6 +53,8 @@ def transform_resample_index_to_image_index(resample_index,image,resampled_image
         DESCRIPTION.
 
     """
+    raise NotImplementedError("Function needs testing; don't trust yet.")
+
     resample_point = resampled_image.TransformContinuousIndexToPhysicalPoint(resample_index)
     image_point = transform.GetInverse().TransformPoint(resample_point)
     return image.TransformPhyicalPointToIndex(image_point)
@@ -74,6 +78,9 @@ def transform_resample_point_to_image_index(resample_point,image,transform):
         DESCRIPTION.
 
     """
+    raise NotImplementedError("Function needs testing; don't trust yet.")
+
+    # CHECK IF THIS IS BACKWARDS??
     image_point = transform.GetInverse().TransformPoint(resample_point)
     return image.TransformPhyicalPointToIndex(image_point)
     
@@ -96,13 +103,15 @@ def transform_image_point_to_resample_index(image_point,resampled_image,transfor
         DESCRIPTION.
 
     """
-    
+    raise NotImplementedError("Function needs testing; don't trust yet.")
+
     resample_point = transform.TransformPoint(image_point)
     return resampled_image.TransformPhyicalPointToIndex(resample_point)
     
 def transform_image_point_to_resample_point(image_point,transform):
     """
-    
+    transform from physical point in image to physical point in resampled image
+
 
     Parameters
     ----------
@@ -117,11 +126,14 @@ def transform_image_point_to_resample_point(image_point,transform):
         DESCRIPTION.
 
     """
+    raise NotImplementedError("Function needs testing; don't trust yet.")
+
     return transform.TransformPoint(image_point)
     
 def transform_resample_point_to_image_point(resample_point,transform):
     """
-    
+    transform from physical point inresampled image to physical point in image
+
 
     Parameters
     ----------
@@ -136,5 +148,9 @@ def transform_resample_point_to_image_point(resample_point,transform):
         DESCRIPTION.
 
     """
+    raise NotImplementedError("Function needs testing; don't trust yet.")
+
     return transform.GetInverse().TransformPoint(resample_point,transform)
 
+def identity_transform(N = 3):
+    return sitk.AffineTransform(N)
