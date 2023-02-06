@@ -8,7 +8,8 @@ description = "MRI utilities library for aind teams."
 license = {text = "MIT"}
 requires-python = ">=3.7"
 authors = [
-    {name = "Allen Institute for Neural Dynamics"}
+    {name = "Allen Institute for Neural Dynamics"},
+    {name = "Galen Lynch", email = "galen@galenlynch.com"}
 ]
 classifiers = [
     "Programming Language :: Python :: 3"
@@ -17,6 +18,7 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
+    'numpy'
 ]
 
 [project.optional-dependencies]
