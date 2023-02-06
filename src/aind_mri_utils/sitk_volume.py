@@ -96,6 +96,22 @@ def read_nifti(filename):
     return read_nii(filename)
 
 def read_tiff_stack(folder):
+    """
+    Code to read a tiff stack
+    THIS CODE IS INCOMPLETE: needs metatdata handling (resolution, etc.) and some
+    thought about how to deal with large images.
+
+    Parameters
+    ----------
+    folder : String folder with numerically ordered tiff images
+        DESCRIPTION.
+
+    Returns
+    -------
+    SITK image
+        Tiff images stacked.
+
+    """
     from functools import reduce
     reader = sitk.ImageSeriesReader()    
     lst = [x for x in  os.listdir(folder,) if ('.tif' in x)]
@@ -106,6 +122,7 @@ def read_tiff_stack(folder):
 def resample(image,transform = None,output_spacing = None,output_direction = None,output_origin = None,output_size = None,interpolator = sitk.sitkLinear):
     """
     Wrapper to generically handle sitk resampling on different image matricies.
+    Includes optional application of a transform.
     Only 3d is currently implemented; need to at at least 2D.
 
     Parameters
@@ -114,13 +131,13 @@ def resample(image,transform = None,output_spacing = None,output_direction = Non
         image to transform.
     transform : SITK Affine Transform, optional
         If no transform is passed, use a identity transform matrix
-    output_spacing : (3x1) array, optional
+    output_spacing : (Nx1) array, optional
         If not passed, coppies from image
-    output_direction : (9x1) array, optional
+    output_direction : (N^2x1) array, optional
         If not passed, coppies from image
-    output_origin : (3x1) array, optional
+    output_origin : (Nx1) array, optional
         If not passed, coppies from image
-    output_size : (3x1) array, optional
+    output_size : (Nx1) array, optional
         If not passed, computes automatically to fully encompus transformed image.
     interpolator: sitk Interpolator,optional
         If not passed, defaults to sitk.sitkLinear
@@ -141,7 +158,7 @@ def resample(image,transform = None,output_spacing = None,output_direction = Non
 
 def resample3D(image, transform = None,output_spacing = None,output_direction = None,output_origin = None,output_size = None,interpolator = sitk.sitkLinear):
     """
-    Resampler for 3D sitk images
+    Resampler for 3D sitk images, with the option to apply a transform
 
     Parameters
     ----------
@@ -237,16 +254,7 @@ def resample3D(image, transform = None,output_spacing = None,output_direction = 
     )
     return resampled_image
 
-#def transform_image_index_to_resample_index(point,image,resampled_image,transform):
-#    point_phys = image.TransformContinuousIndexToPhysicalPoint(point)
-#    point_transfrom = transform.TransformPoint(point_phys)
-#    return resampled_image.TransformPhyicalPointToIndex(point_transfrom)
 
-
-#def transform_resample_index_to_image_index(point,image,resampled_image,transform):
-#    point_phys = resampled_image.TransformContinuousIndexToPhysicalPoint(point)
-#    point_transfrom = transform.GetInverse().TransformPoint(point_phys)
-#   return image.TransformPhyicalPointToIndex
 
     
     
