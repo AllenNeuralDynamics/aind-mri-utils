@@ -1,7 +1,9 @@
 """Functions for working with slicer files"""
 
-import numpy as np
 from typing import Tuple
+
+import numpy as np
+
 
 def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
     """
@@ -16,10 +18,10 @@ def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
     pts, names - numpy.ndarray (N x 3) of point positions and list of
                  controlPoint names
     """
-    pts = json_data['markups'][0]['controlPoints']
+    pts = json_data["markups"][0]["controlPoints"]
     names = []
     pos = []
-    for ii,pt in enumerate(pts):
-        names.append(pt['label'])
-        pos.append(pt['position'])
+    for ii, pt in enumerate(pts):
+        names.append(pt["label"])
+        pos.append(pt["position"])
     return np.array(pos), names

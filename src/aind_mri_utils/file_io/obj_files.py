@@ -2,6 +2,7 @@
 
 import pywavefront
 
+
 def load_obj_wavefront(filename):
     """
     Wrapper for loading a pywavefront scene
