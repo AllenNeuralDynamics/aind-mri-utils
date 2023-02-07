@@ -18,7 +18,8 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
-    'numpy'
+    'numpy',
+    'pywavefront'
 ]
 
 [project.optional-dependencies]
