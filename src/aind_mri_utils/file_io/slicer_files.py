@@ -1,13 +1,25 @@
-import json
-import numpy as np
+"""Functions for working with slicer files"""
 
-def read_slicer_markup_json(filename):
-    with open(filename) as file:
-        data = json.load(file)
-    pts = data['markups'][0]['controlPoints']
-    name = []
+import numpy as np
+from typing import Tuple
+
+def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
+    """
+    Extract points and names from slicer json dict
+
+    Parameters
+    ==========
+    json_data - `dict` with contents of json file
+
+    Returns
+    =======
+    pts, names - numpy.ndarray (N x 3) of point positions and list of
+                 controlPoint names
+    """
+    pts = json_data['markups'][0]['controlPoints']
+    names = []
     pos = []
     for ii,pt in enumerate(pts):
-        name.append(pt['label'])
+        names.append(pt['label'])
         pos.append(pt['position'])
-    return np.array(pos), name
+    return np.array(pos), names
