@@ -1,4 +1,4 @@
-"""Tests functions in `obj_plots`."""
+"""Tests functions in `plots`."""
 
 import unittest
 
@@ -8,8 +8,8 @@ import numpy as np
 from aind_mri_utils import plots as mrplt
 
 
-class ObjPlotsTest(unittest.TestCase):
-    """Tests functions in `obj_plots`."""
+class PlotsTest(unittest.TestCase):
+    """Tests functions in `plots`."""
 
     f1 = plt.figure(1)
     f2 = plt.figure(2)
