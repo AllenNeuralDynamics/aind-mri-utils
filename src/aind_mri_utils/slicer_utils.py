@@ -11,6 +11,23 @@ from numpy import array
 
 
 def markup_json_to_numpy(filename):
+    """
+    Extract points from slice markup file, return as numpy array
+
+    Parameters
+    ----------
+    filename : string
+        filename to open. Must be .json
+        .mrk.json is ok
+
+    Returns
+    -------
+    (Nx3) numpy array
+        points, one point per row.
+    Names : list of strings
+        names of points
+
+    """
     f = open(filename,)
     data = json.load(f)
     pts = data['markups'][0]['controlPoints']
@@ -23,6 +40,22 @@ def markup_json_to_numpy(filename):
 
 
 def markup_json_to_dict(filename):
+    """
+    Extract points from slice markup file, return as labeled dict
+
+    Parameters
+    ----------
+    filename : string
+        filename to open. Must be .json
+        .mrk.json is ok
+
+    Returns
+    -------
+    Dictionary
+        dictionary with keys = point names and values = np.array of points.
+
+
+    """
     f = open(filename,)
     data = json.load(f)
     pts = data['markups'][0]['controlPoints']
