@@ -8,6 +8,8 @@ Created on Mon Feb  6 11:28:07 2023
 ## THIS IS FOR READING SLICER ANNOTATION
 import json
 from numpy import array
+import numpy as np
+
 
 
 def markup_json_to_numpy(filename):
@@ -64,3 +66,6 @@ def markup_json_to_dict(filename):
     for ii,pt in enumerate(pts):
         output[pt['label']] = array(pt['position'])
     return output
+
+
+    
