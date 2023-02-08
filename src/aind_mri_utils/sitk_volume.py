@@ -50,7 +50,7 @@ def resample(
     -------
     resampled_image : SimpleITK image
         resampled image with transform applied.
-
+        
     """
     if len(image.GetSize()) == 3:
         return resample3D(
