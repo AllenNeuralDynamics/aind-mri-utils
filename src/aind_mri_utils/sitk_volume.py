@@ -220,20 +220,20 @@ def resample3D(
     extrema = image.GetSize()
     extreme_points = [
         image.TransformIndexToPhysicalPoint((0, 0, 0)),
-        image.TransformIndexToPhysicalPoint((extrema[0] + 1, 0, 0)),
-        image.TransformIndexToPhysicalPoint((0, extrema[1] + 1, 0)),
-        image.TransformIndexToPhysicalPoint((0, 0, extrema[2] + 1)),
+        image.TransformIndexToPhysicalPoint((extrema[0] , 0, 0)),
+        image.TransformIndexToPhysicalPoint((0, extrema[1] , 0)),
+        image.TransformIndexToPhysicalPoint((0, 0, extrema[2])),
         image.TransformIndexToPhysicalPoint(
-            (extrema[0] + 1, extrema[1] + 1, 0)
+            (extrema[0], extrema[1], 0)
         ),
         image.TransformIndexToPhysicalPoint(
-            (extrema[0] + 1, 0, extrema[2] + 1)
+            (extrema[0], 0, extrema[2])
         ),
         image.TransformIndexToPhysicalPoint(
-            (0, extrema[1] + 1, extrema[2] + 1)
+            (0, extrema[1], extrema[2])
         ),
         image.TransformIndexToPhysicalPoint(
-            (extrema[0] + 1, extrema[1] + 1, extrema[2] + 1)
+            (extrema[0], extrema[1], extrema[2])
         ),
     ]
 
