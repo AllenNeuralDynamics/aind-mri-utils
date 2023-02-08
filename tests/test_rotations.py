@@ -15,7 +15,7 @@ from aind_mri_utils import rotations
 class RotationsTest(unittest.TestCase):
     def test_define_euler_rotation(self) -> None:
         R = rotations.define_euler_rotation(0, 0, 0, degrees=True)
-        self.assertTrue(np.all(R.as_matrix() == np.eye(3)))
+        self.assertTrue(np.array_equal(R.as_matrix(), np.eye(3)))
 
     def test_rotate_about(self) -> None:
         # Test 1: no rotation
@@ -23,13 +23,13 @@ class RotationsTest(unittest.TestCase):
         pivot = np.array([2, 3, 4])
         R = rotations.define_euler_rotation(0, 0, 0, degrees=True)
         X = rotations.rotate_about(pt, R, pivot)
-        self.assertTrue(np.all(X == pt))
+        self.assertTrue(np.array_equal(X, pt))
         # Test 2: 360 rotation
         pt = np.array([1, 2, 3])
         pivot = np.array([2, 3, 4])
         R = rotations.define_euler_rotation(360, 360, 360, degrees=True)
         X = rotations.rotate_about(pt, R, pivot)
-        self.assertTrue(np.all(X == pt))
+        self.assertTrue(np.array_equal(X, pt))
         # Test 3: Numerical Error
         pt = np.array([1, 2, 3])
         pivot = np.array([2, 3, 4])
@@ -37,7 +37,7 @@ class RotationsTest(unittest.TestCase):
             np.pi * 2, np.pi * 2, np.pi * 2, degrees=False
         )
         X = rotations.rotate_about(pt, R, pivot)
-        self.assertFalse(np.all(X == pt))
+        self.assertFalse(np.array_equal(X, pt))
         self.assertTrue(np.all(X - pt < 0.02))
         # Test4: with translation
         pt = np.array([1, 2, 3])
@@ -47,14 +47,20 @@ class RotationsTest(unittest.TestCase):
         X = rotations.rotate_about_and_translate(
             pt, R, pivot, np.array(translate)
         )
-        self.assertTrue(np.all(X == pt + translate))
+        self.assertTrue(np.array_equal(X, pt + translate))
         # Test 5: More than one point
         pt = np.array([[1, 2, 3], [1, 2, 3]])
         pivot = np.array([2, 3, 4])
         R = rotations.define_euler_rotation(0, 0, 0, degrees=True)
         X = rotations.rotate_about(pt, R, pivot)
         self.assertTrue(X.shape[1] == pt.shape[1])
-        self.assertTrue(np.all(X[0, :] == X[1, :]))
+        self.assertTrue(np.array_equal(X[0, :], X[1, :]))
+        # Test 6: non-identity
+        pt = np.array([0, 1, 0], dtype=np.float64)
+        R = rotations.define_euler_rotation(90, 0, 0, degrees=True)
+        pivot = np.array([0, 0, 0])
+        X = rotations.rotate_about(pt, R, pivot)
+        self.assertTrue(np.all(X - np.array([0.0, 0.0, 1.0]) < 0.00001))
 
 
 if __name__ == "__main__":

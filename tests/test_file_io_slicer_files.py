@@ -31,7 +31,7 @@ class SlicerFilesTest(unittest.TestCase):
 
     def test_extract_control_points(self) -> None:
         """
-        Tests that the `markup_json_to_numpy` function works as intended.
+        Tests that the `extract_control_points` function works as intended.
         """
         received_pos, received_names = sf.extract_control_points(
             self.slicer_json_control_points_mock

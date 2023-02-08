@@ -13,12 +13,12 @@ def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
 
     Parameters
     ----------
-    rx : Scalar
-        DESCRIPTION.
-    ry : Scalar
-        DESCRIPTION.
-    rz : Scalar
-        DESCRIPTION.
+    rx : Float
+        Angle to rotate about X
+    ry : Float
+        Angle to rotate about Y
+    rz : Float
+        Angle to rotate about Z
     degrees : Bool, optional
         Are the rotations in degrees?. The default is True.
     order: string, optional

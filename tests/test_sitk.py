@@ -32,7 +32,7 @@ class SITKTest(unittest.TestCase):
         new_img = sitk_volume.resample(testImage, transform=trans)
         print(new_img.GetSize())
         self.assertTrue(
-            np.all(np.array(new_img.GetSize()) == np.array([10, 20, 10]))
+            np.array_equal(new_img.GetSize(), np.array([10, 20, 10]))
         )
         # a couple values
         R = rotations.define_euler_rotation(45, 0, 0)

@@ -48,9 +48,9 @@ def find_circle(x, y):
     Parameters
     ----------
     x : (N) array
-        DESCRIPTION.
+        X values of sample points.
     y : (N) array
-        DESCRIPTION.
+        Y values of sample points.
 
     Returns
     -------
