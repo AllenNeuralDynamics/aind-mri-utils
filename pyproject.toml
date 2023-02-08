@@ -24,6 +24,7 @@ dependencies = [
     'pywavefront',
     'scipy'
     'SimpleITK'
+    'os'
 ]
 
 [project.optional-dependencies]

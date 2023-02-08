@@ -1,7 +1,7 @@
 
 import numpy as np
 import scipy.spatial.transform.rotation as rotation
-
+import SimpleITK as sitk
 def define_euler_rotation(rx,ry,rz,degrees = True,order = 'xyz'):
     """
     wrapper on scipy.spatial.transform.rotation
@@ -72,3 +72,28 @@ def rotate_about(points,rotation,pivot):
 
     '''
     return rotation.apply(points-pivot)+pivot
+
+def scipy_rotation_to_sitk(rotation,center = np.array((0,0,0)),translation = np.array((0,0,0))):
+    """
+    
+
+    Parameters
+    ----------
+    rotation : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    rotmat = rotation.as_matrix().reshape((9,))
+    params = np.concatenate((rotmat,np.zeros((3,),dtype = np.float64)))
+    newTransform = sitk.AffineTransform(3)
+    newTransform.SetParameters(params.tolist())
+    newTransform.SetTranslation(translation.tolist())
+    newTransform.SetCenter(center.tolist())
+    return newTransform
+    
+    

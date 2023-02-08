@@ -142,7 +142,7 @@ def resample(image,transform = None,output_spacing = None,output_direction = Non
         resampled image with transform applied.
 
     """
-    if len(image.GetShape())==3:
+    if len(image.GetSize())==3:
         return resample3D(image, transform = transform,output_spacing = output_spacing,output_direction = output_direction,output_origin = output_origin,output_size = output_size,interpolator = interpolator)
     else:
         raise NotImplementedError('Resample currently only supports 3D transformations')
@@ -178,16 +178,15 @@ def resample3D(image, transform = None,output_spacing = None,output_direction = 
         transform = sitk.AffineTransform(3)
     
     extrema = image.GetSize()
-
     extreme_points = [
         image.TransformIndexToPhysicalPoint((0,0,0)),
-        image.TransformIndexToPhysicalPoint((extrema[0], 0,0)),
-        image.TransformIndexToPhysicalPoint((0, extrema[1],0)),
-        image.TransformIndexToPhysicalPoint((0, 0,extrema[2])),
-        image.TransformIndexToPhysicalPoint((extrema[0], extrema[1],0)),
-        image.TransformIndexToPhysicalPoint((extrema[0],0 ,extrema[2])),
-        image.TransformIndexToPhysicalPoint((0, extrema[1],extrema[2])),
-        image.TransformIndexToPhysicalPoint((extrema[0],extrema[1] ,extrema[2])),
+        image.TransformIndexToPhysicalPoint((extrema[0]+1, 0,0)),
+        image.TransformIndexToPhysicalPoint((0, extrema[1]+1,0)),
+        image.TransformIndexToPhysicalPoint((0, 0,extrema[2]+1)),
+        image.TransformIndexToPhysicalPoint((extrema[0]+1, extrema[1]+1,0)),
+        image.TransformIndexToPhysicalPoint((extrema[0]+1,0 ,extrema[2]+1)),
+        image.TransformIndexToPhysicalPoint((0, extrema[1]+1,extrema[2]+1)),
+        image.TransformIndexToPhysicalPoint((extrema[0]+1,extrema[1] +1,extrema[2]+1)),
     ]
 
     inv_transform = transform.GetInverse()
