@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Feb  6 11:28:07 2023
-
-@author: yoni.browning
-"""
-
-## THIS IS FOR READING SLICER ANNOTATION
 import json
 from numpy import array
 import numpy as np

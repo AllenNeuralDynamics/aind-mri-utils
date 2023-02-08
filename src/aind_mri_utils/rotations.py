@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Feb  6 11:18:01 2023
 
-@author: yoni.browning
-"""
 import numpy as np
 import scipy.spatial.transform.rotation as rotation
 
@@ -55,9 +50,9 @@ def rotate_about_and_translate(points,rotation,pivot,translation):
         Rotated points
 
     '''
-    return rotate_about(points,rototation,pivot)-translation
+    return rotate_about(points,rotation,pivot)-translation
 
-def rotate_about(points,rototation,pivot):
+def rotate_about(points,rotation,pivot):
     '''
     Rotates points about a particular pivot point
 

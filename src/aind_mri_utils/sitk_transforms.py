@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Feb  3 15:00:42 2023
-
-@author: yoni.browning
-"""
-
 def transform_image_index_to_resample_index(image_index,image,resampled_image,transform):
     """
     Transform from image index to resample image index

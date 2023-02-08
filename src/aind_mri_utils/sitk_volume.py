@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan 20 13:17:33 2023
-
-@author: yoni.browning
-"""
-
 import SimpleITK as sitk
 import numpy as np
 import os
