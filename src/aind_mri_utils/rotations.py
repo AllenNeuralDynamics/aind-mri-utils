@@ -1,6 +1,6 @@
-'''
+"""
 Code for rotations of points
-'''
+"""
 
 import numpy as np
 from scipy.spatial.transform import Rotation

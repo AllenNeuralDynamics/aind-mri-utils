@@ -1,6 +1,6 @@
-'''
+"""
 Code to handle sitk volume loading and rotating
-'''
+"""
 
 import os
 
