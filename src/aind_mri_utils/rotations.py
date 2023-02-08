@@ -3,7 +3,7 @@ Code for rotations of points
 '''
 
 import numpy as np
-import scipy.spatial.transform.rotation as rotation
+from scipy.spatial.transform import Rotation
 import SimpleITK as sitk
 
 
@@ -30,7 +30,7 @@ def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
         scipy 3.
 
     """
-    return rotation.Rotation.from_euler(order, [rx, ry, rz], degrees=True)
+    return Rotation.from_euler(order, [rx, ry, rz], degrees=True)
 
 
 def rotate_about_and_translate(points, rotation, pivot, translation):
