@@ -1,10 +1,9 @@
 import unittest
 
-from aind_mri_utils import sitk_volume
-from aind_mri_utils import rotations
-
-import SimpleITK as sitk
 import numpy as np
+import SimpleITK as sitk
+
+from aind_mri_utils import rotations, sitk_volume
 
 
 class SITKTest(unittest.TestCase):

@@ -6,8 +6,10 @@ Created on Tue Feb  7 15:30:09 2023
 """
 
 import unittest
-from aind_mri_utils import rotations
+
 import numpy as np
+
+from aind_mri_utils import rotations
 
 
 class MessageHandlerTest(unittest.TestCase):

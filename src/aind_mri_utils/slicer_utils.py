@@ -1,4 +1,9 @@
+"""
+Code for slicer save formats
+"""
+
 import json
+
 from numpy import array
 
 

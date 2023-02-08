@@ -1,5 +1,10 @@
-import SimpleITK as sitk
+'''
+Code to handle sitk volume loading and rotating
+'''
+
 import os
+
+import SimpleITK as sitk
 
 
 def read_dicom(filename):

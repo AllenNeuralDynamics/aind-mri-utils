@@ -1,3 +1,7 @@
+'''
+Code for rotations of points
+'''
+
 import numpy as np
 import scipy.spatial.transform.rotation as rotation
 import SimpleITK as sitk
