@@ -2,9 +2,9 @@
 Code for slicer save formats
 """
 
-import json
+import json  # pragma: no cover
 
-from numpy import array
+from numpy import array  # pragma: no cover
 
 
 def markup_json_to_numpy(filename):  # pragma: no cover

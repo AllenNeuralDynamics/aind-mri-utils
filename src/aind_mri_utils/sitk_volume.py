@@ -133,7 +133,7 @@ def resample(
     output_origin=None,
     output_size=None,
     interpolator=sitk.sitkLinear,
-):
+):  # pragma: no cover
     """
     Wrapper to generically handle sitk resampling on different imag
     matricies. Includes optional application of a transform.
@@ -188,7 +188,7 @@ def resample3D(
     output_origin=None,
     output_size=None,
     interpolator=sitk.sitkLinear,
-):
+):  # pragma: no cover
     """
     Resampler for 3D sitk images, with the option to apply a transform
 
