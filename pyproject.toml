@@ -19,12 +19,11 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
-    'numpy',
     'matplotlib',
+    'numpy',
     'pywavefront',
     'scipy'
     'SimpleITK'
-    'os'
 ]
 
 [project.optional-dependencies]
