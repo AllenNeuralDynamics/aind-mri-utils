@@ -52,7 +52,7 @@ def rotate_about_and_translate(points, rotation, pivot, translation):
 
     Returns
     -------
-    (Nx3) numoy array
+    (Nx3) numpy array
         Rotated points
 
     """
