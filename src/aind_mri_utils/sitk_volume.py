@@ -1,5 +1,8 @@
 """
 Code to handle sitk volume loading and rotating
+
+SimpleITK example code is under Apache License, see:   
+    https://github.com/SimpleITK/TUTORIAL/blob/main/LICENSE
 """
 import SimpleITK as sitk
 
@@ -17,6 +20,12 @@ def resample(
     Wrapper to generically handle SimpleITK resampling on different image
     matricies. Includes optional application of a transform.
     Only 3d is currently implemented.
+
+    Code is modified from the 2d example in.
+    https://simpleitk.org/SPIE2018_COURSE/images_and_resampling.pdf
+    and
+    https://github.com/SimpleITK/TUTORIAL/blob/main/...
+        02_images_and_resampling.ipynb
 
     Parameters
     ----------
