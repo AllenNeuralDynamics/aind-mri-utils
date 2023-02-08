@@ -7,8 +7,7 @@ import json
 from numpy import array
 
 
-def markup_json_to_numpy(# pragma: no cover
-        filename):
+def markup_json_to_numpy(filename):  # pragma: no cover
     """
     Extract points from slice markup file, return as numpy array
 
@@ -39,8 +38,7 @@ def markup_json_to_numpy(# pragma: no cover
     return array(pos), name
 
 
-def markup_json_to_dict(# pragma: no cover
-        filename):
+def markup_json_to_dict(filename):  # pragma: no cover
     """
     Extract points from slice markup file, return as labeled dict
 
