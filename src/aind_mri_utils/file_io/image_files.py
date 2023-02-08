@@ -25,23 +25,8 @@ def read_image(filename):  # pragma: no cover
 
     """
 
-    if (".nii" in filename) or (".nifti" in filename):
-        return read_nii(filename)
-    if ".dcm" in filename:
-        return read_dicom(filename)
     if os.path.isdir(filename):
-        # Find any dcm images
-        dcm_list = [
-            x
-            for x in os.listdir(
-                filename,
-            )
-            if (".dcm" in filename)
-        ]
-        # if dcm images exist, read as dicom
-        if len(dcm_list) > 0:
-            return read_dicom(filename)
-        # Same, this time looking for tiffs
+        # Look for .tifs
         tiff_list = [
             x
             for x in os.listdir(
@@ -49,13 +34,23 @@ def read_image(filename):  # pragma: no cover
             )
             if (".tif" in x)
         ]
+        # Read tifs if they exist
         if len(tiff_list) > 0:
             return read_tiff_stack(filename)
+        else:
+            # in the absence of tifs, assume folders are dcm
+            return read_dicom(filename)
 
-    # If none of the conditions above are reached, try to
-    # use the default reader. This will trhow an error if there
-    # are any problems
-    return sitk.ReadImage(filename)
+    else:
+        if (".nii" in filename) or (".nifti" in filename):
+            return read_nii(filename)
+        elif ".dcm" in filename:
+            return read_dicom(filename)
+        else:
+            # If none of the conditions above are reached, try to
+            # use the default reader. This will trhow an error if there
+            # are any problems
+            return sitk.ReadImage(filename)
 
 
 def read_dicom(filename):  # pragma: no cover
