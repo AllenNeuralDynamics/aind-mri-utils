@@ -47,7 +47,7 @@ class RotationsTest(unittest.TestCase):
         X = rotations.rotate_about_and_translate(
             pt, R, pivot, np.array(translate)
         )
-        self.assertTrue(np.all(X == pt - translate))
+        self.assertTrue(np.all(X == pt + translate))
         # Test 5: More than one point
         pt = np.array([[1, 2, 3], [1, 2, 3]])
         pivot = np.array([2, 3, 4])
