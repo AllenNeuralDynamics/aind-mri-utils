@@ -3,8 +3,8 @@ Code for rotations of points
 """
 
 import numpy as np
-from scipy.spatial.transform import Rotation
 import SimpleITK as sitk
+from scipy.spatial.transform import Rotation
 
 
 def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
