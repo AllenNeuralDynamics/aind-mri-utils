@@ -6,6 +6,62 @@ import SimpleITK as sitk  # pragma: no cover
 import os  # pragma: no cover
 
 
+def read_image(filename):  # pragma: no cover
+    """
+    Reads generic image files/folders in SITK using
+    Currently explicitlty supported: .dcm,.nii,.tiff
+    Folders/stacks will be read for .dcm and .tiff files
+    Other formats work only if supported they work with sitk.ReadImage()
+
+    Parameters
+    ----------
+    filename : String
+        filename or folder of files.
+
+    Returns
+    -------
+    SITK image
+        SITK image from loaded dicom files.
+
+    """
+
+    if (".nii" in filename) or (".nifti" in filename):
+        return read_nii(filename)
+    if ".dcm" in filename:
+        return read_dicom(filename)
+    if os.path.isdir(filename):
+        # Find any dcm images
+        dcm_list = [
+            x
+            for x in os.listdir(
+                folder,
+            )
+            if (".dcm" in filename)
+        ]
+        # if dcm images exist, read as dicom
+        if len(dcm_list) > 0:
+            return read_dicom(filename)
+        # Same, this time looking for tiffs
+        tiff_list = [
+            x
+            for x in os.listdir(
+                folder,
+            )
+            if (".tif" in x)
+        ]
+        if len(tiff_list) > 0:
+            return read_tiff_stack(folder)
+
+    # If none of the conditions above are reached, try to
+    # use the default reader
+    try:
+        return sitk.ReadImage(filename)
+    except:
+        raise NotImplementedError(
+            "No SITK reader has been implemented for " + filename
+        )
+
+
 def read_dicom(filename):  # pragma: no cover
     """
     Reader to import Dicom file and convert to sitk image
@@ -122,3 +178,47 @@ def read_tiff_stack(folder):  # pragma: no cover
     lst = [os.path.join(folder, x) for x in lst]
     reader.SetFileNames(lst)
     return reader.Execute()
+
+
+def write_nii(image, filename):  # pragma: no cover
+    """
+
+    Write an sitk image to .nii file
+
+
+    Parameters
+    ----------
+    image : SITK image
+        Image to save.
+
+    filename : filename
+        Filename to save
+
+    """
+    f_name, f_ext = os.path.splitext(filename)
+    if len(f_ext) == 0:
+        f_ext = ".nii"
+    elif f_ext != ".nii":
+        raise Exception("Filename should be a .nii file")
+    sitk.WriteImage(image, f_name + f_ext)
+
+
+def write_dicom(image, foldername):  # pragma: no cover
+    """
+    Save SITK image as dicom stack.
+    Heavily borrowed from
+    https://simpleitk.readthedocs.io/en/master/link_DicomSeriesReadModifyWrite_docs.html
+
+    Parameters
+    ----------
+    image : SITK image
+        Image to save.
+
+    filename : filename
+        Filename to save
+
+    """
+    # Need to figure out options to copy metadata
+    raise NotImplementedError(
+        "Dicom file writer still needs to be implemented"
+    )
