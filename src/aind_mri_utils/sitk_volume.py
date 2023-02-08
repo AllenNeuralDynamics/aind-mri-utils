@@ -1,8 +1,9 @@
 """
 Code to handle sitk volume loading and rotating
 
-SimpleITK example code is under Apache License, see:   
-    https://github.com/SimpleITK/TUTORIAL/blob/main/LICENSE
+SimpleITK example code is under Apache License, see:
+https://github.com/SimpleITK/TUTORIAL/blob/main/LICENSE
+
 """
 import SimpleITK as sitk
 
@@ -50,7 +51,7 @@ def resample(
     -------
     resampled_image : SimpleITK image
         resampled image with transform applied.
-        
+
     """
     if len(image.GetSize()) == 3:
         return resample3D(
