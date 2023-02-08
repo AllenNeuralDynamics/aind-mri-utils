@@ -7,7 +7,8 @@ import os
 import SimpleITK as sitk
 
 
-def read_dicom(filename):
+def read_dicom(# pragma: no cover
+        filename):
     """
     Reader to import Dicom file and convert to sitk image
 
@@ -35,7 +36,8 @@ def read_dicom(filename):
     return reader.Execute()
 
 
-def read_dcm(filename):
+def read_dcm(# pragma: no cover
+        filename):
     """
     Reader to import Dicom file and convert to sitk image.
     This fucntion is a wrapper on read_dicom to handle multiple naming
@@ -56,7 +58,8 @@ def read_dcm(filename):
     return read_dicom(filename)
 
 
-def read_nii(filename):
+def read_nii(# pragma: no cover
+        filename):
     """
     Reader to import nifti file and convert to sitk image
     This function is just a wrapper to match convention.
@@ -75,7 +78,8 @@ def read_nii(filename):
     return sitk.ReadImage(filename)
 
 
-def read_nifti(filename):
+def read_nifti(# pragma: no cover
+        filename):
     """
     Reader to import nifti file and convert to sitk image
     This fucntion is a wrapper on read_nii to handle multiple naming
@@ -95,7 +99,8 @@ def read_nifti(filename):
     return read_nii(filename)
 
 
-def read_tiff_stack(folder):
+def read_tiff_stack(# pragma: no cover
+        folder):
     """
     Code to read a tiff stack
     THIS CODE IS INCOMPLETE: needs metatdata handling (resolution, etc.) and
