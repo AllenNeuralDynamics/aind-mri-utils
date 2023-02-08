@@ -34,7 +34,7 @@ def read_image(filename):  # pragma: no cover
         dcm_list = [
             x
             for x in os.listdir(
-                folder,
+                filename,
             )
             if (".dcm" in filename)
         ]
@@ -45,21 +45,17 @@ def read_image(filename):  # pragma: no cover
         tiff_list = [
             x
             for x in os.listdir(
-                folder,
+                filename,
             )
             if (".tif" in x)
         ]
         if len(tiff_list) > 0:
-            return read_tiff_stack(folder)
+            return read_tiff_stack(filename)
 
     # If none of the conditions above are reached, try to
-    # use the default reader
-    try:
-        return sitk.ReadImage(filename)
-    except:
-        raise NotImplementedError(
-            "No SITK reader has been implemented for " + filename
-        )
+    # use the default reader. This will trhow an error if there
+    # are any problems
+    return sitk.ReadImage(filename)
 
 
 def read_dicom(filename):  # pragma: no cover
