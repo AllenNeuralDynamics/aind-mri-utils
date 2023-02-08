@@ -21,8 +21,9 @@ def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
         DESCRIPTION.
     degrees : Bool, optional
         Are the rotations in degrees?. The default is True.
-    order: string,optional
-        Order of axes to transform as a sorted string. Default is 'xyz'
+    order: string, optional
+        Order of axes to to transform as string. Default is 'xyz',
+        meaning transform will happen x-->y-->z
 
     Returns
     -------
@@ -35,15 +36,17 @@ def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
 
 def rotate_about_and_translate(points, rotation, pivot, translation):
     """
-    Rotates points about a particular pivot point, then apply translation
+    Rotates points about a pivot point,
+    then apply translation (add the translation values)
 
 
     Parameters
     ----------
     points : (Nx3) numpy array
         Points to rotate. Each point gets its own row.
-    rototation : Scipy rotation
-        use "define_euler_rotation" to create
+    rototation : Scipy `Rotation` object
+        use `define_euler_rotation` or
+        `scipy.spatial.transform.Rotation` constructor to create
     pivot : (1x3) numpy array
         Point to rotate around
     translation: (1x3) numpy array
@@ -56,25 +59,26 @@ def rotate_about_and_translate(points, rotation, pivot, translation):
         Rotated points
 
     """
-    return rotate_about(points, rotation, pivot) - translation
+    return rotate_about(points, rotation, pivot) + translation
 
 
 def rotate_about(points, rotation, pivot):
     """
-    Rotates points about a particular pivot point
+    Rotates points about a pivot point
 
     Parameters
     ----------
     points : (Nx3) numpy array
         Points to rotate. Each point gets its own row.
-    rototation : Scipy rotation
-        use "define_euler_rotation" to create
+    rototation : Scipy `Rotation` object
+        use `define_euler_rotation` or
+        `scipy.spatial.transform.Rotation` constructor to create
     pivot : (1x3) numpy array
         Point to rotate around
 
     Returns
     -------
-    (Nx3) numoy array
+    (Nx3) numpy array
         Rotated points
 
     """
@@ -85,16 +89,18 @@ def scipy_rotation_to_sitk(
     rotation, center=np.array((0, 0, 0)), translation=np.array((0, 0, 0))
 ):
     """
-
+    Convert Scipy 'Rotation' objecto to equivalent sitk
 
     Parameters
     ----------
-    rotation : TYPE
-        DESCRIPTION.
+    rotation : Scipy `Rotation` object
+        use `define_euler_rotation` or
+        `scipy.spatial.transform.Rotation` constructor to create
 
     Returns
     -------
-    None.
+    SITK transform
+        with parameters matching the input object
 
     """
 

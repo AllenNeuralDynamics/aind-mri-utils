@@ -48,6 +48,13 @@ class RotationsTest(unittest.TestCase):
             pt, R, pivot, np.array(translate)
         )
         self.assertTrue(np.all(X == pt - translate))
+        # Test 5: More than one point
+        pt = np.array([[1, 2, 3], [1, 2, 3]])
+        pivot = np.array([2, 3, 4])
+        R = rotations.define_euler_rotation(0, 0, 0, degrees=True)
+        X = rotations.rotate_about(pt, R, pivot)
+        self.assertTrue(X.shape[1] == pt.shape[1])
+        self.assertTrue(np.all(X[0, :] == X[1, :]))
 
 
 if __name__ == "__main__":

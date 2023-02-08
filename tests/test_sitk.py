@@ -14,10 +14,8 @@ class SITKTest(unittest.TestCase):
         trans = rotations.scipy_rotation_to_sitk(
             R, center=center, translation=translation
         )
-        self.assertTrue(
-            np.all(np.array(trans.GetTranslation()) == translation)
-        )
-        self.assertTrue(np.all(np.array(trans.GetFixedParameters()) == center))
+        self.assertTrue(np.array_equal(trans.GetTranslation(), translation))
+        self.assertTrue(np.array_equal(trans.GetFixedParameters(), center))
         self.assertTrue(
             np.all(
                 R.as_matrix().reshape((9,))

@@ -14,32 +14,32 @@ def resample(
     interpolator=sitk.sitkLinear,
 ):  # pragma: no cover
     """
-    Wrapper to generically handle sitk resampling on different imag
+    Wrapper to generically handle SimpleITK resampling on different image
     matricies. Includes optional application of a transform.
-    Only 3d is currently implemented; need to at at least 2D.
+    Only 3d is currently implemented.
 
     Parameters
     ----------
-    image : SITK image
+    image : SimpleITK image
         image to transform.
-    transform : SITK Affine Transform, optional
+    transform : SimpleITK Affine Transform, optional
         If no transform is passed, use a identity transform matrix
     output_spacing : (Nx1) array, optional
-        If not passed, coppies from image
+        If not passed, copies from image
     output_direction : (N^2x1) array, optional
-        If not passed, coppies from image
+        If not passed, copies from image
     output_origin : (Nx1) array, optional
-        If not passed, coppies from image
+        If not passed, copies from image
     output_size : (Nx1) array, optional
         If not passed, computes automatically to fully encompus
         transformed image.
-    interpolator: sitk Interpolator,optional
+    interpolator: SimpleITK Interpolator, optional
         If not passed, defaults to sitk.sitkLinear
         See sitk documentation for optios.
 
     Returns
     -------
-    resampled_image : SITK image
+    resampled_image : SimpleITK image
         resampled image with transform applied.
 
     """
@@ -69,13 +69,13 @@ def resample3D(
     interpolator=sitk.sitkLinear,
 ):  # pragma: no cover
     """
-    Resampler for 3D sitk images, with the option to apply a transform
+    Resample a 3D sitk image, with the option to apply a transform
 
     Parameters
     ----------
-    image : SITK image
+    image : SimpleITK image
         image to transform.
-    transform : SITK Affine Transform, optional
+    transform : SimpleITK Affine Transform, optional
         If no transform is passed, use a identity transform matrix
     output_spacing : (3x1) array, optional
         If not passed, coppies from image
@@ -89,39 +89,39 @@ def resample3D(
 
     Returns
     -------
-    resampled_image : SITK image
+    resampled_image : SimpleITK image
         resampled image with transform applied.
 
     """
     if transform is None:
         transform = sitk.AffineTransform(3)
 
-    extrema = image.GetSize()
-    extreme_points = [
+    im_size = image.GetSize()
+    extrema = [
         image.TransformIndexToPhysicalPoint((0, 0, 0)),
-        image.TransformIndexToPhysicalPoint((extrema[0], 0, 0)),
-        image.TransformIndexToPhysicalPoint((0, extrema[1], 0)),
-        image.TransformIndexToPhysicalPoint((0, 0, extrema[2])),
-        image.TransformIndexToPhysicalPoint((extrema[0], extrema[1], 0)),
-        image.TransformIndexToPhysicalPoint((extrema[0], 0, extrema[2])),
-        image.TransformIndexToPhysicalPoint((0, extrema[1], extrema[2])),
+        image.TransformIndexToPhysicalPoint((im_size[0], 0, 0)),
+        image.TransformIndexToPhysicalPoint((0, im_size[1], 0)),
+        image.TransformIndexToPhysicalPoint((0, 0, im_size[2])),
+        image.TransformIndexToPhysicalPoint((im_size[0], im_size[1], 0)),
+        image.TransformIndexToPhysicalPoint((im_size[0], 0, im_size[2])),
+        image.TransformIndexToPhysicalPoint((0, im_size[1], im_size[2])),
         image.TransformIndexToPhysicalPoint(
-            (extrema[0], extrema[1], extrema[2])
+            (im_size[0], im_size[1], im_size[2])
         ),
     ]
 
     inv_transform = transform.GetInverse()
 
-    extreme_points_transformed = [
-        inv_transform.TransformPoint(pnt) for pnt in extreme_points
+    extrema_transformed = [
+        inv_transform.TransformPoint(pnt) for pnt in extrema
     ]
 
-    min_x = min(extreme_points_transformed, key=lambda p: p[0])[0]
-    min_y = min(extreme_points_transformed, key=lambda p: p[1])[1]
-    min_z = min(extreme_points_transformed, key=lambda p: p[2])[2]
-    max_x = max(extreme_points_transformed, key=lambda p: p[0])[0]
-    max_y = max(extreme_points_transformed, key=lambda p: p[1])[1]
-    max_z = max(extreme_points_transformed, key=lambda p: p[2])[2]
+    min_x = min(extrema_transformed, key=lambda p: p[0])[0]
+    min_y = min(extrema_transformed, key=lambda p: p[1])[1]
+    min_z = min(extrema_transformed, key=lambda p: p[2])[2]
+    max_x = max(extrema_transformed, key=lambda p: p[0])[0]
+    max_y = max(extrema_transformed, key=lambda p: p[1])[1]
+    max_z = max(extrema_transformed, key=lambda p: p[2])[2]
 
     #
     if output_spacing is None:

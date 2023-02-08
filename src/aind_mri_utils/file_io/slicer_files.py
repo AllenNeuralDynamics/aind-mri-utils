@@ -30,17 +30,17 @@ def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
 
 def markup_json_to_numpy(filename):  # pragma: no cover
     """
-    Extract control points from the requisite json file
+    Extract control points from a 3D Slicer generated markup json file
 
     Parameters
     ----------
-    filename : TYPE
-        DESCRIPTION.
-
+    filename : string
+        filename to open. Must be .json
+        .mrk.json is ok
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    pts, names - numpy.ndarray (N x 3) of point positions and list of
+                 controlPoint names
 
     """
     with open(filename) as f:
@@ -50,7 +50,7 @@ def markup_json_to_numpy(filename):  # pragma: no cover
 
 def markup_json_to_dict(filename):  # pragma: no cover
     """
-    Extract points from slice markup file, return as labeled dict
+    Extract control points from a 3D Slicer generated markup json file
 
     Parameters
     ----------

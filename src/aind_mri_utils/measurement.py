@@ -38,9 +38,9 @@ THE POSSIBILITY OF SUCH DAMAGE.
 import numpy as np
 
 
-def find_circle_center(x, y):
+def find_circle(x, y):
     """
-    Use least squares to find center of a set of points
+    Fit a circle to a set of points using a linearized least-squares algorithm
 
     Borrowed, with modification, from:
     https://scipy-cookbook.readthedocs.io/items/Least_Squares_Circle.html
@@ -54,11 +54,11 @@ def find_circle_center(x, y):
 
     Returns
     -------
-    xc_1 : Scalar
+    xc_1 : Float
         X coordinate of center
-    yc_1 : Scalar
+    yc_1 : Float
         Y coordinate of center.
-    radius : Scalar
+    radius : Float
         Radius of fit circle.
     residu_1 : (N) array
         per-point residual.
@@ -90,7 +90,7 @@ def find_circle_center(x, y):
     B = np.array([Suuu + Suvv, Svvv + Suuv]) / 2.0
     uc, vc = np.linalg.solve(A, B)
 
-    #  
+    #
     xc_1 = x_m + uc
     yc_1 = y_m + vc
 
