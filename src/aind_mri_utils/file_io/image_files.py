@@ -2,8 +2,8 @@
 IO functions for SITK
 """
 
-import SimpleITK as sitk
-import os
+import SimpleITK as sitk # pragma: no cover
+import os # pragma: no cover
 
 
 def read_dicom(filename):  # pragma: no cover
