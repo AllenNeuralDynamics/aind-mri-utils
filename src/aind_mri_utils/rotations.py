@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation
 
 def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
     """
-    wrapper on scipy.spatial.transform.rotation
+    Wrapper of scipy.spatial.transform.Rotation.from_euler
 
     Parameters
     ----------

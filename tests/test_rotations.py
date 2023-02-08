@@ -12,7 +12,7 @@ import numpy as np
 from aind_mri_utils import rotations
 
 
-class MessageHandlerTest(unittest.TestCase):
+class RotationsTest(unittest.TestCase):
     def test_define_euler_rotation(self) -> None:
         R = rotations.define_euler_rotation(0, 0, 0, degrees=True)
         self.assertTrue(np.all(R.as_matrix() == np.eye(3)))
