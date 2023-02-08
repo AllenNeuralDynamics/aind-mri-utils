@@ -1,8 +1,9 @@
-
 import numpy as np
 import scipy.spatial.transform.rotation as rotation
 import SimpleITK as sitk
-def define_euler_rotation(rx,ry,rz,degrees = True,order = 'xyz'):
+
+
+def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
     """
     wrapper on scipy.spatial.transform.rotation
 
@@ -25,10 +26,11 @@ def define_euler_rotation(rx,ry,rz,degrees = True,order = 'xyz'):
         scipy 3.
 
     """
-    return rotation.Rotation.from_euler(order,[rx,ry,rz],degrees=True)
+    return rotation.Rotation.from_euler(order, [rx, ry, rz], degrees=True)
 
-def rotate_about_and_translate(points,rotation,pivot,translation):
-    '''
+
+def rotate_about_and_translate(points, rotation, pivot, translation):
+    """
     Rotates points about a particular pivot point, then apply translation
 
 
@@ -42,18 +44,19 @@ def rotate_about_and_translate(points,rotation,pivot,translation):
         Point to rotate around
     translation: (1x3) numpy array
         Additonal translation to apply to points
-        
-    
+
+
     Returns
     -------
     (Nx3) numoy array
         Rotated points
 
-    '''
-    return rotate_about(points,rotation,pivot)-translation
+    """
+    return rotate_about(points, rotation, pivot) - translation
 
-def rotate_about(points,rotation,pivot):
-    '''
+
+def rotate_about(points, rotation, pivot):
+    """
     Rotates points about a particular pivot point
 
     Parameters
@@ -70,12 +73,15 @@ def rotate_about(points,rotation,pivot):
     (Nx3) numoy array
         Rotated points
 
-    '''
-    return rotation.apply(points-pivot)+pivot
-
-def scipy_rotation_to_sitk(rotation,center = np.array((0,0,0)),translation = np.array((0,0,0))):
     """
-    
+    return rotation.apply(points - pivot) + pivot
+
+
+def scipy_rotation_to_sitk(
+    rotation, center=np.array((0, 0, 0)), translation=np.array((0, 0, 0))
+):
+    """
+
 
     Parameters
     ----------
@@ -87,13 +93,11 @@ def scipy_rotation_to_sitk(rotation,center = np.array((0,0,0)),translation = np.
     None.
 
     """
-    
+
     rotmat = rotation.as_matrix().reshape((9,))
-    params = np.concatenate((rotmat,np.zeros((3,),dtype = np.float64)))
+    params = np.concatenate((rotmat, np.zeros((3,), dtype=np.float64)))
     newTransform = sitk.AffineTransform(3)
     newTransform.SetParameters(params.tolist())
     newTransform.SetTranslation(translation.tolist())
     newTransform.SetCenter(center.tolist())
     return newTransform
-    
-    

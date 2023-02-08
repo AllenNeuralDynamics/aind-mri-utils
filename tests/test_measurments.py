@@ -12,20 +12,18 @@ from aind_mri_utils import measurement
 
 
 class MeasurmentTest(unittest.TestCase):
-
     def test_find_circle_center(self) -> None:
-        center = np.array((0,0))
-        x = np.array([1,0,-1,0])
-        y = np.array([0,1,0,-1])
-        
+        center = np.array((0, 0))
+        x = np.array([1, 0, -1, 0])
+        y = np.array([0, 1, 0, -1])
+
         """Tests that circle finder is working correctly."""
-        xc,yc,radius = measurement.find_circle_center(x,y)
-        
+        xc, yc, radius = measurement.find_circle_center(x, y)
+
         self.assertEqual(xc, 0)
-        self.assertEqual(yc,0)
-        self.assertEqual(radius,1)
-        
+        self.assertEqual(yc, 0)
+        self.assertEqual(radius, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
-
-

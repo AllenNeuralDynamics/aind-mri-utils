@@ -3,7 +3,6 @@ from numpy import array
 import numpy as np
 
 
-
 def markup_json_to_numpy(filename):
     """
     Extract points from slice markup file, return as numpy array
@@ -22,15 +21,17 @@ def markup_json_to_numpy(filename):
         names of points
 
     """
-    f = open(filename,)
+    f = open(
+        filename,
+    )
     data = json.load(f)
-    pts = data['markups'][0]['controlPoints']
+    pts = data["markups"][0]["controlPoints"]
     name = []
     pos = []
-    for ii,pt in enumerate(pts):
-        name.append(pt['label'])
-        pos.append(pt['position'])
-    return array(pos),name
+    for ii, pt in enumerate(pts):
+        name.append(pt["label"])
+        pos.append(pt["position"])
+    return array(pos), name
 
 
 def markup_json_to_dict(filename):
@@ -50,14 +51,13 @@ def markup_json_to_dict(filename):
 
 
     """
-    f = open(filename,)
+    f = open(
+        filename,
+    )
     data = json.load(f)
-    pts = data['markups'][0]['controlPoints']
-    
+    pts = data["markups"][0]["controlPoints"]
+
     output = {}
-    for ii,pt in enumerate(pts):
-        output[pt['label']] = array(pt['position'])
+    for ii, pt in enumerate(pts):
+        output[pt["label"]] = array(pt["position"])
     return output
-
-
-    

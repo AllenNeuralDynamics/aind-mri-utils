@@ -2,6 +2,7 @@ import SimpleITK as sitk
 import numpy as np
 import os
 
+
 def read_dicom(filename):
     """
     Reader to import Dicom file and convert to sitk image
@@ -18,14 +19,14 @@ def read_dicom(filename):
         SITK image from loaded dicom files.
 
     """
-    
+
     if os.path.isdir(filename):
         dirname = filename
     else:
         dirname = os.path.dirname(filename)
-    
+
     reader = sitk.ImageSeriesReader()
-    dicom_names = reader.GetGDCMSeriesFileNames( dirname)
+    dicom_names = reader.GetGDCMSeriesFileNames(dirname)
     reader.SetFileNames(dicom_names)
     return reader.Execute()
 
@@ -49,6 +50,7 @@ def read_dcm(filename):
     """
     return read_dicom(filename)
 
+
 def read_nii(filename):
     """
     Reader to import nifti file and convert to sitk image
@@ -66,7 +68,6 @@ def read_nii(filename):
 
     """
     return sitk.ReadImage(filename)
-    
 
 
 def read_nifti(filename):
@@ -88,6 +89,7 @@ def read_nifti(filename):
     """
     return read_nii(filename)
 
+
 def read_tiff_stack(folder):
     """
     Code to read a tiff stack
@@ -106,13 +108,29 @@ def read_tiff_stack(folder):
 
     """
     from functools import reduce
-    reader = sitk.ImageSeriesReader()    
-    lst = [x for x in  os.listdir(folder,) if ('.tif' in x)]
-    lst = [os.path.join(folder,x) for x in lst]
+
+    reader = sitk.ImageSeriesReader()
+    lst = [
+        x
+        for x in os.listdir(
+            folder,
+        )
+        if (".tif" in x)
+    ]
+    lst = [os.path.join(folder, x) for x in lst]
     reader.SetFileNames(lst)
     return reader.Execute()
 
-def resample(image,transform = None,output_spacing = None,output_direction = None,output_origin = None,output_size = None,interpolator = sitk.sitkLinear):
+
+def resample(
+    image,
+    transform=None,
+    output_spacing=None,
+    output_direction=None,
+    output_origin=None,
+    output_size=None,
+    interpolator=sitk.sitkLinear,
+):
     """
     Wrapper to generically handle sitk resampling on different image matricies.
     Includes optional application of a transform.
@@ -135,21 +153,38 @@ def resample(image,transform = None,output_spacing = None,output_direction = Non
     interpolator: sitk Interpolator,optional
         If not passed, defaults to sitk.sitkLinear
         See sitk documentation for optios.
-    
+
     Returns
     -------
     resampled_image : SITK image
         resampled image with transform applied.
 
     """
-    if len(image.GetSize())==3:
-        return resample3D(image, transform = transform,output_spacing = output_spacing,output_direction = output_direction,output_origin = output_origin,output_size = output_size,interpolator = interpolator)
+    if len(image.GetSize()) == 3:
+        return resample3D(
+            image,
+            transform=transform,
+            output_spacing=output_spacing,
+            output_direction=output_direction,
+            output_origin=output_origin,
+            output_size=output_size,
+            interpolator=interpolator,
+        )
     else:
-        raise NotImplementedError('Resample currently only supports 3D transformations')
-        
+        raise NotImplementedError(
+            "Resample currently only supports 3D transformations"
+        )
 
 
-def resample3D(image, transform = None,output_spacing = None,output_direction = None,output_origin = None,output_size = None,interpolator = sitk.sitkLinear):
+def resample3D(
+    image,
+    transform=None,
+    output_spacing=None,
+    output_direction=None,
+    output_origin=None,
+    output_size=None,
+    interpolator=sitk.sitkLinear,
+):
     """
     Resampler for 3D sitk images, with the option to apply a transform
 
@@ -176,22 +211,32 @@ def resample3D(image, transform = None,output_spacing = None,output_direction = 
     """
     if transform is None:
         transform = sitk.AffineTransform(3)
-    
+
     extrema = image.GetSize()
     extreme_points = [
-        image.TransformIndexToPhysicalPoint((0,0,0)),
-        image.TransformIndexToPhysicalPoint((extrema[0]+1, 0,0)),
-        image.TransformIndexToPhysicalPoint((0, extrema[1]+1,0)),
-        image.TransformIndexToPhysicalPoint((0, 0,extrema[2]+1)),
-        image.TransformIndexToPhysicalPoint((extrema[0]+1, extrema[1]+1,0)),
-        image.TransformIndexToPhysicalPoint((extrema[0]+1,0 ,extrema[2]+1)),
-        image.TransformIndexToPhysicalPoint((0, extrema[1]+1,extrema[2]+1)),
-        image.TransformIndexToPhysicalPoint((extrema[0]+1,extrema[1] +1,extrema[2]+1)),
+        image.TransformIndexToPhysicalPoint((0, 0, 0)),
+        image.TransformIndexToPhysicalPoint((extrema[0] + 1, 0, 0)),
+        image.TransformIndexToPhysicalPoint((0, extrema[1] + 1, 0)),
+        image.TransformIndexToPhysicalPoint((0, 0, extrema[2] + 1)),
+        image.TransformIndexToPhysicalPoint(
+            (extrema[0] + 1, extrema[1] + 1, 0)
+        ),
+        image.TransformIndexToPhysicalPoint(
+            (extrema[0] + 1, 0, extrema[2] + 1)
+        ),
+        image.TransformIndexToPhysicalPoint(
+            (0, extrema[1] + 1, extrema[2] + 1)
+        ),
+        image.TransformIndexToPhysicalPoint(
+            (extrema[0] + 1, extrema[1] + 1, extrema[2] + 1)
+        ),
     ]
 
     inv_transform = transform.GetInverse()
 
-    extreme_points_transformed = [inv_transform.TransformPoint(pnt) for pnt in extreme_points]
+    extreme_points_transformed = [
+        inv_transform.TransformPoint(pnt) for pnt in extreme_points
+    ]
 
     min_x = min(extreme_points_transformed, key=lambda p: p[0])[0]
     min_y = min(extreme_points_transformed, key=lambda p: p[1])[1]
@@ -200,28 +245,26 @@ def resample3D(image, transform = None,output_spacing = None,output_direction = 
     max_y = max(extreme_points_transformed, key=lambda p: p[1])[1]
     max_z = max(extreme_points_transformed, key=lambda p: p[2])[2]
 
-
     #
     if output_spacing is None:
         output_spacing = image.GetSpacing()
-        
+
     if output_direction is None:
         output_direction = image.GetDirection()
 
     if output_origin is None:
-        output_origin = [0,0,0]
-        if output_direction[0]>0:
+        output_origin = [0, 0, 0]
+        if output_direction[0] > 0:
             output_origin[0] = min_x
         else:
             output_origin[0] = max_x
-    
-        if output_direction[4]>0:
+
+        if output_direction[4] > 0:
             output_origin[1] = min_y
         else:
             output_origin[1] = max_y
-    
-    
-        if output_direction[8]>0:
+
+        if output_direction[8] > 0:
             output_origin[2] = min_z
         else:
             output_origin[2] = max_z
@@ -234,7 +277,6 @@ def resample3D(image, transform = None,output_spacing = None,output_direction = 
             int((max_z - min_z) / output_spacing[2]),
         ]
 
-
     resampled_image = sitk.Resample(
         image,
         output_size,
@@ -245,8 +287,3 @@ def resample3D(image, transform = None,output_spacing = None,output_direction = 
         output_direction,
     )
     return resampled_image
-
-
-
-    
-    
