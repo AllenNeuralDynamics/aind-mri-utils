@@ -3,6 +3,7 @@
 from typing import Tuple
 
 import numpy as np
+import json
 
 
 def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
@@ -25,3 +26,46 @@ def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
         names.append(pt["label"])
         pos.append(pt["position"])
     return np.array(pos), names
+
+
+def markup_json_to_numpy(filename):  # pragma: no cover
+    """
+    Extract control points from the requisite json file
+
+    Parameters
+    ----------
+    filename : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    with open(filename) as f:
+        data = json.load(f)
+    return extract_control_points(data)
+
+
+def markup_json_to_dict(filename):  # pragma: no cover
+    """
+    Extract points from slice markup file, return as labeled dict
+
+    Parameters
+    ----------
+    filename : string
+        filename to open. Must be .json
+        .mrk.json is ok
+
+    Returns
+    -------
+    Dictionary
+        dictionary with keys = point names and values = np.array of points.
+
+
+    """
+    with open(filename) as f:
+        data = json.load(f)
+    pos, names = extract_control_points(data)
+    return dict(zip(names, pos))
