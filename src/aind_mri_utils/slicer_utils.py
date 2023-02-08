@@ -1,6 +1,5 @@
 import json
 from numpy import array
-import numpy as np
 
 
 def markup_json_to_numpy(filename):

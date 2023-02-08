@@ -13,7 +13,6 @@ from aind_mri_utils import measurement
 
 class MeasurmentTest(unittest.TestCase):
     def test_find_circle_center(self) -> None:
-        center = np.array((0, 0))
         x = np.array([1, 0, -1, 0])
         y = np.array([0, 1, 0, -1])
 

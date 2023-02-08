@@ -1,7 +1,5 @@
 import unittest
 
-import pandas as pd
-
 from aind_mri_utils import sitk_volume
 from aind_mri_utils import rotations
 

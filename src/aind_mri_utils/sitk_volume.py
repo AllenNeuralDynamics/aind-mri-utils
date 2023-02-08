@@ -1,5 +1,4 @@
 import SimpleITK as sitk
-import numpy as np
 import os
 
 
@@ -34,7 +33,8 @@ def read_dicom(filename):
 def read_dcm(filename):
     """
     Reader to import Dicom file and convert to sitk image.
-    This fucntion is a wrapper on read_dicom to handle multiple naming conventions
+    This fucntion is a wrapper on read_dicom to handle multiple naming
+    conventions
 
     Parameters
     ----------
@@ -73,8 +73,8 @@ def read_nii(filename):
 def read_nifti(filename):
     """
     Reader to import nifti file and convert to sitk image
-    This fucntion is a wrapper on read_nii to handle multiple naming conventions,
-    which is in turn just an sitk wrapper.
+    This fucntion is a wrapper on read_nii to handle multiple naming
+    conventions, which is in turn just an sitk wrapper.
 
     Parameters
     ----------
@@ -93,8 +93,8 @@ def read_nifti(filename):
 def read_tiff_stack(folder):
     """
     Code to read a tiff stack
-    THIS CODE IS INCOMPLETE: needs metatdata handling (resolution, etc.) and some
-    thought about how to deal with large images.
+    THIS CODE IS INCOMPLETE: needs metatdata handling (resolution, etc.) and
+    some thought about how to deal with large images.
 
     Parameters
     ----------
@@ -107,8 +107,6 @@ def read_tiff_stack(folder):
         Tiff images stacked.
 
     """
-    from functools import reduce
-
     reader = sitk.ImageSeriesReader()
     lst = [
         x
@@ -132,8 +130,8 @@ def resample(
     interpolator=sitk.sitkLinear,
 ):
     """
-    Wrapper to generically handle sitk resampling on different image matricies.
-    Includes optional application of a transform.
+    Wrapper to generically handle sitk resampling on different imag
+    matricies. Includes optional application of a transform.
     Only 3d is currently implemented; need to at at least 2D.
 
     Parameters
@@ -149,7 +147,8 @@ def resample(
     output_origin : (Nx1) array, optional
         If not passed, coppies from image
     output_size : (Nx1) array, optional
-        If not passed, computes automatically to fully encompus transformed image.
+        If not passed, computes automatically to fully encompus
+        transformed image.
     interpolator: sitk Interpolator,optional
         If not passed, defaults to sitk.sitkLinear
         See sitk documentation for optios.
@@ -201,7 +200,8 @@ def resample3D(
     output_origin : (3x1) array, optional
         If not passed, coppies from image
     output_size : (3x1) array, optional
-        If not passed, computes automatically to fully encompus transformed image.
+        If not passed, computes automatically to fully encompus
+        transformed image.
 
     Returns
     -------
