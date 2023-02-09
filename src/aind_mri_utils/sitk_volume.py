@@ -19,7 +19,7 @@ def resample(
 ):  # pragma: no cover
     """
     Wrapper to generically handle SimpleITK resampling on different image
-    matricies. Includes optional application of a transform.
+    matrices. Includes optional application of a transform.
     Only 3d is currently implemented.
 
     Code is modified from the 2d example in.
