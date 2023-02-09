@@ -88,7 +88,7 @@ def resample3D(
     transform : SimpleITK Affine Transform, optional
         If no transform is passed, use a identity transform matrix
     output_spacing : (3x1) array, optional
-        If not passed, coppies from image
+        If not passed, copies from image
     output_direction : (9x1) array, optional
         If not passed, coppies from image
     output_origin : (3x1) array, optional
