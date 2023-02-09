@@ -89,7 +89,7 @@ def scipy_rotation_to_sitk(
     rotation, center=np.array((0, 0, 0)), translation=np.array((0, 0, 0))
 ):
     """
-    Convert Scipy 'Rotation' objecto to equivalent sitk
+    Convert Scipy 'Rotation' object to equivalent sitk
 
     Parameters
     ----------
