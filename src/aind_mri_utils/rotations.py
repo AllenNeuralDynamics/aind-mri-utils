@@ -50,7 +50,7 @@ def rotate_about_and_translate(points, rotation, pivot, translation):
     pivot : (1x3) numpy array
         Point to rotate around
     translation: (1x3) numpy array
-        Additonal translation to apply to points
+        Additional translation to apply to points
 
 
     Returns
