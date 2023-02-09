@@ -22,7 +22,7 @@ def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
     degrees : Bool, optional
         Are the rotations in degrees?. The default is True.
     order: string, optional
-        Order of axes to to transform as string. Default is 'xyz',
+        Order of axes to transform as string. Default is 'xyz',
         meaning transform will happen x-->y-->z
 
     Returns
