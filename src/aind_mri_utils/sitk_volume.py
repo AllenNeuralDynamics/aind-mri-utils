@@ -94,7 +94,7 @@ def resample3D(
     output_origin : (3x1) array, optional
         If not passed, copies from image
     output_size : (3x1) array, optional
-        If not passed, computes automatically to fully encompus
+        If not passed, computes automatically to fully encompass
         transformed image.
 
     Returns
