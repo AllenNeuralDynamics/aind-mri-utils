@@ -17,9 +17,9 @@ class SITKTest(unittest.TestCase):
         self.assertTrue(np.array_equal(trans.GetTranslation(), translation))
         self.assertTrue(np.array_equal(trans.GetFixedParameters(), center))
         self.assertTrue(
-            np.all(
-                R.as_matrix().reshape((9,))
-                == np.array(trans.GetParameters()[:9])
+            np.array_equal(
+                R.as_matrix().reshape((9,)),
+                np.array(trans.GetParameters()[:9])
             )
         )
 
