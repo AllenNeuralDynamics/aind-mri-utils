@@ -144,7 +144,7 @@ def read_nifti(filename):  # pragma: no cover
 def read_tiff_stack(folder):  # pragma: no cover
     """
     Code to read a tiff stack
-    THIS CODE IS INCOMPLETE: needs metatdata handling (resolution, etc.) and
+    THIS CODE IS INCOMPLETE: needs metadata handling (resolution, etc.) and
     some thought about how to deal with large images.
 
     Parameters
