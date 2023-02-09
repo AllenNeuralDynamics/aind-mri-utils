@@ -48,7 +48,7 @@ def read_image(filename):  # pragma: no cover
             return read_dicom(filename)
         else:
             # If none of the conditions above are reached, try to
-            # use the default reader. This will trhow an error if there
+            # use the default reader. This will throw an error if there
             # are any problems
             return sitk.ReadImage(filename)
 
