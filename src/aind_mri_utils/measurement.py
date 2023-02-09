@@ -2,7 +2,7 @@
 Measurement code.
 
 
-The applies to find_circle_center, wich is borroed from scipy-cookbooks:
+This applies to find_circle_center, which is borrowed from scipy-cookbooks:
 
 Copyright (c) 2001, 2002 Enthought, Inc.
 All rights reserved.
