@@ -90,7 +90,7 @@ def resample3D(
     output_spacing : (3x1) array, optional
         If not passed, copies from image
     output_direction : (9x1) array, optional
-        If not passed, coppies from image
+        If not passed, copies from image
     output_origin : (3x1) array, optional
         If not passed, coppies from image
     output_size : (3x1) array, optional
