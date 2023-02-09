@@ -9,7 +9,7 @@ import os  # pragma: no cover
 def read_image(filename):  # pragma: no cover
     """
     Reads generic image files/folders in SITK using
-    Currently explicitlty supported: .dcm,.nii,.tiff
+    Currently explicitly supported: .dcm, .nii, .tiff
     Folders/stacks will be read for .dcm and .tiff files
     Other formats work only if supported they work with sitk.ReadImage()
 
