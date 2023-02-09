@@ -50,7 +50,7 @@ def markup_json_to_numpy(filename):  # pragma: no cover
 
 def markup_json_to_dict(filename):  # pragma: no cover
     """
-    Extract control points from a 3D Slicer generated markup json file
+    Extract control points from a 3D Slicer generated markup JSON file
 
     Parameters
     ----------
