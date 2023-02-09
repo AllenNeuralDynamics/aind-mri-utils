@@ -45,7 +45,7 @@ def resample(
         transformed image.
     interpolator: SimpleITK Interpolator, optional
         If not passed, defaults to sitk.sitkLinear
-        See sitk documentation for optios.
+        See sitk documentation for options.
 
     Returns
     -------
