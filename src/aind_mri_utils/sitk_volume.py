@@ -41,7 +41,7 @@ def resample(
     output_origin : (Nx1) array, optional
         If not passed, copies from image
     output_size : (Nx1) array, optional
-        If not passed, computes automatically to fully encompus
+        If not passed, computes automatically to fully encompass
         transformed image.
     interpolator: SimpleITK Interpolator, optional
         If not passed, defaults to sitk.sitkLinear
