@@ -65,7 +65,5 @@ def markup_json_to_dict(filename):  # pragma: no cover
 
 
     """
-    with open(filename) as f:
-        data = json.load(f)
-    pos, names = extract_control_points(data)
+    pos, names = markup_json_to_numpy(filename)
     return dict(zip(names, pos))
