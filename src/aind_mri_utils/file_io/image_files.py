@@ -2,8 +2,9 @@
 IO functions for SITK
 """
 
-import SimpleITK as sitk  # pragma: no cover
 import os  # pragma: no cover
+
+import SimpleITK as sitk  # pragma: no cover
 
 
 def read_image(filename):  # pragma: no cover
@@ -44,7 +45,9 @@ def read_image(filename):  # pragma: no cover
     else:
         if (".nii" in filename) or (".nifti" in filename):
             return read_nii(filename)
-        elif (".dcm" in filename) or (os.path.splitext(filename)[0]==filename):
+        elif (".dcm" in filename) or (
+            os.path.splitext(filename)[0] == filename
+        ):
             return read_dicom(filename)
         else:
             # If none of the conditions above are reached, try to

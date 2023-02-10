@@ -1,9 +1,9 @@
 """Functions for working with slicer files"""
 
+import json
 from typing import Tuple
 
 import numpy as np
-import json
 
 
 def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
