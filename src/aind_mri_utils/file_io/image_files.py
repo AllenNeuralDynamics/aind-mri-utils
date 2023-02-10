@@ -44,7 +44,7 @@ def read_image(filename):  # pragma: no cover
     else:
         if (".nii" in filename) or (".nifti" in filename):
             return read_nii(filename)
-        elif ".dcm" in filename:
+        elif (".dcm" in filename) or (os.path.splitext(filename)[0]==filename):
             return read_dicom(filename)
         else:
             # If none of the conditions above are reached, try to
@@ -150,7 +150,7 @@ def read_tiff_stack(folder):  # pragma: no cover
     Parameters
     ----------
     folder : String folder with numerically ordered tiff images
-        DESCRIPTION.
+        Folder containing ONLY .tif images
 
     Returns
     -------
