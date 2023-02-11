@@ -14,28 +14,30 @@ class CoordinateSystemsTest(unittest.TestCase):
     test_coordinates = np.array(
         [[2.0, -3.0, 4.0], [-1.0, 4.0, -5.0], [0.0, 0.0, 0.0]]
     )
-    target_coordinates = np.array(
-        [[-2.0, 3.0, 4.0], [1.0, -4.0, -5.0], [0.0, 0.0, 0.0]]
-    )
 
-    def coordinate_helper_func(self, func: Callable) -> None:
-        """Helper method that runs tests for lps_to_ras and ras_to_lps"""
+    def coordinate_helper_func(self, src, dst, expected) -> None:
+        """Helper method for test_convert_coordinate_systems"""
         self.assertTrue(
             np.array_equal(
-                func(self.test_coordinates), self.target_coordinates
+                cs.convert_coordinate_system(self.test_coordinates, src, dst),
+                expected,
             )
         )  # The obvious test
         self.assertTrue(
             np.array_equal(
-                func(self.test_coordinates[0, :]),
-                self.target_coordinates[0, :],
+                cs.convert_coordinate_system(
+                    self.test_coordinates[[0], :], src, dst
+                ),
+                expected[[0], :],
             )
-        )  # vector
+        )  # different shape
 
         # Test with ints
         int_test_data = self.test_coordinates.astype(int)
-        int_target_data = self.target_coordinates.astype(int)
-        int_transformed_test_data = func(int_test_data)
+        int_target_data = expected.astype(int)
+        int_transformed_test_data = cs.convert_coordinate_system(
+            int_test_data, src, dst
+        )
         self.assertTrue(
             np.array_equal(int_transformed_test_data, int_target_data)
         )
@@ -43,13 +45,99 @@ class CoordinateSystemsTest(unittest.TestCase):
             int_target_data.dtype == int_transformed_test_data.dtype
         )
 
-    def test_lps_to_ras(self) -> None:
-        """Tests that the `lps_to_ras` function works as intended."""
-        self.coordinate_helper_func(cs.lps_to_ras)
+    def test__find_coordinate_perm_and_flips(self) -> None:
+        perm, direction = cs._find_coordinate_perm_and_flips("RAS", "LPI")
+        self.assertTrue(
+            np.array_equal(perm, [0, 1, 2])
+            and np.array_equal(direction, [-1, -1, -1])
+        )
+        perm, direction = cs._find_coordinate_perm_and_flips("ras", "LPI")
+        self.assertTrue(
+            np.array_equal(perm, [0, 1, 2])
+            and np.array_equal(direction, [-1, -1, -1])
+        )
+        perm, direction = cs._find_coordinate_perm_and_flips("RAS", "RAS")
+        self.assertTrue(
+            np.array_equal(perm, [0, 1, 2])
+            and np.array_equal(direction, [1, 1, 1])
+        )
+        perm, direction = cs._find_coordinate_perm_and_flips("ASR", "RAS")
+        self.assertTrue(
+            np.array_equal(perm, [2, 0, 1])
+            and np.array_equal(direction, [1, 1, 1])
+        )
+        perm, direction = cs._find_coordinate_perm_and_flips("PIL", "RAS")
+        self.assertTrue(
+            np.array_equal(perm, [2, 0, 1])
+            and np.array_equal(direction, [-1, -1, -1])
+        )
+        perm, direction = cs._find_coordinate_perm_and_flips("PLS", "LPS")
+        self.assertTrue(
+            np.array_equal(perm, [1, 0, 2])
+            and np.array_equal(direction, [1, 1, 1])
+        )
+        perm, direction = cs._find_coordinate_perm_and_flips("PRS", "LPS")
+        self.assertTrue(
+            np.array_equal(perm, [1, 0, 2])
+            and np.array_equal(direction, [-1, 1, 1])
+        )
+        self.assertRaisesRegex(
+            ValueError,
+            "Inputs should be the same length",
+            cs._find_coordinate_perm_and_flips,
+            "RA",
+            "RAS",
+        )
+        self.assertRaisesRegex(
+            ValueError,
+            "Source axis 'R' not unique",
+            cs._find_coordinate_perm_and_flips,
+            "RRS",
+            "RAS",
+        )
+        self.assertRaisesRegex(
+            ValueError,
+            "Source axis 'L' not unique",
+            cs._find_coordinate_perm_and_flips,
+            "RLS",
+            "RAS",
+        )
+        self.assertRaisesRegex(
+            ValueError,
+            "Destination axis 'L' not unique",
+            cs._find_coordinate_perm_and_flips,
+            "RAS",
+            "RLS",
+        )
+        self.assertRaisesRegex(
+            ValueError,
+            "Source direction 'D' not in R/L, A/P, or I/S",
+            cs._find_coordinate_perm_and_flips,
+            "RAD",
+            "RAS",
+        )
+        self.assertRaisesRegex(
+            ValueError,
+            "Destination direction 'D' not in R/L, A/P, or I/S",
+            cs._find_coordinate_perm_and_flips,
+            "RAS",
+            "RAD",
+        )
+        self.assertRaisesRegex(
+            ValueError,
+            "Destination direction 'S' has no match in source directions 'RA'",
+            cs._find_coordinate_perm_and_flips,
+            "RA",
+            "RS",
+        )
 
-    def test_ras_to_lps(self) -> None:
-        """Tests that the `ras_to_lps` function works as intended."""
-        self.coordinate_helper_func(cs.ras_to_lps)
+    def test_convert_coordinate_system(self):
+        expected = np.array([-1, -1, -1]) * self.test_coordinates[:, [0, 1, 2]]
+        self.coordinate_helper_func("RAS", "LPI", expected)
+        expected = np.array([-1, -1, -1]) * self.test_coordinates[:, [1, 0, 2]]
+        self.coordinate_helper_func("RAS", "PLI", expected)
+        expected = self.test_coordinates[:, [1, 2, 0]]
+        self.coordinate_helper_func("RAS", "ASR", expected)
 
 
 if __name__ == "__main__":
