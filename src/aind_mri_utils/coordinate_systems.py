@@ -4,7 +4,7 @@
 import numpy as np
 
 
-def _find_coordinate_perm_and_flips(src: str, dst: str):  # noqa: C901
+def find_coordinate_perm_and_flips(src: str, dst: str):  # noqa: C901
     """Determine how to convert between coordinate systems
 
     This function takes a source `src` and destination `dst` string specifying
@@ -122,7 +122,7 @@ def convert_coordinate_system(
     out : np.ndarray (N x M)
         The N input points transformed into the destination coordinate system
     """
-    perm, direction = _find_coordinate_perm_and_flips(src_coord, dst_coord)
+    perm, direction = find_coordinate_perm_and_flips(src_coord, dst_coord)
     out = arr[:, perm]
     out *= direction
     return out

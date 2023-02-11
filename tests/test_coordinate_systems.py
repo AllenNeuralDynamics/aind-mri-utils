@@ -44,38 +44,38 @@ class CoordinateSystemsTest(unittest.TestCase):
             int_target_data.dtype == int_transformed_test_data.dtype
         )
 
-    def test__find_coordinate_perm_and_flips(self) -> None:
-        perm, direction = cs._find_coordinate_perm_and_flips("RAS", "LPI")
+    def test_find_coordinate_perm_and_flips(self) -> None:
+        perm, direction = cs.find_coordinate_perm_and_flips("RAS", "LPI")
         self.assertTrue(
             np.array_equal(perm, [0, 1, 2])
             and np.array_equal(direction, [-1, -1, -1])
         )
-        perm, direction = cs._find_coordinate_perm_and_flips("ras", "LPI")
+        perm, direction = cs.find_coordinate_perm_and_flips("ras", "LPI")
         self.assertTrue(
             np.array_equal(perm, [0, 1, 2])
             and np.array_equal(direction, [-1, -1, -1])
         )
-        perm, direction = cs._find_coordinate_perm_and_flips("RAS", "RAS")
+        perm, direction = cs.find_coordinate_perm_and_flips("RAS", "RAS")
         self.assertTrue(
             np.array_equal(perm, [0, 1, 2])
             and np.array_equal(direction, [1, 1, 1])
         )
-        perm, direction = cs._find_coordinate_perm_and_flips("ASR", "RAS")
+        perm, direction = cs.find_coordinate_perm_and_flips("ASR", "RAS")
         self.assertTrue(
             np.array_equal(perm, [2, 0, 1])
             and np.array_equal(direction, [1, 1, 1])
         )
-        perm, direction = cs._find_coordinate_perm_and_flips("PIL", "RAS")
+        perm, direction = cs.find_coordinate_perm_and_flips("PIL", "RAS")
         self.assertTrue(
             np.array_equal(perm, [2, 0, 1])
             and np.array_equal(direction, [-1, -1, -1])
         )
-        perm, direction = cs._find_coordinate_perm_and_flips("PLS", "LPS")
+        perm, direction = cs.find_coordinate_perm_and_flips("PLS", "LPS")
         self.assertTrue(
             np.array_equal(perm, [1, 0, 2])
             and np.array_equal(direction, [1, 1, 1])
         )
-        perm, direction = cs._find_coordinate_perm_and_flips("PRS", "LPS")
+        perm, direction = cs.find_coordinate_perm_and_flips("PRS", "LPS")
         self.assertTrue(
             np.array_equal(perm, [1, 0, 2])
             and np.array_equal(direction, [-1, 1, 1])
@@ -83,49 +83,49 @@ class CoordinateSystemsTest(unittest.TestCase):
         self.assertRaisesRegex(
             ValueError,
             "Inputs should be the same length",
-            cs._find_coordinate_perm_and_flips,
+            cs.find_coordinate_perm_and_flips,
             "RA",
             "RAS",
         )
         self.assertRaisesRegex(
             ValueError,
             "Source axis 'R' not unique",
-            cs._find_coordinate_perm_and_flips,
+            cs.find_coordinate_perm_and_flips,
             "RRS",
             "RAS",
         )
         self.assertRaisesRegex(
             ValueError,
             "Source axis 'L' not unique",
-            cs._find_coordinate_perm_and_flips,
+            cs.find_coordinate_perm_and_flips,
             "RLS",
             "RAS",
         )
         self.assertRaisesRegex(
             ValueError,
             "Destination axis 'L' not unique",
-            cs._find_coordinate_perm_and_flips,
+            cs.find_coordinate_perm_and_flips,
             "RAS",
             "RLS",
         )
         self.assertRaisesRegex(
             ValueError,
             "Source direction 'D' not in R/L, A/P, or I/S",
-            cs._find_coordinate_perm_and_flips,
+            cs.find_coordinate_perm_and_flips,
             "RAD",
             "RAS",
         )
         self.assertRaisesRegex(
             ValueError,
             "Destination direction 'D' not in R/L, A/P, or I/S",
-            cs._find_coordinate_perm_and_flips,
+            cs.find_coordinate_perm_and_flips,
             "RAS",
             "RAD",
         )
         self.assertRaisesRegex(
             ValueError,
             "Destination direction 'S' has no match in source directions 'RA'",
-            cs._find_coordinate_perm_and_flips,
+            cs.find_coordinate_perm_and_flips,
             "RA",
             "RS",
         )
