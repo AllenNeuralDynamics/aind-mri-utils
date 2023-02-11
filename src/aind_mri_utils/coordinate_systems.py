@@ -4,8 +4,8 @@
 import numpy as np
 
 
-def _find_coordinate_perm_and_flips(src: str, dst: str):
-    """Determine the permutation and direction flips to convert between coordinate systems
+def _find_coordinate_perm_and_flips(src: str, dst: str):  # noqa: C901
+    """Determine how to convert between coordinate systems
 
     This function takes a source `src` and destination `dst` string specifying
     two coordinate systems, and finds the permutation and sign flip such that a
@@ -78,9 +78,10 @@ def _find_coordinate_perm_and_flips(src: str, dst: str):
             direction[i] = -1
         else:
             raise ValueError(
-                "Destination direction '{}' has no match in source directions '{}'".format(
-                    d, src_u
-                )
+                (
+                    "Destination direction '{}' has "
+                    + "no match in source directions '{}'"
+                ).format(d, src_u)
             )
         dst_set.add(d)
     return perm, direction

@@ -1,7 +1,6 @@
 """Tests functions in `coordinate_systems`."""
 
 import unittest
-from typing import Callable
 
 import numpy as np
 
