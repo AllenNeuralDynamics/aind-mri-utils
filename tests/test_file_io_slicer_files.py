@@ -15,6 +15,7 @@ class SlicerFilesTest(unittest.TestCase):
     slicer_json_control_points_mock = {
         "markups": [
             {
+                "coordinateSystem": "LPS"
                 "controlPoints": [
                     {
                         "label": expected_names[0],
