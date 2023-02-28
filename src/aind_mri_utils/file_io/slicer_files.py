@@ -5,6 +5,7 @@ from typing import Tuple
 
 import numpy as np
 
+import re
 
 def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
     """
@@ -33,6 +34,16 @@ def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
         pos.append(pt["position"])
     return np.array(pos), labels, coord_str
 
+def find_seg_nrrd_header_segment_info(header_odict):
+    matches = filter(
+        None,
+        map(lambda s: re.match("^([^_]+)_LabelValue$", s), header_odict.keys())
+    )
+    segment_info = dict()
+    for m in matches:
+        segment_name = header_odict["{}_Name".format(m[1])]
+        segment_info[segment_name] = int(header_odict[m[0]])
+    return segment_info
 
 def markup_json_to_numpy(filename):  # pragma: no cover
     """

@@ -98,3 +98,20 @@ def find_circle(x, y):
     radius = np.mean(Ri_1)
 
     return xc_1, yc_1, radius
+
+def mask_segmented_voxels(full_vol, seg_vol, seg_vals):
+    masked_vol = np.zeros_like(full_vol)
+    mask = np.isin(seg_vol, seg_vals)
+    masked_vol[mask] = full_vol[mask]
+    return masked_vol
+
+def find_mask_ndxs(seg_vol, v):
+    return np.column_stack(np.nonzero(seg_vol == v))
+
+def translate_ndxs(simage, index_arr):
+    position_arr = np.zeros_like(index_arr, dtype="float32")
+    npt = index_arr.shape[0]
+    for ptno in range(npt):
+        ndx = tuple(map(lambda x: x.item(), index_arr[ptno, :]))
+        position_arr[ptno, :] = simage.TransformIndexToPhysicalPoint(ndx)
+    return position_arr
