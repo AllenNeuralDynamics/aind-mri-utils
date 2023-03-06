@@ -11,21 +11,27 @@ def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
     Extract points and names from slicer json dict
 
     Parameters
-    ==========
-    json_data - `dict` with contents of json file
+    ----------
+    json_data : dict
+        Contents of json file
 
     Returns
-    =======
-    pts, names - numpy.ndarray (N x 3) of point positions and list of
-                 controlPoint names
+    -------
+    pts : numpy.ndarray (N x 3)
+        point positions
+    labels : list
+        labels of controlPoints
+    coord_str : str
+        String specifying coordinate system of pts, e.g. 'LPS'
     """
     pts = json_data["markups"][0]["controlPoints"]
-    names = []
+    coord_str = json_data["markups"][0]["coordinateSystem"]
+    labels = []
     pos = []
     for ii, pt in enumerate(pts):
-        names.append(pt["label"])
+        labels.append(pt["label"])
         pos.append(pt["position"])
-    return np.array(pos), names
+    return np.array(pos), labels, coord_str
 
 
 def markup_json_to_numpy(filename):  # pragma: no cover

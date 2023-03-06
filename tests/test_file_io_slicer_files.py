@@ -15,6 +15,7 @@ class SlicerFilesTest(unittest.TestCase):
     slicer_json_control_points_mock = {
         "markups": [
             {
+                "coordinateSystem": "LPS",
                 "controlPoints": [
                     {
                         "label": expected_names[0],
@@ -24,7 +25,7 @@ class SlicerFilesTest(unittest.TestCase):
                         "label": expected_names[1],
                         "position": expected_pos[1, :].tolist(),
                     },
-                ]
+                ],
             }
         ]
     }
@@ -33,11 +34,12 @@ class SlicerFilesTest(unittest.TestCase):
         """
         Tests that the `extract_control_points` function works as intended.
         """
-        received_pos, received_names = sf.extract_control_points(
+        received_pos, received_names, coord_sys = sf.extract_control_points(
             self.slicer_json_control_points_mock
         )
         self.assertTrue(np.array_equal(received_pos, self.expected_pos))
         self.assertEqual(received_names, self.expected_names)
+        self.assertEqual(coord_sys, "LPS")
 
 
 if __name__ == "__main__":
