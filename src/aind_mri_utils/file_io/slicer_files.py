@@ -1,6 +1,7 @@
 """Functions for working with slicer files"""
 
 import json
+import re
 from typing import Tuple
 
 import numpy as np
@@ -32,6 +33,29 @@ def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
         labels.append(pt["label"])
         pos.append(pt["position"])
     return np.array(pos), labels, coord_str
+
+
+def find_seg_nrrd_header_segment_info(header):
+    """parse keys of slicer created dict to find segment names and values
+
+    Parameters
+    ----------
+    header : dict-like
+
+    Returns
+    -------
+    segment_info: dict
+        pairs of segment name : segment value
+    """
+    matches = filter(
+        None,
+        map(lambda s: re.match("^([^_]+)_LabelValue$", s), header.keys()),
+    )
+    segment_info = dict()
+    for m in matches:
+        segment_name = header["{}_Name".format(m[1])]
+        segment_info[segment_name] = int(header[m[0]])
+    return segment_info
 
 
 def markup_json_to_numpy(filename):  # pragma: no cover
