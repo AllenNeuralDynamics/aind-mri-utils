@@ -59,7 +59,7 @@ def find_indices_equal_to(arr, v):
     return np.column_stack(np.nonzero(arr == v))
 
 
-def translate_ndxs(simage, index_arr):
+def transform_sitk_indices_to_physical_points(simage, index_arr):
     """Transforms indices indices of simage to physical points
 
     For a SimpleITK image `simage` and a list of indices `index_arr`, transform
@@ -80,5 +80,5 @@ def translate_ndxs(simage, index_arr):
     npt = index_arr.shape[0]
     for ptno in range(npt):
         ndx = tuple(map(lambda x: x.item(), index_arr[ptno, :]))
-        position_arr[ptno, :] = simage.TransformIndexToPhysicalPoint(ndx)
+        position_arr[ptno, :] = simage.TransformContinuousIndexToPhysicalPoint(ndx)
     return position_arr
