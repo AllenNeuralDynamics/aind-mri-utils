@@ -23,8 +23,12 @@ class UtilsTest(unittest.TestCase):
 
     test_index_translation_sets = [
         (np.array([[0, 0, 0], [2, 2, 2]]), np.array([[0, 0, 0], [2, 2, 2]])),
-        (np.array([[0.5, 0.5, 0.5], [2, 2, 2]]), np.array([[0.5, 0.5, 0.5], [2, 2, 2]]))
+        (
+            np.array([[0.5, 0.5, 0.5], [2, 2, 2]]),
+            np.array([[0.5, 0.5, 0.5], [2, 2, 2]]),
+        ),
     ]
+
     def test_skew_symmetric_cross_product_matrix(self) -> None:
         for a, b, c in self.cross_product_sets:
             self.assertTrue(
@@ -65,9 +69,7 @@ class UtilsTest(unittest.TestCase):
             basis_vec[i] = 1
             self.assertTrue(
                 np.allclose(
-                    ut.vector_rejection(
-                        self.test_proj_vec, basis_vec
-                    ),
+                    ut.vector_rejection(self.test_proj_vec, basis_vec),
                     ans,
                 )
             )

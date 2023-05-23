@@ -80,5 +80,7 @@ def transform_sitk_indices_to_physical_points(simage, index_arr):
     npt = index_arr.shape[0]
     for ptno in range(npt):
         ndx = tuple(map(lambda x: x.item(), index_arr[ptno, :]))
-        position_arr[ptno, :] = simage.TransformContinuousIndexToPhysicalPoint(ndx)
+        position_arr[ptno, :] = simage.TransformContinuousIndexToPhysicalPoint(
+            ndx
+        )
     return position_arr
