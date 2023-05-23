@@ -3,7 +3,6 @@
 import unittest
 
 import numpy as np
-import SimpleITK as sitk
 
 from aind_mri_utils import utils as ut
 
@@ -20,14 +19,6 @@ class UtilsTest(unittest.TestCase):
 
     test_match_arr = np.arange(0, 9).reshape(3, 3)
     test_proj_vec = np.array([0.5, 0.2, 0.7])
-
-    test_index_translation_sets = [
-        (np.array([[0, 0, 0], [2, 2, 2]]), np.array([[0, 0, 0], [2, 2, 2]])),
-        (
-            np.array([[0.5, 0.5, 0.5], [2, 2, 2]]),
-            np.array([[0.5, 0.5, 0.5], [2, 2, 2]]),
-        ),
-    ]
 
     def test_skew_symmetric_cross_product_matrix(self) -> None:
         for a, b, c in self.cross_product_sets:
@@ -86,12 +77,6 @@ class UtilsTest(unittest.TestCase):
         modified_ans = np.copy(ans)
         modified_ans[0, 1] = 0
         self.assertTrue(np.allclose(modified_ans, np.zeros((3, 3))))
-
-    def test_transform_sitk_indices_to_physical_points(self) -> None:
-        simg = sitk.Image(256, 128, 64, sitk.sitkUInt8)
-        for ndxs, ans in self.test_index_translation_sets:
-            received = ut.transform_sitk_indices_to_physical_points(simg, ndxs)
-            self.assertTrue(np.allclose(ans, received))
 
 
 if __name__ == "__main__":

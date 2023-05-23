@@ -57,30 +57,3 @@ def mask_arr_by_annotations(arr, anno_arr, seg_vals, default_val=0):
 def find_indices_equal_to(arr, v):
     """Find array indices equal to v"""
     return np.column_stack(np.nonzero(arr == v))
-
-
-def transform_sitk_indices_to_physical_points(simage, index_arr):
-    """Transforms indices indices of simage to physical points
-
-    For a SimpleITK image `simage` and a list of indices `index_arr`, transform
-    each index to a physical point.
-
-    Parameters
-    ----------
-    simage : M-d SimpleITK image
-    index_arr : numpy.ndarray (NxM)
-        matrix of indices of `simage`, where each row is an index
-
-    Returns
-    -------
-    position_arr: numpy.ndarray (NxM)
-        matrix of physical points for each index in `index_arr`
-    """
-    position_arr = np.zeros_like(index_arr, dtype="float32")
-    npt = index_arr.shape[0]
-    for ptno in range(npt):
-        ndx = tuple(map(lambda x: x.item(), index_arr[ptno, :]))
-        position_arr[ptno, :] = simage.TransformContinuousIndexToPhysicalPoint(
-            ndx
-        )
-    return position_arr
