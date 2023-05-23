@@ -15,8 +15,8 @@ def norm_vec(vec):
     return vec / n
 
 
-def projection_onto_normal_plane(v, n):
-    """Find projection of v onto plane normal to n"""
+def vector_rejection(v, n):
+    """Find the component of v orthogonal to n"""
     ndim = n.size
     nn = norm_vec(n)
     vn = (v.reshape(-1, ndim) @ nn[:, np.newaxis]) * nn[np.newaxis, :]

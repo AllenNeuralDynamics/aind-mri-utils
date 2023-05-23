@@ -53,7 +53,7 @@ class UtilsTest(unittest.TestCase):
             )
         )
 
-    def test_projection_onto_normal_plane(self) -> None:
+    def test_vector_rejection(self) -> None:
         for i in range(0, 3):
             ans = np.copy(self.test_proj_vec)
             ans[i] = 0
@@ -61,7 +61,7 @@ class UtilsTest(unittest.TestCase):
             basis_vec[i] = 1
             self.assertTrue(
                 np.allclose(
-                    ut.projection_onto_normal_plane(
+                    ut.vector_rejection(
                         self.test_proj_vec, basis_vec
                     ),
                     ans,
