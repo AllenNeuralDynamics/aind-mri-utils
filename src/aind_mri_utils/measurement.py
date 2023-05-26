@@ -152,6 +152,68 @@ def  closet_point_between_lines(P1,V1,P2,V2):
     return p_a,p_b
 
 def angle(v1, v2):
+    """
+    Angle (in degrees) between two vectors
+
+    Parameters
+    ----------
+    v1 : numpy array 
+        First Vector.
+    v2 : numpy array 
+        Second Vector.
+
+    Returns
+    -------
+    Angle between vectors
+    """
     rad = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
     return np.rad2deg(rad)
+
+def dist_point_to_line(pt_1,pt_2,query_pt):
+    """
+    Distance between line defined by two points and a query point
+    insperation from: 
+        https://stackoverflow.com/questions/39840030/...
+        distance-between-point-and-a-line-from-two-points
+        
+    Parameters
+    ----------
+    pt_1 : numpy array  (N,)
+        First Vector.
+    pt_2 : numpy array (N,)
+        Second Vector.
+    query_pt: numpy array (N,)
+        Point to find distance of.
+
+    Returns
+    -------
+    Distance    
+    """
+    ln_pt = pt_1
+    ln_norm = pt_1-pt_2
+    ln_norm = ln_norm/np.linalg.norm(ln_norm)
+    return np.abs(np.linalg.norm(np.cross(ln_norm,ln_pt-query_pt)))/np.linalg.norm(ln_norm)
+
+def dist_point_to_plane(pt_0,normal,query_pt):
+    """
+    Distance between plane defined by point and normal and a query point
+
+    Parameters
+    ----------
+    pt_0 : numpy array  (N,)
+        Point on plane.
+    normal : numpy array (N,)
+        Normal vector of plane.
+    query_pt: numpy array (N,)
+        Point to find distance of.
+
+    Returns
+    -------
+    Distance    
+    """
+    D = -normal[0]*pt_0[0]-normal[1]*pt_0[1]-normal[2]*pt_0[2]
+    num = np.abs(normal[0]*query_pt[0]+normal[1]*query_pt[1]+normal[2]*query_pt[2]+D)
+    denom = np.sqrt(np.sum(normal**2))
+    return num/denom
+
 
