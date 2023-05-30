@@ -1,6 +1,7 @@
 from ..optimization import create_rigid_transform
 import SimpleITK as sitk
 import numpy as np
+from unittest.mock import MagicMock, patch
 
 
 def save_sitk_transform(filename,trans,invert = False):
@@ -61,3 +62,4 @@ def load_sitk_transform(filename,invert = False):
     offset = np.array(A.GetParameters()[-3:])
     trans = np.vstack([matrix,offset])
     return trans
+
