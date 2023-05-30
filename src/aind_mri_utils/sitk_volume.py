@@ -7,7 +7,6 @@ https://github.com/SimpleITK/TUTORIAL/blob/main/LICENSE
 """
 import SimpleITK as sitk
 
-
 def resample(
     image,
     transform=None,

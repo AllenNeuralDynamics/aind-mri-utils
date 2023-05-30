@@ -128,9 +128,9 @@ def convert_coordinate_system(
     return out
 
 
-def matrix_to_rig_angles(matrix,origin,mouse_ap_tilt = 14):
+def matrix_to_rig_angles(matrix, origin, mouse_ap_tilt=14):
     """
-    Convert a transform (3x3 matrix and origin) to a set of rig angles. 
+    Convert a transform (3x3 matrix and origin) to a set of rig angles.
     Here, origin assumes the transform is centered on mouse bregma.
 
     Parameters
@@ -144,11 +144,11 @@ def matrix_to_rig_angles(matrix,origin,mouse_ap_tilt = 14):
         Default: 14 degrees
     """
     from aind_mri_utils.measurement import angle
-    A = np.array([[0, 0, 1000],[0,0,0]])/1000
-    B = np.dot(A,np.linalg.inv(matrix))-origin
-    B = B[0,:]-B[1,:]
-    B = B/np.linalg.norm(B)
-    rig_ap = -(90-angle([0,1,0],B)-14)                 
-    rig_ml = -(90-angle([1,0,0],B))
-    return rig_ap,rig_ml
 
+    A = np.array([[0, 0, 1000], [0, 0, 0]]) / 1000
+    B = np.dot(A, np.linalg.inv(matrix)) - origin
+    B = B[0, :] - B[1, :]
+    B = B / np.linalg.norm(B)
+    rig_ap = -(90 - angle([0, 1, 0], B) - 14)
+    rig_ml = -(90 - angle([1, 0, 0], B))
+    return rig_ap, rig_ml

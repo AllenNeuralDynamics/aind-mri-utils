@@ -4,8 +4,9 @@ Functions for optimizing volume fits.
 
 """
 import numpy as np
-from .measurement import dist_point_to_line,dist_point_to_plane
 from scipy.optimize import fmin
+
+from .measurement import dist_point_to_line, dist_point_to_plane
 
 
 def append_ones_column(data):
@@ -22,10 +23,10 @@ def append_ones_column(data):
     np.array
         Data with a column of ones appended to the end.
     """
-    return np.hstack([data,np.ones([data.shape[0],1])])
+    return np.hstack([data, np.ones([data.shape[0], 1])])
 
 
-def create_rigid_transform(rx,ry,rz,cx,cy,cz):
+def create_rigid_transform(rx, ry, rz, cx, cy, cz):
     """
     Create a rigid transform matrix from the given parameters.
 
@@ -46,27 +47,41 @@ def create_rigid_transform(rx,ry,rz,cx,cy,cz):
 
     Returns
     -------
-    R : np.array(4,4)
+    R : np.array(4,3)
         Rotation matrix (rigid transform).
 
     """
-    
-    RZ = np.array([[np.cos(np.deg2rad(rz)),-np.sin(np.deg2rad(rz)),0],
-                   [np.sin(np.deg2rad(rz)),np.cos(np.deg2rad(rz)),0],
-                   [0,0,1]])
-    RX = np.array([[1,0,0],
-                   [0,np.cos(np.deg2rad(rx)),-np.sin(np.deg2rad(rx))],
-                   [0,np.sin(np.deg2rad(rx)),np.cos(np.deg2rad(rx))]])
-    RY = np.array([[np.cos(np.deg2rad(ry)),0,np.sin(np.deg2rad(ry))],
-                   [0,1,0],
-                   [-np.sin(np.deg2rad(ry)),0,np.cos(np.deg2rad(ry))]])
-    
-    R = np.dot(np.dot(RX,RY),RZ)
-    R = np.vstack([R,np.array([cx,cy,cz])])
+
+    RZ = np.array(
+        [
+            [np.cos(np.deg2rad(rz)), -np.sin(np.deg2rad(rz)), 0],
+            [np.sin(np.deg2rad(rz)), np.cos(np.deg2rad(rz)), 0],
+            [0, 0, 1],
+        ]
+    )
+    RX = np.array(
+        [
+            [1, 0, 0],
+            [0, np.cos(np.deg2rad(rx)), -np.sin(np.deg2rad(rx))],
+            [0, np.sin(np.deg2rad(rx)), np.cos(np.deg2rad(rx))],
+        ]
+    )
+    RY = np.array(
+        [
+            [np.cos(np.deg2rad(ry)), 0, np.sin(np.deg2rad(ry))],
+            [0, 1, 0],
+            [-np.sin(np.deg2rad(ry)), 0, np.cos(np.deg2rad(ry))],
+        ]
+    )
+
+    R = np.dot(np.dot(RX, RY), RZ)
+    R = np.vstack([R, np.array([cx, cy, cz])])
     return R
 
 
-def cost_function_weighted_labeled_lines(T,pts1,pts2,moving,labels,weights = None):
+def cost_function_weighted_labeled_lines(
+    T, pts1, pts2, moving, labels, weights=None
+):
     """
     Cost function for optimizing a rigid transform on weighted points.
 
@@ -98,24 +113,29 @@ def cost_function_weighted_labeled_lines(T,pts1,pts2,moving,labels,weights = Non
     cx = T[3]
     cy = T[4]
     cz = T[5]
-    trans = create_rigid_transform(rx,ry,rz,cx,cy,cz)
-    transformed = np.dot(moving,trans)
-    
-    if weights is None:
-        weights = np.ones((moving.shape[0],1))
+    trans = create_rigid_transform(rx, ry, rz, cx, cy, cz)
+    transformed = np.dot(moving, trans)
 
-    D = np.zeros((moving.shape[0],1))
+    if weights is None:
+        weights = np.ones((moving.shape[0], 1))
+
+    D = np.zeros((moving.shape[0], 1))
     for ii in range(pts1.shape[0]):
-        lst = np.where(labels==ii)[0]
+        lst = np.where(labels == ii)[0]
         for jj in range(len(lst)):
-            D[lst[jj]]  = dist_point_to_line(pts1[ii,:],
-                                              pts2[ii,:],
-                                              transformed[lst[jj],:])*weights[lst[jj]]
-    
+            D[lst[jj]] = (
+                dist_point_to_line(
+                    pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]
+                )
+                * weights[lst[jj]]
+            )
+
     return np.sum(D)
 
 
-def cost_function_weighted_labeled_lines_with_plane(T,pts1,pts2,pts_for_line,moving,labels,weights = None):
+def cost_function_weighted_labeled_lines_with_plane(
+    T, pts1, pts2, pts_for_line, moving, labels, weights=None
+):
     """
     Cost function for optimizing a rigid transform on weighted points; includes labeled lines and labeled planes.
 
@@ -146,33 +166,47 @@ def cost_function_weighted_labeled_lines_with_plane(T,pts1,pts2,pts_for_line,mov
     cx = T[3]
     cy = T[4]
     cz = T[5]
-    trans = create_rigid_transform(rx,ry,rz,cx,cy,cz)
-    transformed = np.dot(moving,trans)
+    trans = create_rigid_transform(rx, ry, rz, cx, cy, cz)
+    transformed = np.dot(moving, trans)
 
     if weights is None:
-        weights = np.ones((moving.shape[0],1))
+        weights = np.ones((moving.shape[0], 1))
 
-
-    d = 0
+    D = np.zeros((moving.shape[0], 1))
     for ii in range(pts1.shape[0]):
-        lst = np.where(labels==ii)[0]
+        lst = np.where(labels == ii)[0]
         if pts_for_line[ii]:
-            d += np.sum([dist_point_to_line(pts1[ii,:],pts2[ii,:],transformed[tt,:])*weights[lst[tt]] for tt in lst])
+            for jj in range(len(lst)):
+                D[lst[jj]] = (
+                    dist_point_to_line(
+                        pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]
+                    )
+                    * weights[lst[jj]]
+                )
         else:
-            d += np.sum([dist_point_to_plane(pts1[ii,:],pts2[ii,:],transformed[tt,:])*weights[lst[tt]] for tt in lst])
-    print(d)
-    return d
+            for jj in range(len(lst)):
+                D[lst[jj]] = (
+                    dist_point_to_plane(
+                        pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]
+                    )
+                    * weights[lst[jj]]
+                )
+            # d += np.sum([dist_point_to_plane(pts1[ii, :], pts2[ii, :], transformed[lst[tt], :])* weights[lst[tt]]for tt in lst])
+    return np.sum(D)
 
-def optimize_transform_labeled_lines(init,
-        pts1,
-        pts2,
-        positions,
-        labels,
-        weights = None,
-        xtol = 1e-12,
-        maxfun = 10000,
-        normalize = False,
-        gamma = None):
+
+def optimize_transform_labeled_lines(
+    init,
+    pts1,
+    pts2,
+    positions,
+    labels,
+    weights=None,
+    xtol=1e-12,
+    maxfun=10000,
+    normalize=False,
+    gamma=None,
+):
     """
     Function for optimizing a rigid transform on weighted points by minimizing distance
     from each point to a specified line. Multiple lines can be specified by using labels.
@@ -197,10 +231,10 @@ def optimize_transform_labeled_lines(init,
     maxfun : int, optional
         Max number of function calls for optimizer. The default is 10000.
     normalize : bool, optional
-        If True, normalize weights to be between 0 and 1. 
+        If True, normalize weights to be between 0 and 1.
         The default is False.
     gamma : float, optional
-        If value is passed, weight gamma corrected for that value. 
+        If value is passed, weight gamma corrected for that value.
         The default is None.
 
     Returns
@@ -209,19 +243,16 @@ def optimize_transform_labeled_lines(init,
         Rigid transform matrix that minimizes the cost function.
     T: np.array(6,1)
         Parameters of the rigid transform matrix that minimizes the cost function.
-    output: tuple  
+    output: tuple
         Fitting data from scipy.optimize.fmin (see retol in scipy.optimize.fmin documentation)
 
     """
-    Tinit = create_rigid_transform(init[0],
-                                   init[1],
-                                   init[2],
-                                   init[3],
-                                   init[4],
-                                   init[5])
+    Tinit = create_rigid_transform(
+        init[0], init[1], init[2], init[3], init[4], init[5]
+    )
 
     if weights is None:
-        weights = np.ones((positions.shape[0],1))
+        weights = np.ones((positions.shape[0], 1))
     else:
         # Gamma correct
         # Taken from skimage.exposure.adjust_gamma. Implementing here to avoid importing skimage.
@@ -230,34 +261,38 @@ def optimize_transform_labeled_lines(init,
             wieghts = ((weights / scale) ** gamma) * scale
 
         if normalize:
-            weights = (weights-np.min(weights))/(np.max(weights)-np.min(weights))
-    
-    output = fmin(cost_function_weighted_labeled_lines,
-              Tinit,
-              args = (pts1,pts2,positions,labels,weights),
-              xtol = xtol,
-              maxfun=maxfun,)
+            weights = (weights - np.min(weights)) / (
+                np.max(weights) - np.min(weights)
+            )
+
+    output = fmin(
+        cost_function_weighted_labeled_lines,
+        Tinit,
+        args=(pts1, pts2, positions, labels, weights),
+        xtol=xtol,
+        maxfun=maxfun,
+    )
 
     Tframe = output
-    trans = create_rigid_transform(Tframe[0],
-                                   Tframe[1],
-                                   Tframe[2],
-                                   Tframe[3],
-                                   Tframe[4],
-                                   Tframe[5])
-    return trans,Tframe
+    trans = create_rigid_transform(
+        Tframe[0], Tframe[1], Tframe[2], Tframe[3], Tframe[4], Tframe[5]
+    )
+    return trans, Tframe
 
-def optimize_transform_labeled_lines_with_plane(init,
-                                            pts1,
-                                            pts2,
-                                            pts_for_line,
-                                            positions,
-                                            labels,
-                                            weights = None,
-                                            xtol = 1e-12,
-                                            maxfun = 10000,
-                                            normalize = False,
-                                            gamma = None):
+
+def optimize_transform_labeled_lines_with_plane(
+    init,
+    pts1,
+    pts2,
+    pts_for_line,
+    positions,
+    labels,
+    weights=None,
+    xtol=1e-12,
+    maxfun=10000,
+    normalize=False,
+    gamma=None,
+):
     """
     Function for optimizing a rigid transform on weighted points by minimizing distance
     between each point and a specified line or plane. Multiple lines/planes can be specified by using labels.
@@ -269,45 +304,37 @@ def optimize_transform_labeled_lines_with_plane(init,
     pts1 : np.array(N,3)
         First point on each line OR plane normal
     pts2 : np.array(N,3)
-        Second point on each line OR point on plane 
+        Second point on each line OR point on plane
     pts_for_line : np.array(N,1)
         Boolean array specifying if each line is a line or a plane.
-    positions : np.array(M,3)   
+    positions : np.array(M,3)
         Positions of points to optimize on.
-    labels : np.array(M,dtype=np.int))  
+    labels : np.array(M,dtype=np.int))
         Labels for each point in positions, specifying which line that point too.
     weights : np.array(M,1), optional
         Weights for each point in positions. If None is passed, assumes all wieghts are 1.
         Default is None.
-    xtol : float, optional  
+    xtol : float, optional
         Stopping tolerence for optimizer. The default is 1e-12.
     maxfun : int, optional
         Max number of function calls for optimizer. The default is 10000.
-    normalize : bool, optional  
+    normalize : bool, optional
         If True, normalize weights to be between 0 and 1.
-        The default is False.   
+        The default is False.
     gamma : float, optional
         If value is passed, weight gamma corrected for that value.
         The default is None.
 
-    Returns 
+    Returns
     -------
-    trans: np.array(4,4)   
+    trans: np.array(4,4)
         Rigid transform matrix that minimizes the cost function.
-    T: np.array(6,1)    
+    T: np.array(6,1)
         Parameters of the rigid transform matrix that minimizes the cost function.
     """
 
-
-    Tinit = create_rigid_transform(init[0],
-                                   init[1],
-                                   init[2],
-                                   init[3],
-                                   init[4],
-                                   init[5])
-
     if weights is None:
-        weights = np.ones((positions.shape[0],1))
+        weights = np.ones((positions.shape[0], 1))
     else:
         # Gamma correct
         # Taken from skimage.exposure.adjust_gamma. Implementing here to avoid importing skimage.
@@ -316,37 +343,39 @@ def optimize_transform_labeled_lines_with_plane(init,
             wieghts = ((weights / scale) ** gamma) * scale
 
         if normalize:
-            weights = (weights-np.min(weights))/(np.max(weights)-np.min(weights))
+            weights = (weights - np.min(weights)) / (
+                np.max(weights) - np.min(weights)
+            )
 
-    output_a = fmin(cost_function_weighted_labeled_lines,
-            Tinit,
-            args = (pts1,pts2,positions,labels,weights),
-            xtol = xtol,
-            maxfun=maxfun,)
-    
-    output_b = fmin(cost_function_weighted_labeled_lines_with_plane,
-            output_a[0],
-            args = (pts1,
-                      pts2,
-                      pts_for_line,
-                      positions,
-                      labels,
-                      weights),
-            xtol = xtol,
-            maxfun=maxfun,)
-    
+    output_a = fmin(
+        cost_function_weighted_labeled_lines,
+        init,
+        args=(pts1, pts2, positions, labels, weights),
+        xtol=xtol,
+        maxfun=maxfun,
+    )
+
+    output_b = fmin(
+        cost_function_weighted_labeled_lines_with_plane,
+        output_a,
+        args=(pts1, pts2, pts_for_line, positions, labels, weights),
+        xtol=xtol,
+        maxfun=maxfun,
+    )
+
     Tframe = output_b
-    trans = create_rigid_transform(Tframe[0],
-                                   Tframe[1],
-                                   Tframe[2],
-                                   Tframe[3],
-                                   Tframe[4],
-                                   Tframe[5])
-    return trans,Tframe
-    
-                                                                         
+    trans = create_rigid_transform(
+        Tframe[0], Tframe[1], Tframe[2], Tframe[3], Tframe[4], Tframe[5]
+    )
+    return trans, Tframe
 
-def get_headframe_hole_lines(version = 0.1,insert_underscores = False,coordinate_system = 'LPS',return_plane = False):
+
+def get_headframe_hole_lines(
+    version=0.1,
+    insert_underscores=False,
+    coordinate_system="LPS",
+    return_plane=False,
+):
     """
     Return the lines for the headframe holes, in a format that can be used by the cost function.
     Parameters
@@ -360,7 +389,7 @@ def get_headframe_hole_lines(version = 0.1,insert_underscores = False,coordinate
     return_plane : bool, optional
         Return point for horizontal plane as last point in list
         Default is False
-        
+
     Returns
     -------
     pts1 : np.array
@@ -371,37 +400,90 @@ def get_headframe_hole_lines(version = 0.1,insert_underscores = False,coordinate
         Name of each line.
     """
     if version == 0.1:
-
-        if coordinate_system=='RAS':
+        if coordinate_system == "RAS":
             # Idealized Headframe holes
-            ant_vert_hole_pts = np.array([[5.1,-3.2,-1],[5.1,-3.2,4]]) # Z doesn't matter, just needs two points
-            post_vert_hole_pts = np.array([[6.85,-9.9,0],[6.85,-9.9,5]]) # Z doesn't matter, just needs two points
-            ant_hrz_hole_pts = np.array([[6.34,0,2.5],[6.34,-6.5,2.5]])# Y doesn't matter, just needs two points
-            post_hrz_hole_pts = np.array([[5.04,-6.5,1],[5.04,-12,1]])# Y doesn't matter, just needs two points
-        elif coordinate_system=='LPS':
-            ant_vert_hole_pts = np.array([[-5.1,3.2,-1],[-5.1,3.2,4]]) # Z doesn't matter, just needs two points
-            post_vert_hole_pts = np.array([[-6.85,9.9,0],[-6.85,9.9,5]]) # Z doesn't matter, just needs two points
-            ant_hrz_hole_pts = np.array([[-6.34,0,2.5],[-6.34,6.5,2.5]])# Y doesn't matter, just needs two points
-            post_hrz_hole_pts = np.array([[-5.04,6.5,1],[-5.04,12,1]])# Y doesn't matter, just needs two points
+            ant_vert_hole_pts = np.array(
+                [[5.1, -3.2, -1], [5.1, -3.2, 4]]
+            )  # Z doesn't matter, just needs two points
+            post_vert_hole_pts = np.array(
+                [[6.85, -9.9, 0], [6.85, -9.9, 5]]
+            )  # Z doesn't matter, just needs two points
+            ant_hrz_hole_pts = np.array(
+                [[6.34, 0, 2.5], [6.34, -6.5, 2.5]]
+            )  # Y doesn't matter, just needs two points
+            post_hrz_hole_pts = np.array(
+                [[5.04, -6.5, 1], [5.04, -12, 1]]
+            )  # Y doesn't matter, just needs two points
+        elif coordinate_system == "LPS":
+            ant_vert_hole_pts = np.array(
+                [[-5.1, 3.2, -1], [-5.1, 3.2, 4]]
+            )  # Z doesn't matter, just needs two points
+            post_vert_hole_pts = np.array(
+                [[-6.85, 9.9, 0], [-6.85, 9.9, 5]]
+            )  # Z doesn't matter, just needs two points
+            ant_hrz_hole_pts = np.array(
+                [[-6.34, 0, 2.5], [-6.34, 6.5, 2.5]]
+            )  # Y doesn't matter, just needs two points
+            post_hrz_hole_pts = np.array(
+                [[-5.04, 6.5, 1], [-5.04, 12, 1]]
+            )  # Y doesn't matter, just needs two points
 
         if insert_underscores:
-            names = ['anterior_horizontal','anterior_vertical','posterior_horizontal','posterior_vertical']
+            names = [
+                "anterior_horizontal",
+                "anterior_vertical",
+                "posterior_horizontal",
+                "posterior_vertical",
+            ]
         else:
-            names = ['anterior horizontal','anterior vertical','posterior horizontal','posterior vertical']
-            
-        if return_plane:            
+            names = [
+                "anterior horizontal",
+                "anterior vertical",
+                "posterior horizontal",
+                "posterior vertical",
+            ]
+
+        if return_plane:
             # Last point is point on plane
-            pts1 = np.array([ant_hrz_hole_pts[0,:],ant_vert_hole_pts[0,:],post_hrz_hole_pts[0,:],post_vert_hole_pts[0,:],[0,0,2]],)
+            pts1 = np.array(
+                [
+                    ant_hrz_hole_pts[0, :],
+                    ant_vert_hole_pts[0, :],
+                    post_hrz_hole_pts[0, :],
+                    post_vert_hole_pts[0, :],
+                    [0, 0, 2],
+                ],
+            )
             # Last point is plane normal
-            pts2 = np.array([ant_hrz_hole_pts[1,:],ant_vert_hole_pts[1,:],post_hrz_hole_pts[1,:],post_vert_hole_pts[1,:],[0,0,1]])
-            names.append('plane')
+            pts2 = np.array(
+                [
+                    ant_hrz_hole_pts[1, :],
+                    ant_vert_hole_pts[1, :],
+                    post_hrz_hole_pts[1, :],
+                    post_vert_hole_pts[1, :],
+                    [0, 0, 1],
+                ]
+            )
+            names.append("plane")
         else:
             # Stack in a specific order
-            pts1 = np.array([ant_hrz_hole_pts[0,:],ant_vert_hole_pts[0,:],post_hrz_hole_pts[0,:],post_vert_hole_pts[0,:]])
-            pts2 = np.array([ant_hrz_hole_pts[1,:],ant_vert_hole_pts[1,:],post_hrz_hole_pts[1,:],post_vert_hole_pts[1,:]])
+            pts1 = np.array(
+                [
+                    ant_hrz_hole_pts[0, :],
+                    ant_vert_hole_pts[0, :],
+                    post_hrz_hole_pts[0, :],
+                    post_vert_hole_pts[0, :],
+                ]
+            )
+            pts2 = np.array(
+                [
+                    ant_hrz_hole_pts[1, :],
+                    ant_vert_hole_pts[1, :],
+                    post_hrz_hole_pts[1, :],
+                    post_vert_hole_pts[1, :],
+                ]
+            )
 
-
-        return pts1,pts2, names
+        return pts1, pts2, names
     else:
-        raise ValueError('Version not supported')
-     
+        raise ValueError("Version not supported")

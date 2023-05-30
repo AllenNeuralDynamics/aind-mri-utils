@@ -81,7 +81,9 @@ def read_dicom(filename):  # pragma: no cover
         dirname = os.path.dirname(filename)
 
     reader = sitk.ImageSeriesReader()
-    dicom_names = reader.GetGDCMSeriesFileNames(dirname,useSeriesDetails =True,loadSequences = True)
+    dicom_names = reader.GetGDCMSeriesFileNames(
+        dirname, useSeriesDetails=True, loadSequences=True
+    )
     reader.SetFileNames(dicom_names)
     reader.MetaDataDictionaryArrayUpdateOn()
     reader.LoadPrivateTagsOn()

@@ -112,7 +112,7 @@ def scipy_rotation_to_sitk(
     newTransform.SetCenter(center.tolist())
     return newTransform
 
-#def sitk_rotation_to_scipy(transform):
+    # def sitk_rotation_to_scipy(transform):
     """
     Convert sitk affine transform to the equivalent scipy 'Rotation' object
     
@@ -132,13 +132,14 @@ def scipy_rotation_to_sitk(
         Rotation Center
 
     """
+
+
 #    if transform.GetDimension()!=3:
 #        raise NotImplementedError('sitk_rotation_to_scipy only supports
 #                                  3d transforms at this time.')
-#    
+#
 #    params = tranform.GetParameters()
 #    R = Rotation.from_matrix(params[:10].reshape(3,3))
 #    translation = transfrom.GetTranslation()
 #    center = transform.GetCenter()
 #    return R,tr
-    
