@@ -1,5 +1,3 @@
-from unittest.mock import MagicMock, patch
-
 import numpy as np
 import SimpleITK as sitk
 
@@ -22,11 +20,12 @@ def save_sitk_transform(filename, T, invert=False):
         If true, invert the transform before saving.
         Default is False.
 
+
     """
     if len(T) == 6:
         trans = create_rigid_transform(T[0], T[1], T[2], T[3], T[4], T[5])
     else:
-        assert (T.shape == (4, 3), "T must be a 4x3 matrix")
+        assert (T.shape == (4, 3))
         trans = T
 
     A = sitk.AffineTransform(3)
