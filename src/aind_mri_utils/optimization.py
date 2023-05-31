@@ -96,7 +96,8 @@ def cost_function_weighted_labeled_lines(
     moving : np.array(M,3)
         Position of points to be transformed.
     labels : np.array(M,dtype=int)
-        Labels of points, corresponding to index in pts1,pts2,and pts_for_line.
+        Labels of points, corresponding to index in
+        pts1,pts2,and pts_for_line.
     weights : np.array(M,) (optional)
         Weights of points
         Default is None.
@@ -104,7 +105,8 @@ def cost_function_weighted_labeled_lines(
     Returns
     -------
     Distance
-        Sum of distances between points all points and their corresponding lines, weighted by weights.
+        Sum of distances between points all points and
+        their corresponding lines, weighted by weights.
 
     """
     rx = T[0]
@@ -137,7 +139,8 @@ def cost_function_weighted_labeled_lines_with_plane(
     T, pts1, pts2, pts_for_line, moving, labels, weights=None
 ):
     """
-    Cost function for optimizing a rigid transform on weighted points; includes labeled lines and labeled planes.
+    Cost function for optimizing a rigid transform on weighted points;
+    includes labeled lines and labeled planes.
 
     Parameters
     ----------
@@ -148,7 +151,8 @@ def cost_function_weighted_labeled_lines_with_plane(
     pts2 : np.array(N,3)
         Second point on line
     pts_for_line : List[bool] or np.array(N,dtype=bool)
-        True if the line should be used for distance calculation, False if the plane should be used.
+        True if the line should be used for distance calculation,
+        False if the plane should be used.
     moving : np.array(M,3)
         position of points to be transformed.
     labels : np.array(M,dtye=int)
@@ -158,7 +162,8 @@ def cost_function_weighted_labeled_lines_with_plane(
     Returns
     -------
     Distance
-        Sum of distances between points all points and their corresponding line or plane, weighted by weights.
+        Sum of distances between points all points and
+        their corresponding line or plane, weighted by weights.
     """
     rx = T[0]
     ry = T[1]
@@ -191,7 +196,7 @@ def cost_function_weighted_labeled_lines_with_plane(
                     )
                     * weights[lst[jj]]
                 )
-            # d += np.sum([dist_point_to_plane(pts1[ii, :], pts2[ii, :], transformed[lst[tt], :])* weights[lst[tt]]for tt in lst])
+
     return np.sum(D)
 
 
@@ -208,8 +213,10 @@ def optimize_transform_labeled_lines(
     gamma=None,
 ):
     """
-    Function for optimizing a rigid transform on weighted points by minimizing distance
-    from each point to a specified line. Multiple lines can be specified by using labels.
+    Function for optimizing a rigid transform on
+    weighted points by minimizing distance
+    from each point to a specified line.
+    Multiple lines can be specified by using labels.
 
     Parameters
     ----------
@@ -222,14 +229,17 @@ def optimize_transform_labeled_lines(
     positions : np.array(M,3)
         Positions of points to optimize on.
     labels : np.array(M,1)
-        Labels for each point in positions, specifying which line that point too.
+        Labels for each point in positions,
+        specifying which line that point too.
     weights : np.array(M,1), optional
-        Weights for each point in positions. If None is passed, assumes all wieghts are 1.
+        Weights for each point in positions.
+        If None is passed, assumes all wieghts are 1.
         Default is None.
     xtol : float, optional
         Stopping tolerence for optimizer. The default is 1e-12.
     maxfun : int, optional
-        Max number of function calls for optimizer. The default is 10000.
+        Max number of function calls for optimizer.
+        The default is 10000.
     normalize : bool, optional
         If True, normalize weights to be between 0 and 1.
         The default is False.
@@ -242,9 +252,11 @@ def optimize_transform_labeled_lines(
     trans: np.array(4,4)
         Rigid transform matrix that minimizes the cost function.
     T: np.array(6,1)
-        Parameters of the rigid transform matrix that minimizes the cost function.
+        Parameters of the rigid transform matrix
+        that minimizes the cost function.
     output: tuple
-        Fitting data from scipy.optimize.fmin (see retol in scipy.optimize.fmin documentation)
+        Fitting data from scipy.optimize.fmin
+        (see retol in scipy.optimize.fmin documentation)
 
     """
     Tinit = create_rigid_transform(
@@ -255,10 +267,11 @@ def optimize_transform_labeled_lines(
         weights = np.ones((positions.shape[0], 1))
     else:
         # Gamma correct
-        # Taken from skimage.exposure.adjust_gamma. Implementing here to avoid importing skimage.
-        if gamma != None:
+        # Taken from skimage.exposure.adjust_gamma.
+        # Implementing here to avoid importing skimage.
+        if gamma is not None:
             scale = np.max(weights) - np.min(weights)
-            wieghts = ((weights / scale) ** gamma) * scale
+            weights = ((weights / scale) ** gamma) * scale
 
         if normalize:
             weights = (weights - np.min(weights)) / (
@@ -294,8 +307,10 @@ def optimize_transform_labeled_lines_with_plane(
     gamma=None,
 ):
     """
-    Function for optimizing a rigid transform on weighted points by minimizing distance
-    between each point and a specified line or plane. Multiple lines/planes can be specified by using labels.
+    Function for optimizing a rigid transform on
+    weighted points by minimizing distance
+    between each point and a specified line or plane.
+    Multiple lines/planes can be specified by using labels.
 
     Parameters
     ----------
@@ -310,14 +325,17 @@ def optimize_transform_labeled_lines_with_plane(
     positions : np.array(M,3)
         Positions of points to optimize on.
     labels : np.array(M,dtype=np.int))
-        Labels for each point in positions, specifying which line that point too.
+        Labels for each point in positions,
+        specifying which line that point too.
     weights : np.array(M,1), optional
-        Weights for each point in positions. If None is passed, assumes all wieghts are 1.
+        Weights for each point in positions.
+        If None is passed, assumes all wieghts are 1.
         Default is None.
     xtol : float, optional
         Stopping tolerence for optimizer. The default is 1e-12.
     maxfun : int, optional
-        Max number of function calls for optimizer. The default is 10000.
+        Max number of function calls for optimizer.
+        The default is 10000.
     normalize : bool, optional
         If True, normalize weights to be between 0 and 1.
         The default is False.
@@ -330,17 +348,19 @@ def optimize_transform_labeled_lines_with_plane(
     trans: np.array(4,4)
         Rigid transform matrix that minimizes the cost function.
     T: np.array(6,1)
-        Parameters of the rigid transform matrix that minimizes the cost function.
+        Parameters of the rigid transform matrix
+        that minimizes the cost function.
     """
 
     if weights is None:
         weights = np.ones((positions.shape[0], 1))
     else:
         # Gamma correct
-        # Taken from skimage.exposure.adjust_gamma. Implementing here to avoid importing skimage.
-        if gamma != None:
+        # Taken from skimage.exposure.adjust_gamma.
+        # Implementing here to avoid importing skimage.
+        if gamma is not None:
             scale = np.max(weights) - np.min(weights)
-            wieghts = ((weights / scale) ** gamma) * scale
+            weights = ((weights / scale) ** gamma) * scale
 
         if normalize:
             weights = (weights - np.min(weights)) / (
@@ -377,13 +397,18 @@ def get_headframe_hole_lines(
     return_plane=False,
 ):
     """
-    Return the lines for the headframe holes, in a format that can be used by the cost function.
+    Return the lines for the headframe holes,
+    in a format that can be used by the cost function.
+
     Parameters
     ----------
     version : float, optional
-        headframe version to match. The default is 0.1., which corresponds to the first-gen zircona hole hemisphere headframe.
+        headframe version to match.
+        The default is 0.1.,
+        which corresponds to the first-gen zircona hole hemisphere headframe.
     insert_underscores : bool, optional
-        If true, insert underscores into the names of the lines. The default is False.
+        If true, insert underscores into the names of the lines.
+        The default is False.
     coordinate_system : str, optional
         Coordinate system to return the lines in. The default is 'LPS'.
     return_plane : bool, optional

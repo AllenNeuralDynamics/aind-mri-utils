@@ -67,14 +67,14 @@ class OptimaizationTest(unittest.TestCase):
         """
         Tests optimize_transform_labeled_lines
         """
-        # Generate some test data by just moving the 'ground truth' points around
+        # Generate some test data by just moving the 'ground truth' point
+        # around
         pts1, pts2, _ = get_headframe_hole_lines()
 
         move_pts = np.vstack([pts1, pts2])
         move_pts[:, 2] = move_pts[:, 2] + 1
         move_pts = append_ones_column(move_pts)
         labels = np.array([0, 1, 2, 3, 0, 1, 2, 3])
-        weights = np.ones((8,))
 
         init = np.zeros((6,))
         trans, Tframe = optimize_transform_labeled_lines(
@@ -99,9 +99,7 @@ class OptimaizationTest(unittest.TestCase):
         move_pts = append_ones_column(move_pts)
 
         labels = np.array([0, 1, 2, 3, 0, 1, 2, 3, 4])
-        weights = np.ones(
-            len(labels),
-        )
+
         pts_for_line = np.ones(len(labels), dtype=bool)
         pts_for_line[-1] = False
 

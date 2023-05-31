@@ -49,6 +49,7 @@ class SITKTest(unittest.TestCase):
     def close_enough(self, a, b):
         """Helper function to check if two arrays are close enough."""
         return np.all(np.abs(a - b) < 0.0001)
-    
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -46,7 +46,8 @@ def load_obj_wavefront(filename):
 
 def load_wavefront_get_vertices_faces(filename):
     """
-    Shortcut function for leading a wavefront file and getting vertices and faces.
+    Shortcut function for leading a wavefront
+    file and getting vertices and faces.
     """
     scene = load_obj_wavefront(filename)
     return get_vertices_and_faces(scene)

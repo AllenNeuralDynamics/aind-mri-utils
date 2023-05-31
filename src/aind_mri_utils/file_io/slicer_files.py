@@ -31,6 +31,9 @@ def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
 
 
 def find_seg_nrrd_header_segment_info(header_odict):
+    """
+    Get header information from a 3D Slicer generated .seg.nrrd file
+    """
     matches = filter(
         None,
         map(
@@ -53,11 +56,13 @@ def load_segmentation_points(label_vol, order=None, image=None):
     label_vol : SimpleITK.Image or str
         SimpleITK.Image or filename to open. Must be .seg.nrrd
     order : list of strings, optional
-        list of segment names to load. Labels will be in order specified by order
+        list of segment names to load.
+        Labels will be in order specified by order.
         If None, labels will be loaded in the order they are found in the file.
         Default is None.
     image : SimpleITK.Image, optional
-        Image to use for extracting the weights (image intensity) for each labeled point
+        Image to use for extracting the weights
+        (image intensity) for each labeled point
 
     Returns
     -------
@@ -93,9 +98,7 @@ def load_segmentation_points(label_vol, order=None, image=None):
             idx = np.vstack((idxx[2], idxx[1], idxx[0])).T  # convert to xyz
             this_position = np.zeros(idx.shape)
             for ii in range(idx.shape[0]):
-                this_position[
-                    ii, :
-                ] = this_masked_image.TransformIndexToPhysicalPoint(
+                this_position[ii, :] = is_label.TransformIndexToPhysicalPoint(
                     idx[ii, :].tolist()
                 )
             positions.append(this_position)
