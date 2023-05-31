@@ -1,3 +1,6 @@
+"""
+Code for handling manual keypoints transforms using vtk
+"""
 import vtk
 import numpy as np
 
