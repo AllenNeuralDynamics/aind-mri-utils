@@ -45,6 +45,7 @@ class CoordinateSystemsTest(unittest.TestCase):
         )
 
     def test_find_coordinate_perm_and_flips(self) -> None:
+        """Tests for find_coordinate_perm_and_flips"""
         perm, direction = cs.find_coordinate_perm_and_flips("RAS", "LPI")
         self.assertTrue(
             np.array_equal(perm, [0, 1, 2])
@@ -131,6 +132,7 @@ class CoordinateSystemsTest(unittest.TestCase):
         )
 
     def test_convert_coordinate_system(self):
+        """Tests for convert_coordinate_system"""
         expected = np.array([-1, -1, -1]) * self.test_coordinates[:, [0, 1, 2]]
         self.coordinate_helper_func("RAS", "LPI", expected)
         expected = np.array([-1, -1, -1]) * self.test_coordinates[:, [1, 0, 2]]
@@ -139,6 +141,7 @@ class CoordinateSystemsTest(unittest.TestCase):
         self.coordinate_helper_func("RAS", "ASR", expected)
 
     def test_matrix_to_rig_angles(self):
+        """Tests for matrix_to_rig_angles"""
         ap, ml = cs.matrix_to_rig_angles(np.eye(3), np.zeros(3))
         self.assertTrue(np.array_equal(ap, 14))
         self.assertTrue(np.array_equal(ml, 0))

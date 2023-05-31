@@ -23,7 +23,8 @@ dependencies = [
     'numpy',
     'pywavefront',
     'scipy',
-    'SimpleITK'
+    'SimpleITK',
+    'vtk'
 ]
 
 [project.optional-dependencies]
