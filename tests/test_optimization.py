@@ -48,6 +48,13 @@ class OptimaizationTest(unittest.TestCase):
         self.assertTrue("_" in names[0])
         self.assertTrue(len(names) == 5)
 
+        # Test that value error is raised if bad version in passed
+        try:
+            get_headframe_hole_lines(version =12)
+            self.assertTrue(False)
+        except ValueError:
+            self.assertTrue(True)
+
     def test_append_ones_column(self) -> None:
         """
         Tests append_ones_column
@@ -75,10 +82,22 @@ class OptimaizationTest(unittest.TestCase):
         move_pts[:, 2] = move_pts[:, 2] + 1
         move_pts = append_ones_column(move_pts)
         labels = np.array([0, 1, 2, 3, 0, 1, 2, 3])
-
+        weights = np.ones(
+            len(labels),
+        )
+        # Test with default weights input
         init = np.zeros((6,))
         trans, Tframe = optimize_transform_labeled_lines(
             init, pts1, pts2, move_pts, labels
+        )
+        self.assertTrue(Tframe[-1] - 1 < 1e-6)
+        self.assertTrue(trans[-1, -1] - 1 < 1e-6)
+
+        # Test with non-default weights input
+        init = np.zeros((6,))
+        trans, Tframe = optimize_transform_labeled_lines(
+            init, pts1, pts2, move_pts, labels,
+            weights=weights,gamma=.5,normalize=True,
         )
         self.assertTrue(Tframe[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)
@@ -99,10 +118,13 @@ class OptimaizationTest(unittest.TestCase):
         move_pts = append_ones_column(move_pts)
 
         labels = np.array([0, 1, 2, 3, 0, 1, 2, 3, 4])
+        weights = np.ones(
+            len(labels),
+        )
 
-        pts_for_line = np.ones(len(labels), dtype=bool)
+        pts_for_line = np.ones(pts1.shape[0], dtype=bool)
         pts_for_line[-1] = False
-
+        # Test with all no weights added
         init = np.zeros((6,))
         trans, Tframe = optimize_transform_labeled_lines_with_plane(
             init, pts1, pts2, pts_for_line, move_pts, labels
@@ -111,6 +133,15 @@ class OptimaizationTest(unittest.TestCase):
         self.assertTrue(Tframe[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)
 
+        # Test with weights input
+        init = np.zeros((6,))
+        trans, Tframe = optimize_transform_labeled_lines_with_plane(
+            init, pts1, pts2, pts_for_line, move_pts, labels,
+            weights=weights,gamma=.5,normalize=True,
+        )
+
+        self.assertTrue(Tframe[-1] - 1 < 1e-6)
+        self.assertTrue(trans[-1, -1] - 1 < 1e-6)
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,7 @@
 """
 
 import numpy as np
+from aind_mri_utils.measurement import angle
 
 
 def find_coordinate_perm_and_flips(src: str, dst: str):  # noqa: C901
@@ -26,7 +27,7 @@ def find_coordinate_perm_and_flips(src: str, dst: str):  # noqa: C901
     move to the patient's right).
 
     Parameters
-    ----------
+    ---------
     src: str
         String specifying a coordinate system, as described above
     dst: str
@@ -143,7 +144,6 @@ def matrix_to_rig_angles(matrix, origin, mouse_ap_tilt=14):
         angle of the mouse in the AP direction in degrees
         Default: 14 degrees
     """
-    from aind_mri_utils.measurement import angle
 
     A = np.array([[0, 0, 1000], [0, 0, 0]]) / 1000
     B = np.dot(A, np.linalg.inv(matrix)) - origin

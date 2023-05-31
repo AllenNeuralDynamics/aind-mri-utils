@@ -80,11 +80,11 @@ def create_rigid_transform(rx, ry, rz, cx, cy, cz):
 
 
 def cost_function_weighted_labeled_lines(
-    T, pts1, pts2, moving, labels, weights=None
+    T, pts1, pts2, moving, labels, weights
 ):
     """
     Cost function for optimizing a rigid transform on weighted points.
-
+    
     Parameters
     ----------
     T : np.array(6,)
@@ -98,9 +98,8 @@ def cost_function_weighted_labeled_lines(
     labels : np.array(M,dtype=int)
         Labels of points, corresponding to index in
         pts1,pts2,and pts_for_line.
-    weights : np.array(M,) (optional)
+    weights : np.array(M,) 
         Weights of points
-        Default is None.
 
     Returns
     -------
@@ -118,9 +117,6 @@ def cost_function_weighted_labeled_lines(
     trans = create_rigid_transform(rx, ry, rz, cx, cy, cz)
     transformed = np.dot(moving, trans)
 
-    if weights is None:
-        weights = np.ones((moving.shape[0], 1))
-
     D = np.zeros((moving.shape[0], 1))
     for ii in range(pts1.shape[0]):
         lst = np.where(labels == ii)[0]
@@ -136,7 +132,7 @@ def cost_function_weighted_labeled_lines(
 
 
 def cost_function_weighted_labeled_lines_with_plane(
-    T, pts1, pts2, pts_for_line, moving, labels, weights=None
+    T, pts1, pts2, pts_for_line, moving, labels, weights
 ):
     """
     Cost function for optimizing a rigid transform on weighted points;
@@ -157,7 +153,7 @@ def cost_function_weighted_labeled_lines_with_plane(
         position of points to be transformed.
     labels : np.array(M,dtye=int)
         Labels of points, corresponding to index in pts1,pts2,and pts_for_line.
-    weights : np.array(M,) (optional)
+    weights : np.array(M,)
 
     Returns
     -------
@@ -173,9 +169,6 @@ def cost_function_weighted_labeled_lines_with_plane(
     cz = T[5]
     trans = create_rigid_transform(rx, ry, rz, cx, cy, cz)
     transformed = np.dot(moving, trans)
-
-    if weights is None:
-        weights = np.ones((moving.shape[0], 1))
 
     D = np.zeros((moving.shape[0], 1))
     for ii in range(pts1.shape[0]):

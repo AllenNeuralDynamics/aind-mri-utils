@@ -22,6 +22,12 @@ class SITKTest(unittest.TestCase):
         load_trans = si.load_sitk_transform(str(Path("testsave.h5")))
         self.assertTrue(self.close_enough(trans, load_trans))
 
+        # Test that the above can work from 6x1
+        si.save_sitk_transform(str(Path("testsave.h5")), [0,0,0,0,0,0])
+        load_trans = si.load_sitk_transform(str(Path("testsave.h5")))
+        self.assertTrue(self.close_enough(trans, load_trans))
+
+
         # Test more complicated transform
         trans[0, -1] = 1
         si.save_sitk_transform(str(Path("testsave.h5")), trans)

@@ -122,7 +122,7 @@ def find_line_eig(points):
     return b[:, 0], points_mean
 
 
-def closet_point_between_lines(P1, V1, P2, V2):
+def closet_points_on_two_lines(P1, V1, P2, V2):
     """
     Taken, with modification, from:
     https://math.stackexchange.com/questions/846054/...
