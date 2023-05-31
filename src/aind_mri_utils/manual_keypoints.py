@@ -1,8 +1,8 @@
 import vtk
 import numpy as np
 
-def define_transform(source_landmarks, target_landmarks):
 
+def define_transform(source_landmarks, target_landmarks):
     """
     Defines a non-linear warp between a set of source and target landmarks
 
@@ -22,12 +22,12 @@ def define_transform(source_landmarks, target_landmarks):
     target_points = vtk.vtkPoints()
 
     for i in range(source_landmarks.shape[0]):
-        source_points.InsertNextPoint(source_landmarks[i,:])
-        
-    for i in range(target_landmarks.shape[0]):
-        target_points.InsertNextPoint(target_landmarks[i,:])
+        source_points.InsertNextPoint(source_landmarks[i, :])
 
-    transform.SetBasisToR() # for 3D transform
+    for i in range(target_landmarks.shape[0]):
+        target_points.InsertNextPoint(target_landmarks[i, :])
+
+    transform.SetBasisToR()  # for 3D transform
     transform.SetSourceLandmarks(source_points)
     transform.SetTargetLandmarks(target_points)
     transform.Update()
@@ -36,7 +36,6 @@ def define_transform(source_landmarks, target_landmarks):
 
 
 def apply_transform(transform, points):
-    
     """
     Applies a non-linear warp to a set of points
 
@@ -53,6 +52,6 @@ def apply_transform(transform, points):
 
     warped_points = np.zeros(points.shape)
     for i in range(points.shape[0]):
-        warped_points[i,:] = transform.TransformPoint(points[i,:])
+        warped_points[i, :] = transform.TransformPoint(points[i, :])
 
     return warped_points
