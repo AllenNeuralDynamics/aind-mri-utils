@@ -40,6 +40,7 @@ def find_seg_nrrd_header_segment_info(header):
     """
     parse keys of slicer created dict to find segment names and values
 
+
     Parameters
     ----------
     header : dict-like
