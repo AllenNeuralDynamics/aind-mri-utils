@@ -84,7 +84,7 @@ def cost_function_weighted_labeled_lines(
 ):
     """
     Cost function for optimizing a rigid transform on weighted points.
-    
+
     Parameters
     ----------
     T : np.array(6,)
@@ -98,7 +98,7 @@ def cost_function_weighted_labeled_lines(
     labels : np.array(M,dtype=int)
         Labels of points, corresponding to index in
         pts1,pts2,and pts_for_line.
-    weights : np.array(M,) 
+    weights : np.array(M,)
         Weights of points
 
     Returns

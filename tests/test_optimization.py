@@ -50,7 +50,7 @@ class OptimaizationTest(unittest.TestCase):
 
         # Test that value error is raised if bad version in passed
         try:
-            get_headframe_hole_lines(version =12)
+            get_headframe_hole_lines(version=12)
             self.assertTrue(False)
         except ValueError:
             self.assertTrue(True)
@@ -96,8 +96,14 @@ class OptimaizationTest(unittest.TestCase):
         # Test with non-default weights input
         init = np.zeros((6,))
         trans, Tframe = optimize_transform_labeled_lines(
-            init, pts1, pts2, move_pts, labels,
-            weights=weights,gamma=.5,normalize=True,
+            init,
+            pts1,
+            pts2,
+            move_pts,
+            labels,
+            weights=weights,
+            gamma=0.5,
+            normalize=True,
         )
         self.assertTrue(Tframe[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)
@@ -136,12 +142,20 @@ class OptimaizationTest(unittest.TestCase):
         # Test with weights input
         init = np.zeros((6,))
         trans, Tframe = optimize_transform_labeled_lines_with_plane(
-            init, pts1, pts2, pts_for_line, move_pts, labels,
-            weights=weights,gamma=.5,normalize=True,
+            init,
+            pts1,
+            pts2,
+            pts_for_line,
+            move_pts,
+            labels,
+            weights=weights,
+            gamma=0.5,
+            normalize=True,
         )
 
         self.assertTrue(Tframe[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)
+
 
 if __name__ == "__main__":
     unittest.main()

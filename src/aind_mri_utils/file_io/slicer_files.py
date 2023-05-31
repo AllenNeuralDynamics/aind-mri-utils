@@ -60,14 +60,15 @@ def find_seg_nrrd_header_segment_info(header):
     return segment_info
 
 
-
-def load_segmentation_points(label_vol, order=None, image=None):# pragma: no cover
+def load_segmentation_points(
+    label_vol, order=None, image=None
+):  # pragma: no cover
     """
     Load segmentation points from a 3D Slicer generated .seg.nrrd file
 
     Note that, because this is effectively an image loader, it is excluded from
     coverage tests
-    
+
     Parameters
     ----------
     label_vol : SimpleITK.Image or str

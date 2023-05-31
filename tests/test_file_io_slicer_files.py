@@ -7,13 +7,6 @@ import numpy as np
 from aind_mri_utils.file_io import slicer_files as sf
 
 
-import unittest
-
-import numpy as np
-
-from aind_mri_utils.file_io import slicer_files as sf
-
-
 class SlicerFilesTest(unittest.TestCase):
     """Tests functions in `file_io.slicer_files`."""
 

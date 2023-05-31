@@ -44,7 +44,7 @@ def load_obj_wavefront(filename):
     return scene
 
 
-def load_wavefront_get_vertices_faces(filename): # pragma: no cover
+def load_wavefront_get_vertices_faces(filename):  # pragma: no cover
     """
     Shortcut function for leading a wavefront
     file and getting vertices and faces.
