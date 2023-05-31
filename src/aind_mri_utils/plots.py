@@ -75,3 +75,11 @@ def make_3d_ax_look_normal(ax: plt.Axes):
     """
     ax.set_box_aspect([1, 1, 1])
     set_axes_equal(ax)
+
+
+def get_prop_cycle():  # pragma: no cover
+    """
+    Returns the colors in the current prop cycle
+    """
+    prop_cycle = plt.rcParams["axes.prop_cycle"]
+    return prop_cycle.by_key()["color"]
