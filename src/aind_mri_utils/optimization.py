@@ -280,6 +280,7 @@ def optimize_transform_labeled_lines(
     )
 
     Tframe = output
+    print(output)
     trans = create_rigid_transform(
         Tframe[0], Tframe[1], Tframe[2], Tframe[3], Tframe[4], Tframe[5]
     )

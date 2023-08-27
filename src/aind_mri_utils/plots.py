@@ -3,6 +3,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import tri as mpt
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 
 def plot_tri_mesh(ax, vertices, faces, *plot_args, **plot_kwargs):
@@ -83,3 +84,40 @@ def get_prop_cycle():  # pragma: no cover
     """
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     return prop_cycle.by_key()["color"]
+
+def create_single_colormap(colorname,N = 256,saturation = 0,start_color = "white",is_transparent = True,is_reverse = False):
+    """"
+    Creates a colormap with a single color
+
+    Parameters
+    ==========
+    colorname - string name of color
+    N - number of colors in colormap
+    saturation - number of colors to add to the colormap
+    start_color - color to start the colormap with
+    is_transparent - whether to make the start color transparent
+    is_reverse - whether to reverse the colormap
+    Returns
+    =======
+    cmap - matplotlib colormap
+
+    """
+    cmap = ListedColormap([start_color,colorname])
+    start_color = np.array(cmap(0))
+    if is_transparent:
+        start_color[-1] = 0
+    if not is_reverse:
+        cmap = ListedColormap(
+            np.vstack(
+                (np.linspace(start_color,cmap(1),N),
+                np.tile(cmap(1),(int(saturation*N),1)))
+            )
+        )
+    else:
+        cmap = ListedColormap(
+            np.vstack(
+                (np.tile(cmap(1),(int(saturation*N),1)),
+                np.linspace(cmap(1),start_color,N),)
+            )
+        )
+    return cmap
