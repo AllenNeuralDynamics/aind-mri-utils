@@ -194,32 +194,39 @@ def markup_json_to_dict(filename):  # pragma: no cover
     pos, names = markup_json_to_numpy(filename)
     return dict(zip(names, pos))
 
-def create_slicer_fcsv(filename,pts_dict,direction = 'LPS'):
+
+def create_slicer_fcsv(filename, pts_dict, direction="LPS"):
     """
     Save fCSV file that is slicer readable.
     """
     # Create output file
-    OutObj = open(filename,"w+")
+    OutObj = open(filename, "w+")
 
-    header0 = '# Markups fiducial file version = 4.11\n'
-    header1 = '# CoordinateSystem = '+ direction+'\n'
-    header2 = '# columns = id,x,y,z,ow,ox,oy,oz,vis,sel,lock,label,desc,associatedNodeID\n'
+    header0 = "# Markups fiducial file version = 4.11\n"
+    header1 = "# CoordinateSystem = " + direction + "\n"
+    header2 = "# columns = id,x,y,z,ow,ox,oy,oz,vis,sel,lock,label,desc,associatedNodeID\n"
 
-    OutObj.writelines([header0,header1,header2])
+    OutObj.writelines([header0, header1, header2])
 
     outlines = []
-    for ii,key in enumerate(pts_dict.keys()):
+    for ii, key in enumerate(pts_dict.keys()):
         outlines.append(
-            str(ii+1) +','+
-            str(pts_dict[key][0])+','+
-            str(pts_dict[key][1])+','+
-            str(pts_dict[key][2])+
-            ',0,0,0,1,1,1,0,'
-            +key+',,vtkMRMLScalarVolumeNode1\n')
+            str(ii + 1)
+            + ","
+            + str(pts_dict[key][0])
+            + ","
+            + str(pts_dict[key][1])
+            + ","
+            + str(pts_dict[key][2])
+            + ",0,0,0,1,1,1,0,"
+            + key
+            + ",,vtkMRMLScalarVolumeNode1\n"
+        )
 
     OutObj.writelines(outlines)
 
-def read_slicer_fcsv(filename,direction = 'LPS'):
+
+def read_slicer_fcsv(filename, direction="LPS"):
     """
     Read fscv into dictionary.
     While reading, points will be converted to the specified direction.
@@ -238,30 +245,34 @@ def read_slicer_fcsv(filename,direction = 'LPS'):
     Dictionary
         dictionary with keys = point names and values = np.array of points.
     """
-    InObj = open(filename,"r")
+    InObj = open(filename, "r")
     lines = InObj.readlines()
 
     point_dictionary = {}
 
-    for ii,line in enumerate(lines):
-        if '# CoordinateSystem = ' in line:
-            coordinate_system = line.split(' = ')[1].strip('\n')
+    for ii, line in enumerate(lines):
+        if "# CoordinateSystem = " in line:
+            coordinate_system = line.split(" = ")[1].strip("\n")
             print(coordinate_system)
-        if '# columns = ' in line:
-            columns = line.split(' = ')[1].strip('\n').split(',')
-        if '#' not in line:
-            this_data = line.split(',')
-            key = this_data[columns.index('label')]
-            point_dictionary[key] = np.array([
-                float(this_data[columns.index('x')]),
-                float(this_data[columns.index('y')]),
-                float(this_data[columns.index('z')])
-            ])
+        if "# columns = " in line:
+            columns = line.split(" = ")[1].strip("\n").split(",")
+        if "#" not in line:
+            this_data = line.split(",")
+            key = this_data[columns.index("label")]
+            point_dictionary[key] = np.array(
+                [
+                    float(this_data[columns.index("x")]),
+                    float(this_data[columns.index("y")]),
+                    float(this_data[columns.index("z")]),
+                ]
+            )
             print(point_dictionary[key])
 
     if coordinate_system != direction:
-        for ii,key in enumerate(point_dictionary.keys()):
-            point_dictionary[key] = convert_coordinate_system(point_dictionary[key],coordinate_system,direction)
+        for ii, key in enumerate(point_dictionary.keys()):
+            point_dictionary[key] = convert_coordinate_system(
+                point_dictionary[key], coordinate_system, direction
+            )
     InObj.close()
 
     return point_dictionary
