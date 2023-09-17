@@ -200,23 +200,23 @@ def create_slicer_fcsv(filename,pts_dict,direction = 'LPS'):
     """
     # Create output file
     OutObj = open(filename,"w+")
-    
+
     header0 = '# Markups fiducial file version = 4.11\n'
     header1 = '# CoordinateSystem = '+ direction+'\n'
     header2 = '# columns = id,x,y,z,ow,ox,oy,oz,vis,sel,lock,label,desc,associatedNodeID\n'
-    
+
     OutObj.writelines([header0,header1,header2])
-    
+
     outlines = []
     for ii,key in enumerate(pts_dict.keys()):
         outlines.append(
-            str(ii+1) +','+ 
-            str(pts_dict[key][0])+','+ 
-            str(pts_dict[key][1])+','+ 
+            str(ii+1) +','+
+            str(pts_dict[key][0])+','+
+            str(pts_dict[key][1])+','+
             str(pts_dict[key][2])+
-            ',0,0,0,1,1,1,0,' 
+            ',0,0,0,1,1,1,0,'
             +key+',,vtkMRMLScalarVolumeNode1\n')
-    
+
     OutObj.writelines(outlines)
 
 def read_slicer_fcsv(filename,direction = 'LPS'):
