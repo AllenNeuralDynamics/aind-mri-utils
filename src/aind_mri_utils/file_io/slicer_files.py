@@ -200,31 +200,20 @@ def create_slicer_fcsv(filename, pts_dict, direction="LPS"):
     Save fCSV file that is slicer readable.
     """
     # Create output file
-    OutObj = open(filename, "w+")
-
-    header0 = "# Markups fiducial file version = 4.11\n"
-    header1 = "# CoordinateSystem = " + direction + "\n"
-    header2 = "# columns = id,x,y,z,ow,ox,oy,oz,vis,sel,lock,label,desc,associatedNodeID\n"
-
-    OutObj.writelines([header0, header1, header2])
-
-    outlines = []
-    for ii, key in enumerate(pts_dict.keys()):
-        outlines.append(
-            str(ii + 1)
-            + ","
-            + str(pts_dict[key][0])
-            + ","
-            + str(pts_dict[key][1])
-            + ","
-            + str(pts_dict[key][2])
-            + ",0,0,0,1,1,1,0,"
-            + key
-            + ",,vtkMRMLScalarVolumeNode1\n"
+    with open(filename, "w+") as f:
+        f.write("# Markups fiducial file version = 4.11\n")
+        f.write("# CoordinateSystem = {}\n".format(direction))
+        f.write(
+            "# columns = id,x,y,z,ow,ox,oy,oz,vis,sel,lock,label,desc,associatedNodeID\n"
         )
 
-    OutObj.writelines(outlines)
-
+        for ptno, key in enumerate(pts_dict.keys()):
+            x, y, z = pts_dict[key]
+            f.write(
+                "{:d},{:f},{:f},{:f},0,0,0,1,1,1,0,{!s},,vtkMRMLScalarVolumeNode1\n".format(
+                    ptno + 1, x, y, z, key
+                )
+            )
 
 def read_slicer_fcsv(filename, direction="LPS"):
     """
