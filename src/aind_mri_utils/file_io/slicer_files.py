@@ -236,34 +236,43 @@ def read_slicer_fcsv(filename, direction="LPS"):
     Dictionary
         dictionary with keys = point names and values = np.array of points.
     """
-    InObj = open(filename, "r")
-    lines = InObj.readlines()
+    if not filename.endswith(".fcsv"):
+        raise ValueError("File must be a .fcsv file")
+    valid_directions = {"LPS", "RAS", "LAS", "LAI", "RAI", "RPI", "LPI", "LAI"}
+    if direction not in valid_directions:
+        raise ValueError(f"Direction must be one of {valid_directions}")
 
     point_dictionary = {}
+    coordinate_system = None
+    columns = []
 
-    for ii, line in enumerate(lines):
-        if "# CoordinateSystem = " in line:
-            coordinate_system = line.split(" = ")[1].strip("\n")
-            print(coordinate_system)
-        if "# columns = " in line:
-            columns = line.split(" = ")[1].strip("\n").split(",")
-        if "#" not in line:
-            this_data = line.split(",")
-            key = this_data[columns.index("label")]
-            point_dictionary[key] = np.array(
-                [
-                    float(this_data[columns.index("x")]),
-                    float(this_data[columns.index("y")]),
-                    float(this_data[columns.index("z")]),
-                ]
-            )
-            print(point_dictionary[key])
+    with open(filename, "r") as f:
 
-    if coordinate_system != direction:
-        for ii, key in enumerate(point_dictionary.keys()):
+        for ii, line in enumerate(f):
+            if line.startswith("#"):
+                if "CoordinateSystem" in line:
+                    coordinate_system = line.split("=")[1].strip()
+                elif "columns" in line:
+                    columns = [
+                        col.strip() for col in line.split("=")[1].split(",")
+                    ]
+            else:
+                point_data = line.strip().split(",")
+                if "label" in columns and all(
+                    axis in columns for axis in ["x", "y", "z"]
+                ):
+                    point_key = point_data[columns.index("label")]
+                    point_values = np.array(
+                        [
+                            float(point_data[columns.index(axis)])
+                            for axis in ["x", "y", "z"]
+                        ]
+                    )
+                    point_dictionary[point_key] = point_values
+    if coordinate_system and coordinate_system != direction:
+        for key, value in point_dictionary.items():
             point_dictionary[key] = convert_coordinate_system(
-                point_dictionary[key], coordinate_system, direction
+                value, coordinate_system, direction
             )
-    InObj.close()
 
     return point_dictionary
