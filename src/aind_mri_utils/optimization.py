@@ -252,9 +252,6 @@ def optimize_transform_labeled_lines(
         (see retol in scipy.optimize.fmin documentation)
 
     """
-    Tinit = create_rigid_transform(
-        init[0], init[1], init[2], init[3], init[4], init[5]
-    )
 
     if weights is None:
         weights = np.ones((positions.shape[0], 1))
@@ -273,7 +270,7 @@ def optimize_transform_labeled_lines(
 
     output = fmin(
         cost_function_weighted_labeled_lines,
-        Tinit,
+        init,
         args=(pts1, pts2, positions, labels, weights),
         xtol=xtol,
         maxfun=maxfun,
