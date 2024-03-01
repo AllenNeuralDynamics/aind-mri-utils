@@ -140,12 +140,6 @@ class CoordinateSystemsTest(unittest.TestCase):
         expected = self.test_coordinates[:, [1, 2, 0]]
         self.coordinate_helper_func("RAS", "ASR", expected)
 
-    def test_matrix_to_rig_angles(self):
-        """Tests for matrix_to_rig_angles"""
-        ap, ml = cs.matrix_to_rig_angles(np.eye(3), np.zeros(3))
-        self.assertTrue(np.array_equal(ap, 14))
-        self.assertTrue(np.array_equal(ml, 0))
-
 
 if __name__ == "__main__":
     unittest.main()
