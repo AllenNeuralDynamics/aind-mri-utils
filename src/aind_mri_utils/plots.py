@@ -3,7 +3,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import tri as mpt
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from matplotlib.colors import ListedColormap
 
 
 def plot_tri_mesh(ax, vertices, faces, *plot_args, **plot_kwargs):

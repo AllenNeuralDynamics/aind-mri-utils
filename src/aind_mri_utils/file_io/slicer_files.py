@@ -6,6 +6,7 @@ from typing import Tuple
 
 import numpy as np
 import SimpleITK as sitk
+
 from aind_mri_utils.coordinate_systems import convert_coordinate_system
 
 
@@ -138,10 +139,10 @@ def load_segmentation_points(
                 this_weight[ii] = this_masked_image.GetPixel(
                     idx[ii, :].tolist()
                 )
-                this_position[
-                    ii, :
-                ] = this_masked_image.TransformIndexToPhysicalPoint(
-                    idx[ii, :].tolist()
+                this_position[ii, :] = (
+                    this_masked_image.TransformIndexToPhysicalPoint(
+                        idx[ii, :].tolist()
+                    )
                 )
 
             weights.append(this_weight)
@@ -214,6 +215,7 @@ def create_slicer_fcsv(filename, pts_dict, direction="LPS"):
                     ptno + 1, x, y, z, key
                 )
             )
+
 
 def read_slicer_fcsv(filename, direction="LPS"):
     """

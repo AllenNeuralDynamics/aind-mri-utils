@@ -5,6 +5,7 @@ SimpleITK example code is under Apache License, see:
 https://github.com/SimpleITK/TUTORIAL/blob/main/LICENSE
 
 """
+
 import numpy as np
 import SimpleITK as sitk
 

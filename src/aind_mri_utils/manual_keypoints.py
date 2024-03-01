@@ -1,8 +1,9 @@
 """
 Code for handling manual keypoints transforms using vtk
 """
-import vtk
+
 import numpy as np
+import vtk
 
 
 def define_transform(source_landmarks, target_landmarks):

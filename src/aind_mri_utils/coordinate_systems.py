@@ -2,7 +2,6 @@
 """
 
 import numpy as np
-from aind_mri_utils.measurement import angle
 
 
 def find_coordinate_perm_and_flips(src: str, dst: str):  # noqa: C901
