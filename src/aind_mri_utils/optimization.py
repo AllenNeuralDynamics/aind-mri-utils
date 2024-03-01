@@ -193,6 +193,27 @@ def cost_function_weighted_labeled_lines_with_plane(
     return np.sum(D)
 
 
+def _preprocess_weights(weights, positions, normalize, gamma):
+    """
+    Preprocess weights for use in optimization functions
+    """
+    if weights is None:
+        weights = np.ones((positions.shape[0], 1))
+    else:
+        # Gamma correct
+        # Taken from skimage.exposure.adjust_gamma.
+        # Implementing here to avoid importing skimage.
+        scale = np.max(weights) - np.min(weights)
+        if abs(scale) > 1e-6:
+            if gamma is not None:
+                if abs(scale) > 1e-6:
+                    weights = ((weights / scale) ** gamma) * scale
+
+            if normalize:
+                weights = (weights - np.min(weights)) / (scale)
+    return weights
+
+
 def optimize_transform_labeled_lines(
     init,
     pts1,
@@ -253,20 +274,7 @@ def optimize_transform_labeled_lines(
 
     """
 
-    if weights is None:
-        weights = np.ones((positions.shape[0], 1))
-    else:
-        # Gamma correct
-        # Taken from skimage.exposure.adjust_gamma.
-        # Implementing here to avoid importing skimage.
-        if gamma is not None:
-            scale = np.max(weights) - np.min(weights)
-            weights = ((weights / scale) ** gamma) * scale
-
-        if normalize:
-            weights = (weights - np.min(weights)) / (
-                np.max(weights) - np.min(weights)
-            )
+    weights = _preprocess_weights(weights, positions, normalize, gamma)
 
     output = fmin(
         cost_function_weighted_labeled_lines,
@@ -342,21 +350,7 @@ def optimize_transform_labeled_lines_with_plane(
         Parameters of the rigid transform matrix
         that minimizes the cost function.
     """
-
-    if weights is None:
-        weights = np.ones((positions.shape[0], 1))
-    else:
-        # Gamma correct
-        # Taken from skimage.exposure.adjust_gamma.
-        # Implementing here to avoid importing skimage.
-        if gamma is not None:
-            scale = np.max(weights) - np.min(weights)
-            weights = ((weights / scale) ** gamma) * scale
-
-        if normalize:
-            weights = (weights - np.min(weights)) / (
-                np.max(weights) - np.min(weights)
-            )
+    weights = _preprocess_weights(weights, positions, normalize, gamma)
 
     output_a = fmin(
         cost_function_weighted_labeled_lines,
