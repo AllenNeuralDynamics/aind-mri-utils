@@ -1,5 +1,7 @@
 """Functions for working with obj files"""
 
+from pathlib import Path
+
 import numpy as np
 import pywavefront
 
@@ -19,7 +21,7 @@ def get_vertices_and_faces(scene):
             each element corresponds to the index of a vertex in `vertices`.
             Each list element corresponds to a different mesh.
     """
-    if isinstance(scene, str):
+    if isinstance(scene, str) or isinstance(scene, Path):
         scene = load_obj_wavefront(scene)
     vertices = np.array(scene.vertices)
     faces = []
