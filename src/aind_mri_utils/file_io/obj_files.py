@@ -19,6 +19,8 @@ def get_vertices_and_faces(scene):
             each element corresponds to the index of a vertex in `vertices`.
             Each list element corresponds to a different mesh.
     """
+    if isinstance(scene, str):
+        scene = load_obj_wavefront(scene)
     vertices = np.array(scene.vertices)
     faces = []
     for mesh in scene.mesh_list:
@@ -42,15 +44,3 @@ def load_obj_wavefront(filename):
         filename, strict=False, create_materials=True, collect_faces=True
     )
     return scene
-
-
-def load_wavefront_get_vertices_faces(filename):  # pragma: no cover
-    """
-    Shortcut function for leading a wavefront
-    file and getting vertices and faces.
-
-    Since this is just a wrapper to save a line of code, it is excluded from
-    coverages tests
-    """
-    scene = load_obj_wavefront(filename)
-    return get_vertices_and_faces(scene)
