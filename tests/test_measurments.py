@@ -60,6 +60,13 @@ class MeasurmentTest(unittest.TestCase):
         self.assertTrue(np.array_equal(ln, np.array([1, 0, 0])))
         self.assertTrue(np.array_equal(mn, np.array([1, 0, 0])))
 
+    def test_angle(self):
+        # Test code for angle between two vectors
+        x = measurement.angle(np.array([1, 0, 0]), np.array([0, 1, 0]))
+        self.assertEqual(x, 90)
+        x = measurement.angle(np.array([1, 0, 0]), np.array([1, 0, 0]))
+        self.assertEqual(x, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

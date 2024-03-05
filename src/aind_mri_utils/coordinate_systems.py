@@ -123,6 +123,9 @@ def convert_coordinate_system(
         The N input points transformed into the destination coordinate system
     """
     perm, direction = find_coordinate_perm_and_flips(src_coord, dst_coord)
-    out = arr[:, perm]
+    if arr.ndim == 1:
+        out = arr[perm]
+    else:
+        out = arr[:, perm]
     out *= direction
     return out

@@ -139,10 +139,10 @@ def load_segmentation_points(
                 this_weight[ii] = this_masked_image.GetPixel(
                     idx[ii, :].tolist()
                 )
-                this_position[ii, :] = (
-                    this_masked_image.TransformIndexToPhysicalPoint(
-                        idx[ii, :].tolist()
-                    )
+                this_position[
+                    ii, :
+                ] = this_masked_image.TransformIndexToPhysicalPoint(
+                    idx[ii, :].tolist()
                 )
 
             weights.append(this_weight)
@@ -241,6 +241,7 @@ def read_slicer_fcsv(filename, direction="LPS"):
     valid_directions = {"LPS", "RAS", "LAS", "LAI", "RAI", "RPI", "LPI", "LAI"}
     if direction not in valid_directions:
         raise ValueError(f"Direction must be one of {valid_directions}")
+    print(f"Reading {filename} with direction {direction}")
 
     point_dictionary = {}
     coordinate_system = None

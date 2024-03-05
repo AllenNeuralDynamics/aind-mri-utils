@@ -93,7 +93,7 @@ def create_single_colormap(
     start_color="white",
     is_transparent=True,
     is_reverse=False,
-):
+):  # pragma: no cover
     """ "
     Creates a colormap with a single color
 

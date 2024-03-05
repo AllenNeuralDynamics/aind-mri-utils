@@ -81,14 +81,38 @@ class OptimaizationTest(unittest.TestCase):
         move_pts = np.vstack([pts1, pts2])
         move_pts[:, 2] = move_pts[:, 2] + 1
         move_pts = append_ones_column(move_pts)
-        labels = np.array([0, 1, 2, 3, 0, 1, 2, 3])
-        weights = np.ones(
-            len(labels),
+        labels = np.array(
+            [
+                0,
+                1,
+                2,
+                3,
+                0,
+                1,
+                2,
+                3,
+            ]
         )
+        weights = np.array(
+            [
+                1,
+                1,
+                1,
+                1,
+                0.99,
+                0.99,
+                0.99,
+                0.99,
+            ]
+        )  # To test that the weights are being used
         # Test with default weights input
         init = np.zeros((6,))
         trans, Tframe = optimize_transform_labeled_lines(
-            init, pts1, pts2, move_pts, labels
+            init,
+            pts1,
+            pts2,
+            move_pts,
+            labels,
         )
         self.assertTrue(Tframe[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)
