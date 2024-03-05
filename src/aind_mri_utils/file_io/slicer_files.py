@@ -139,10 +139,10 @@ def load_segmentation_points(
                 this_weight[ii] = this_masked_image.GetPixel(
                     idx[ii, :].tolist()
                 )
-                this_position[
-                    ii, :
-                ] = this_masked_image.TransformIndexToPhysicalPoint(
-                    idx[ii, :].tolist()
+                this_position[ii, :] = (
+                    this_masked_image.TransformIndexToPhysicalPoint(
+                        idx[ii, :].tolist()
+                    )
                 )
 
             weights.append(this_weight)
