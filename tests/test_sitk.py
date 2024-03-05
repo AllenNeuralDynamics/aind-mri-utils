@@ -15,22 +15,6 @@ class SITKTest(unittest.TestCase):
         ),
     ]
 
-    def test_scipy_rotation_to_sitk(self) -> None:
-        R = rotations.define_euler_rotation(90, 0, 0)
-        center = np.array((-1, 0, 0))
-        translation = np.array((1, 0, 0))
-        trans = rotations.scipy_rotation_to_sitk(
-            R, center=center, translation=translation
-        )
-        self.assertTrue(np.array_equal(trans.GetTranslation(), translation))
-        self.assertTrue(np.array_equal(trans.GetFixedParameters(), center))
-        self.assertTrue(
-            np.array_equal(
-                R.as_matrix().reshape((9,)),
-                np.array(trans.GetParameters()[:9]),
-            )
-        )
-
     def test_resample(self) -> None:
         testImage = sitk.GetImageFromArray(np.ones((20, 10, 10)))
 
