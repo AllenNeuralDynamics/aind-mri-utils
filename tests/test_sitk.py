@@ -44,7 +44,7 @@ class SITKTest(unittest.TestCase):
         # revisited at some point :/
         self.assertTrue(
             np.array_equal(new_img.GetSize(), np.array([10, 20, 10]))
-            | np.array_equal(new_img.GetSize(), np.array([10, 20, 10]) - 1) 
+            | np.array_equal(new_img.GetSize(), np.array([10, 20, 10]) - 1)
         )
         # a couple values
         R = rotations.define_euler_rotation(45, 0, 0)
