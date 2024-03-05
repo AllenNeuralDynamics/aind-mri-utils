@@ -1,18 +1,100 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Feb  7 13:54:02 2023
-
-@author: yoni.browning
 """
 
 import unittest
 
 import numpy as np
+import SimpleITK as sitk
 
 from aind_mri_utils import measurement
 
 
-class MeasurmentTest(unittest.TestCase):
+def add_cylinder(arr, center, radius, sel_ndx, ndx_range, value):
+    """Add a cylinder to an array"""
+    x, y, z = np.meshgrid(*map(np.arange, arr.shape), indexing="ij")
+    ndxs = [x, y, z]
+    all_axes = set([0, 1, 2])
+    a, b = all_axes.difference([sel_ndx])
+    mask = (ndxs[a] - center[0]) ** 2 + (ndxs[b] - center[1]) ** 2 < radius**2
+    mask = mask & (
+        (ndx_range[0] <= ndxs[sel_ndx]) & (ndxs[sel_ndx] < ndx_range[1])
+    )
+    arr[mask] = value
+    return arr
+
+
+def add_z_cylinder(arr, center, radius, ndx_range, value):
+    """Add a cylinder to an array"""
+    add_cylinder(arr, center, radius, 2, ndx_range, value)
+
+
+def add_y_cylinder(arr, center, radius, ndx_range, value):
+    """Add a cylinder to an array"""
+    add_cylinder(arr, center, radius, 1, ndx_range, value)
+
+
+def add_x_cylinder(arr, center, radius, ndx_range, value):
+    """Add a cylinder to an array"""
+    add_cylinder(arr, center, radius, 0, ndx_range, value)
+
+
+def make_cylinders(img_size, cylinder_defs, vals):
+    seg_arr = np.zeros(img_size[::-1], dtype="uint8")
+    for cylinder, val in zip(cylinder_defs, vals):
+        center, radius, sel_ndx, ndx_range = cylinder
+        # Reminder: numpy indexing is (z, y, x) while SimpleITK uses (x, y, z)
+        # Need to convert these sitk definitions to numpy
+        center_np = np.array(center)[::-1]
+        sel_ndx_np = 2 - sel_ndx
+        add_cylinder(seg_arr, center_np, radius, sel_ndx_np, ndx_range, val)
+    seg_img = sitk.GetImageFromArray(seg_arr)
+    return seg_img
+
+
+class MeasurementTest(unittest.TestCase):
+    sitk_test_img_size = (64, 64, 32)
+    sitk_test_img_center = np.array([31.5, 31.5])
+    # These are SITK indices!
+    cylinder_defs = [
+        # center, radius, sel_ndx, ndx_range
+        # axis of cylinder is in `sel_ndx` direction
+        # `ndx_range` determines the range of the cylinder
+        #  in `sel_ndx` direction
+        ((16, 16), 5, 2, (0, 16)),
+        ((45, 45), 5, 2, (16, 32)),
+        ((45, 10), 5, 1, (0, 16)),
+        ((16, 20), 5, 1, (48, 64)),
+    ]
+    seg_vals = range(1, len(cylinder_defs) + 1)
+    orient_names = ("vertical", "horizontal")
+    ap_names = ("anterior", "posterior")
+    seg_vals_dict = {
+        "vertical": {a: v for a, v in zip(ap_names, range(1, 3))},
+        "horizontal": {a: v for a, v in zip(ap_names, range(3, 5))},
+    }
+    lps_axes = dict(
+        ap=np.array([0, 1, 0]), dv=np.array([0, 0, 1]), ml=np.array([1, 0, 0])
+    )
+    hole_orient_axis = dict(horizontal="ap", vertical="dv")
+    orient_comparison_axis = dict(horizontal="dv", vertical="ap")
+    design_centers = dict(
+        horizontal=dict(
+            anterior=np.array([-6.34, np.nan, 2.5]),
+            posterior=np.array([-5.04, np.nan, 1]),
+        ),
+        vertical=dict(
+            anterior=np.array([-5.09, 3.209, np.nan]),
+            posterior=np.array([-6.84, 9.909, np.nan]),
+        ),
+    )  # Bregma-relative mms (LPS)
+    orient_indices = dict(horizontal=[0, 2], vertical=[0, 1])
+    hole_order = dict(
+        horizontal=["anterior", "posterior"],
+        vertical=["posterior", "anterior"],
+    )
+
     def test_find_circle(self) -> None:
         x = np.array([1, 0, -1, 0])
         y = np.array([0, 1, 0, -1])
@@ -66,6 +148,122 @@ class MeasurmentTest(unittest.TestCase):
         self.assertEqual(x, 90)
         x = measurement.angle(np.array([1, 0, 0]), np.array([1, 0, 0]))
         self.assertEqual(x, 0)
+
+    def test_slices_center_of_mass(self) -> None:
+        # Reminder: numpy indexing is (z, y, x) while SimpleITK uses (x, y, z)
+        # (column major vs row major)
+        # So a LPS image should have the THIRD axis be the L axis in numpy
+
+        # convert between numpy and simpleITK indexing for size
+        np_test_img_size = self.sitk_test_img_size[::-1]
+        img_arr = np.zeros(np_test_img_size)
+        seg_arr = np.zeros_like(img_arr, dtype="uint8")
+        sigma = 0.5
+        grids = []
+        for i in range(1, 3):
+            grids.append(np.linspace(-1, 1, np_test_img_size[i]))
+        # backwards because of numpy indexing
+        y, x = np.meshgrid(*grids, indexing="ij")
+        dst = np.sqrt(x**2 + y**2)
+        normal = 1 / (sigma * np.sqrt(2 * np.pi))
+        exp_normal = 1 / (2 * sigma**2)
+        img_arr[0, :, :] = normal * np.exp(exp_normal * -((dst) ** 2))
+        seg_arr[0, :, :] = img_arr[0, :, :] > 0.5
+        # Copy the first slice to the rest of the slices
+        for i in range(1, np_test_img_size[0]):
+            img_arr[i, :, :] = img_arr[0, :, :]
+            seg_arr[i, :, :] = seg_arr[0, :, :]
+        img = sitk.GetImageFromArray(img_arr)
+        seg_img = sitk.GetImageFromArray(seg_arr)
+        coms = measurement.slices_centers_of_mass(img, seg_img, 2, 1, 5)
+        self.assertEqual(coms.shape, (np_test_img_size[0], 3))
+        for i in range(coms.shape[0]):
+            self.assertTrue(
+                np.allclose(coms[i, :2], self.sitk_test_img_center)
+            )
+
+    def test_get_segmentation_pca(self) -> None:
+        seg_img = make_cylinders(
+            self.sitk_test_img_size, self.cylinder_defs, self.seg_vals
+        )
+        axis = measurement.get_segmentation_pca(
+            seg_img, list(self.seg_vals_dict["vertical"].values())
+        )
+        self.assertTrue(np.allclose(axis, self.lps_axes["dv"]))
+
+    def test_find_hole(self) -> None:
+        seg_img = make_cylinders(
+            self.sitk_test_img_size, self.cylinder_defs, self.seg_vals
+        )
+        img = make_cylinders(
+            self.sitk_test_img_size,
+            self.cylinder_defs,
+            np.ones(len(self.seg_vals)),
+        )
+        this_val = self.seg_vals_dict["vertical"]["anterior"]
+        hole = measurement.find_hole(
+            img, seg_img, this_val, self.orient_indices["vertical"]
+        )
+        self.assertTrue(np.isnan(hole[2]))
+        self.assertTrue(np.allclose(hole[:2], list(self.cylinder_defs[0][0])))
+        none_hole = measurement.find_hole(
+            img, seg_img, 5, self.orient_indices["vertical"]
+        )  # 5 is not a seg value
+        self.assertTrue(none_hole is None)
+        bad_img = make_cylinders(
+            self.sitk_test_img_size[::-1],
+            self.cylinder_defs,
+            np.ones(len(self.seg_vals)),
+        )
+        self.assertRaises(
+            ValueError,
+            measurement.find_hole,
+            bad_img,
+            seg_img,
+            this_val,
+            self.orient_indices["vertical"],
+        )
+        zero_img = make_cylinders(
+            self.sitk_test_img_size,
+            self.cylinder_defs,
+            np.zeros(len(self.seg_vals)),
+        )
+        none_hole = measurement.find_hole(
+            zero_img, seg_img, this_val, self.orient_indices["vertical"]
+        )
+        self.assertTrue(none_hole is None)
+        holes = measurement.find_holes_by_orientation(
+            img,
+            seg_img,
+            self.seg_vals_dict,
+            self.orient_indices,
+            self.orient_names,
+            self.ap_names,
+        )
+        self.assertTrue(
+            np.allclose(
+                holes["vertical"]["anterior"][:2],
+                list(self.cylinder_defs[0][0]),
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                holes["vertical"]["posterior"][:2],
+                list(self.cylinder_defs[1][0]),
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                holes["horizontal"]["anterior"][[0, 2]],
+                list(self.cylinder_defs[2][0]),
+            )
+        )
+        self.assertTrue(
+            np.allclose(
+                holes["horizontal"]["posterior"][[0, 2]],
+                list(self.cylinder_defs[3][0]),
+            )
+        )
 
 
 if __name__ == "__main__":

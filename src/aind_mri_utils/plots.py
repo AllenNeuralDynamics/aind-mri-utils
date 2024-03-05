@@ -86,6 +86,11 @@ def get_prop_cycle():  # pragma: no cover
     return prop_cycle.by_key()["color"]
 
 
+def plot_point_cloud_3d(a, pts, *args, **kwargs):
+    """Scatter plots a Nx3 array as N 3D points"""
+    return a.scatter(pts[:, 0], pts[:, 1], pts[:, 2], *args, **kwargs)
+
+
 def create_single_colormap(
     colorname,
     N=256,
@@ -133,3 +138,9 @@ def create_single_colormap(
             )
         )
     return cmap
+
+
+def plot_vector(a, pt, *args, **kwargs):
+    """Plots a 3D point as a vector from the origin"""
+    plt_pts = np.vstack([np.array([0, 0, 0]), pt])
+    return a.plot(plt_pts[:, 0], plt_pts[:, 1], plt_pts[:, 2], *args, **kwargs)

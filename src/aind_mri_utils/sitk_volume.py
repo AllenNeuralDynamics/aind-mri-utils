@@ -11,6 +11,8 @@ import itertools as itr
 import numpy as np
 import SimpleITK as sitk
 
+from . import utils as ut
+
 
 def resample(
     image,
@@ -174,3 +176,15 @@ def transform_sitk_indices_to_physical_points(simage, index_arr):
             ndx
         )
     return position_arr
+
+
+def find_points_equal_to(simage, val):
+    """Find physical points in simage equal to val
+    Results are in LPS
+    """
+    arr = sitk.GetArrayViewFromImage(simage)
+    ndxs = ut.find_indices_equal_to(arr, val)
+    ndxs_xyz = ndxs[
+        :, [2, 1, 0]
+    ]  # convert between numpy and simpleITK indexing
+    return transform_sitk_indices_to_physical_points(simage, ndxs_xyz)

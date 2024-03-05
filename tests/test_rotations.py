@@ -78,6 +78,19 @@ class RotationsTest(unittest.TestCase):
             )
         )
 
+    def test_rotation_matrix_from_vectors(self) -> None:
+        a = np.array([1, 0, 0])
+        b = np.array([1, 1, 0]) / np.sqrt(2)
+        rotmat = rotations.rotation_matrix_from_vectors(a, b)
+        self.assertTrue(np.allclose(rotmat @ a, b))
+        rotmat = rotations.rotation_matrix_from_vectors(a, a)
+        self.assertTrue(np.allclose(rotmat, np.eye(a.size)))
+        rotmat = rotations.rotation_matrix_from_vectors(a, -a)
+        self.assertTrue(np.allclose(rotmat, -np.eye(a.size)))
+        self.assertRaises(
+            ValueError, rotations.rotation_matrix_from_vectors, a, np.zeros(1)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

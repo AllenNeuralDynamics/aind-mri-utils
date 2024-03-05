@@ -20,6 +20,22 @@ class UtilsTest(unittest.TestCase):
     test_match_arr = np.arange(0, 9).reshape(3, 3)
     test_proj_vec = np.array([0.5, 0.2, 0.7])
 
+    signed_angle_sets = [
+        (
+            np.array([1, 0, 0]),
+            np.array([np.pi, np.pi, 0]),
+            np.array([0, 0, 1]),
+            0.785398,
+        ),
+        (
+            np.array([np.pi, np.pi, 0]),
+            np.array([1, 0, 0]),
+            np.array([0, 0, 1]),
+            -0.785398,
+        ),
+        (np.array([1, 0, 0]), np.array([1, 0, 0]), np.array([0, 0, 1]), 0.0),
+    ]
+
     def test_skew_symmetric_cross_product_matrix(self) -> None:
         for a, b, c in self.cross_product_sets:
             self.assertTrue(
@@ -77,6 +93,27 @@ class UtilsTest(unittest.TestCase):
         modified_ans = np.copy(ans)
         modified_ans[0, 1] = 0
         self.assertTrue(np.allclose(modified_ans, np.zeros((3, 3))))
+
+    def test_signed_angle(self) -> None:
+        for a, b, n, ans in self.signed_angle_sets:
+            received = ut.signed_angle_rh(a, b, n)
+            self.assertTrue(np.isclose(received, ans))
+            self.assertTrue(np.isclose(ans, ut.signed_angle_lh(b, a, n)))
+
+    def test_get_first_pca_axis(self) -> None:
+        pts = np.array([[1, 2], [3, 4], [5, 6]])
+        expected_first_pc = np.array([0.70710678, 0.70710678])
+        self.assertTrue(
+            np.allclose(
+                ut.get_first_pca_axis(pts),
+                expected_first_pc,
+            )
+        )
+
+    def test_unsigned_angle(self) -> None:
+        for a, b, n, ans in self.signed_angle_sets:
+            received = ut.unsigned_angle(a, b)
+            self.assertTrue(np.isclose(received, abs(ans)))
 
 
 if __name__ == "__main__":
