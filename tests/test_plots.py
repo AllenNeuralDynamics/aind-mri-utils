@@ -80,6 +80,34 @@ class PlotsTest(unittest.TestCase):
         )
         self.assertTrue(np.array_equal(tri.edges, self.expected_edges))
 
+    def create_single_colormap(self) -> None:
+        """Tests create_single_color_map"""
+        # Test colormap creation
+        A = mrplt.create_single_colormap("magenta", start_color="white")
+        self.assertTrue(np.array_equal(A(0), np.array([1, 1, 1, 1])))
+        self.assertTrue(np.array_equal(A(1), np.array([1, 0, 1, 1])))
+        # Test colormap creation with reverse
+        A = mrplt.create_single_colormap(
+            "magenta", start_color="white", is_reverse=True
+        )
+        self.assertTrue(np.array_equal(A(0), np.array([1, 0, 1, 1])))
+        self.assertTrue(np.array_equal(A(1), np.array([1, 1, 1, 1])))
+        # Test output length
+        A = mrplt.create_single_colormap(
+            "magenta", start_color="white", N=4192
+        )
+        self.assertTrue(len(A) == 4192)
+        # Test transparency
+        A = mrplt.create_single_colormap(
+            "magenta", start_color="white", N=4192, is_transparent=True
+        )
+        self.assertTrue(np.array_equal(A(0), np.array([1, 1, 1, 0])))
+        # Tst saturation
+        A = mrplt.create_single_colormap(
+            "magenta", start_color="white", saturation=4
+        )
+        self.assertTrue(np.array_equal(A(254), np.array([1, 0, 1, 1])))
+
 
 if __name__ == "__main__":
     unittest.main()

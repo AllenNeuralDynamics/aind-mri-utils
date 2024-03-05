@@ -66,6 +66,31 @@ class SlicerFilesTest(unittest.TestCase):
             self.assertTrue(k in received_segment_info)
             self.assertTrue(received_segment_info[k] == v)
 
+    def test_fcsv_read_write(self) -> None:
+        """
+        Tests that reading and writing of fcsv files works as expected
+
+        """
+        # Test basic read/write functionality.
+        pts_dict = {"0": [0, 0, 0], "1": [1, 1, 1], "2": [2, 2, 2]}
+        sf.create_slicer_fcsv(
+            "test.fcsv",
+            pts_dict,
+        )
+        read_pts_dict = sf.read_slicer_fcsv("test.fcsv")
+        self.assertTrue(np.all(pts_dict["0"] == read_pts_dict["0"]))
+        self.assertTrue(np.all(pts_dict["1"] == read_pts_dict["1"]))
+        self.assertTrue(np.all(pts_dict["2"] == read_pts_dict["2"]))
+        # Check errors from bad extensions.
+        self.assertRaises(ValueError, sf.read_slicer_fcsv, "test.xlxs")
+        # Assert that the function raises a ValueError when direction is wrong.
+        self.assertRaises(
+            ValueError, sf.read_slicer_fcsv, "test.fcsv", direction="XYZ"
+        )
+        # Assert that the function corrects mismatched directions
+        fixed_pt_dict = sf.read_slicer_fcsv("test.fcsv", direction="RAS")
+        self.assertTrue(pts_dict["0"][0] == -fixed_pt_dict["0"][0])
+
 
 if __name__ == "__main__":
     unittest.main()

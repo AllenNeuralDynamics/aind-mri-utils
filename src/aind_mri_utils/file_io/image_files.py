@@ -59,6 +59,8 @@ def read_image(filename):  # pragma: no cover
 def read_dicom(filename):  # pragma: no cover
     """
     Reader to import Dicom file and convert to sitk image
+    See https://simpleitk.readthedocs.io/en/master/...
+        link_DicomSeriesReader_docs.html#lbl-dicom-series-reader
 
     Parameters
     ----------
@@ -79,8 +81,12 @@ def read_dicom(filename):  # pragma: no cover
         dirname = os.path.dirname(filename)
 
     reader = sitk.ImageSeriesReader()
-    dicom_names = reader.GetGDCMSeriesFileNames(dirname)
+    dicom_names = reader.GetGDCMSeriesFileNames(
+        dirname, useSeriesDetails=True, loadSequences=True
+    )
     reader.SetFileNames(dicom_names)
+    reader.MetaDataDictionaryArrayUpdateOn()
+    reader.LoadPrivateTagsOn()
     return reader.Execute()
 
 
