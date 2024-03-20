@@ -190,8 +190,8 @@ def markup_json_to_dict(filename):
 
 
     """
-    pos, names = markup_json_to_numpy(filename)
-    return dict(zip(names, pos))
+    pos, names, coord_string = markup_json_to_numpy(filename)
+    return dict(zip(names, pos)), coord_string
 
 
 def create_slicer_fcsv(filename, pts_dict, direction="LPS"):
