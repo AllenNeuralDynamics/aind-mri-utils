@@ -155,7 +155,7 @@ def load_segmentation_points(
         )
 
 
-def markup_json_to_numpy(filename):  # pragma: no cover
+def markup_json_to_numpy(filename):
     """
     Extract control points from a 3D Slicer generated markup JSON file
 
@@ -175,7 +175,7 @@ def markup_json_to_numpy(filename):  # pragma: no cover
     return extract_control_points(data)
 
 
-def markup_json_to_dict(filename):  # pragma: no cover
+def markup_json_to_dict(filename):
     """
     Extract control points from a 3D Slicer generated markup JSON file
 
@@ -192,8 +192,8 @@ def markup_json_to_dict(filename):  # pragma: no cover
 
 
     """
-    pos, names = markup_json_to_numpy(filename)
-    return dict(zip(names, pos))
+    pos, names, coord_string = markup_json_to_numpy(filename)
+    return dict(zip(names, pos)), coord_string
 
 
 def create_slicer_fcsv(filename, pts_dict, direction="LPS"):
