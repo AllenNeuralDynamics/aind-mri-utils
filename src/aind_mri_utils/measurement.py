@@ -567,7 +567,7 @@ def find_rotation_to_match_hole_angles(
         hole_diffs[i, :] = (
             design_centers[orient][ap] - found_centers[orient][ap]
         )
-    offsets_current = np.nanmean(hole_diffs, axis=0)
+    offsets = np.nanmean(hole_diffs, axis=0)
 
     iter_angle_err = np.zeros((n_iter + 1, 2))
     iter_hole_diff_err = np.zeros((n_iter + 1, nhole, 3))
@@ -579,9 +579,7 @@ def find_rotation_to_match_hole_angles(
             found_centers_ang_curr[orient] - design_centers_ang[orient]
             for orient in orient_names
         ]
-        iter_hole_diff_err[iterno, :, :] = (
-            offsets_current[np.newaxis, :] - hole_diffs
-        )
+        iter_hole_diff_err[iterno, :, :] = offsets[np.newaxis, :] - hole_diffs
         for orient in orient_names:
             ang_err = (
                 design_centers_ang[orient] - found_centers_ang_curr[orient]
@@ -622,15 +620,13 @@ def find_rotation_to_match_hole_angles(
                 hole_diffs[i, :] = (
                     design_centers[orient][ap] - found_centers_curr[orient][ap]
                 )
-            offsets_current = np.nanmean(hole_diffs, axis=0)
+            offsets = np.nanmean(hole_diffs, axis=0)
     iter_angle_err[n_iter, :] = [
         found_centers_ang_curr[orient] - design_centers_ang[orient]
         for orient in orient_names
     ]
-    iter_hole_diff_err[n_iter, :, :] = (
-        offsets_current[np.newaxis, :] - hole_diffs
-    )
-    return R, offsets_current
+    iter_hole_diff_err[n_iter, :, :] = offsets[np.newaxis, :] - hole_diffs
+    return R, offsets
 
 
 def estimate_coms_from_image_and_segmentation(

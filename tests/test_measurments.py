@@ -346,6 +346,52 @@ class MeasurementTest(unittest.TestCase):
         self.assertTrue(np.allclose(axes["vertical"], self.lps_axes["dv"]))
         self.assertTrue(np.allclose(axes["horizontal"], self.lps_axes["ap"]))
 
+        test_centers = dict(
+            vertical=dict(
+                anterior=np.array([16, 16, np.nan]),
+                posterior=np.array([45, 45, np.nan]),
+            ),
+            horizontal=dict(
+                anterior=np.array([45, np.nan, 10]),
+                posterior=np.array([16, np.nan, 20]),
+            ),
+        )
+        R, offset = measurement.find_rotation_to_match_hole_angles(
+            img,
+            seg_img,
+            orient_rotation_matrices,
+            axes,
+            self.seg_vals_dict,
+            test_centers,
+            orient_lps_vector_dict,
+            self.orient_names,
+            self.ap_names,
+            self.orient_indices,
+            self.hole_order,
+            self.lps_axes,
+            self.orient_comparison_axis,
+        )
+        self.assertTrue(np.allclose(R, np.eye(3)))
+        self.assertTrue(np.allclose(offset, np.zeros(3)))
+
+        coms = measurement.estimate_coms_from_image_and_segmentation(
+            img, seg_img, self.seg_vals_dict
+        )
+        for orient, com_answer_dict_orient in com_answer_dict.items():
+            for ap, com_answer in com_answer_dict_orient.items():
+                self.assertTrue(np.allclose(coms[orient][ap], com_answer))
+
+        coms, R, offset = (
+            measurement.estimate_rotation_and_coms_from_image_and_segmentation(
+                img, seg_img, self.seg_vals_dict, design_centers=test_centers
+            )
+        )
+        for orient, com_answer_dict_orient in com_answer_dict.items():
+            for ap, com_answer in com_answer_dict_orient.items():
+                self.assertTrue(np.allclose(coms[orient][ap], com_answer))
+        self.assertTrue(np.allclose(R, np.eye(3)))
+        self.assertTrue(np.allclose(offset, np.zeros(3)))
+
 
 if __name__ == "__main__":
     unittest.main()
