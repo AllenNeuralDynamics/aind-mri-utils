@@ -191,7 +191,8 @@ class MeasurementTest(unittest.TestCase):
         )
         self.assertTrue(np.allclose(axis, self.lps_axes["dv"]))
 
-    def test_find_hole(self) -> None:
+    def test_hole_finding_and_orientation(self) -> None:
+
         seg_img = make_cylinders(
             self.sitk_test_img_size, self.cylinder_defs, self.seg_vals
         )
@@ -200,16 +201,19 @@ class MeasurementTest(unittest.TestCase):
             self.cylinder_defs,
             np.ones(len(self.seg_vals)),
         )
+
         this_val = self.seg_vals_dict["vertical"]["anterior"]
         hole = measurement.find_hole(
             img, seg_img, this_val, self.orient_indices["vertical"]
         )
         self.assertTrue(np.isnan(hole[2]))
         self.assertTrue(np.allclose(hole[:2], list(self.cylinder_defs[0][0])))
+
         none_hole = measurement.find_hole(
             img, seg_img, 5, self.orient_indices["vertical"]
         )  # 5 is not a seg value
         self.assertTrue(none_hole is None)
+
         bad_img = make_cylinders(
             self.sitk_test_img_size[::-1],
             self.cylinder_defs,
@@ -223,6 +227,7 @@ class MeasurementTest(unittest.TestCase):
             this_val,
             self.orient_indices["vertical"],
         )
+
         zero_img = make_cylinders(
             self.sitk_test_img_size,
             self.cylinder_defs,
@@ -232,7 +237,8 @@ class MeasurementTest(unittest.TestCase):
             zero_img, seg_img, this_val, self.orient_indices["vertical"]
         )
         self.assertTrue(none_hole is None)
-        holes = measurement.find_holes_by_orientation(
+
+        holes_dict = measurement.find_holes_by_orientation(
             img,
             seg_img,
             self.seg_vals_dict,
@@ -242,28 +248,103 @@ class MeasurementTest(unittest.TestCase):
         )
         self.assertTrue(
             np.allclose(
-                holes["vertical"]["anterior"][:2],
+                holes_dict["vertical"]["anterior"][:2],
                 list(self.cylinder_defs[0][0]),
             )
         )
         self.assertTrue(
             np.allclose(
-                holes["vertical"]["posterior"][:2],
+                holes_dict["vertical"]["posterior"][:2],
                 list(self.cylinder_defs[1][0]),
             )
         )
         self.assertTrue(
             np.allclose(
-                holes["horizontal"]["anterior"][[0, 2]],
+                holes_dict["horizontal"]["anterior"][[0, 2]],
                 list(self.cylinder_defs[2][0]),
             )
         )
         self.assertTrue(
             np.allclose(
-                holes["horizontal"]["posterior"][[0, 2]],
+                holes_dict["horizontal"]["posterior"][[0, 2]],
                 list(self.cylinder_defs[3][0]),
             )
         )
+
+        orient_lps_vector_dict = {
+            orient: self.lps_axes[self.hole_orient_axis[orient]]
+            for orient in self.orient_names
+        }
+        centers_ang = measurement.find_hole_angles(
+            holes_dict,
+            self.hole_order,
+            self.lps_axes,
+            self.orient_comparison_axis,
+            orient_lps_vector_dict,
+            self.orient_names,
+        )
+
+        self.assertAlmostEqual(centers_ang["vertical"], -0.7853981633)
+        self.assertAlmostEqual(centers_ang["horizontal"], 1.9028557943377)
+
+        initial_axes = (
+            measurement.estimate_hole_axes_from_segmentation_by_orientation(
+                seg_img,
+                self.seg_vals_dict,
+                orient_lps_vector_dict,
+                self.orient_names,
+                self.ap_names,
+            )
+        )
+        self.assertTrue(
+            np.allclose(initial_axes["vertical"], self.lps_axes["dv"])
+        )
+        self.assertTrue(
+            np.allclose(initial_axes["horizontal"], self.lps_axes["ap"])
+        )
+
+        coms = (
+            measurement.calculate_centers_of_mass_for_image_and_segmentation(
+                img,
+                seg_img,
+                initial_axes,
+                self.seg_vals_dict,
+                orient_lps_vector_dict,
+                self.orient_names,
+                self.ap_names,
+            )
+        )
+        com_answer_dict = {
+            "vertical": {
+                "anterior": np.array([[16.0, 16.0, x] for x in range(16)]),
+                "posterior": np.array(
+                    [[45.0, 45.0, x] for x in range(16, 32)]
+                ),
+            },
+            "horizontal": {
+                "anterior": np.array([[45.0, x, 10.0] for x in range(16)]),
+                "posterior": np.array(
+                    [[16.0, x, 20.0] for x in range(48, 64)]
+                ),
+            },
+        }
+        for orient, com_answer_dict_orient in com_answer_dict.items():
+            for ap, com_answer in com_answer_dict_orient.items():
+                self.assertTrue(np.allclose(coms[orient][ap], com_answer))
+
+        orient_rotation_matrices, axes = (
+            measurement.estimate_axis_rotations_from_centers_of_mass(
+                coms, orient_lps_vector_dict, self.orient_names, self.ap_names
+            )
+        )
+        self.assertTrue(
+            np.allclose(orient_rotation_matrices["vertical"], np.eye(3))
+        )
+        self.assertTrue(
+            np.allclose(orient_rotation_matrices["horizontal"], np.eye(3))
+        )
+        self.assertTrue(np.allclose(axes["vertical"], self.lps_axes["dv"]))
+        self.assertTrue(np.allclose(axes["horizontal"], self.lps_axes["ap"]))
 
 
 if __name__ == "__main__":

@@ -399,7 +399,7 @@ def find_hole_angles(
 def estimate_hole_axis_from_segmentation(seg_img, seg_vals, orient_lps_vector):
     # Estimate axis rotations from segment locations
     axis = get_segmentation_pca(seg_img, seg_vals)
-    if np.dot(axis, orient_lps_vector) < 0:
+    if np.dot(axis, orient_lps_vector) < 0:  # pragma: no cover
         axis *= -1
     return axis
 
@@ -460,7 +460,7 @@ def calculate_centers_of_mass_for_image_and_segmentation(
 
 
 def estimate_axis_rotations_from_centers_of_mass(
-    coms, orient_lps_vector, orient_names, ap_names
+    coms, orient_lps_vector_dict, orient_names, ap_names
 ):
     orient_rotation_matrices = {orient: dict() for orient in orient_names}
     axes = dict()
@@ -474,7 +474,7 @@ def estimate_axis_rotations_from_centers_of_mass(
             ccoms.append(com - m[np.newaxis, :])
             joined_ccoms = np.concatenate(ccoms, axis=0)
             tmp_axis = ut.get_first_pca_axis(joined_ccoms)
-        if np.dot(tmp_axis, orient_lps_vector[orient]) < 0:
+        if np.dot(tmp_axis, orient_lps_vector_dict[orient]) < 0:
             tmp_axis *= -1
 
         # remove off-axis mean for each segment separately
@@ -485,10 +485,12 @@ def estimate_axis_rotations_from_centers_of_mass(
             proj_m = np.mean(com_proj, axis=0)
             coms_deproj_centered.append(com - proj_m[np.newaxis, :])
         axis = ut.get_first_pca_axis(joined_ccoms)
-        if np.dot(axis, orient_lps_vector[orient]) < 0:
+        if np.dot(axis, orient_lps_vector_dict[orient]) < 0:
             axis *= -1
-        R = rot.rotation_matrix_from_vectors(axis, orient_lps_vector[orient])
-        axes[orient] = R.T @ orient_lps_vector[orient]
+        R = rot.rotation_matrix_from_vectors(
+            axis, orient_lps_vector_dict[orient]
+        )
+        axes[orient] = R.T @ orient_lps_vector_dict[orient]
         orient_rotation_matrices[orient] = R
     return orient_rotation_matrices, axes
 
@@ -507,6 +509,7 @@ def find_rotation_to_match_hole_angles(
     hole_order,
     lps_axes,
     orient_comparison_axis,
+    n_iter=10,
 ):
     nhole = np.prod([len(x) for x in (orient_names, ap_names)])
     # Start measuring hole location and orientation using the estimated set of
@@ -528,9 +531,9 @@ def find_rotation_to_match_hole_angles(
     )
     Rot_y = Rotation.from_rotvec(rad * orient_lps_vector_dict["horizontal"])
     R_y = Rot_y.as_matrix()
-    Rinit = R_y @ initial_orient_rotation_matrices["horizontal"]
+    R = R_y @ initial_orient_rotation_matrices["horizontal"]
 
-    Sinit = rot.rotation_matrix_to_sitk(Rinit)
+    Sinit = rot.rotation_matrix_to_sitk(R)
     Sinit_inv = Sinit.GetInverse()
 
     seg_img_current = sv.resample3D(
@@ -548,34 +551,24 @@ def find_rotation_to_match_hole_angles(
         orient_names,
         ap_names,
     )
-    found_centers_ang = find_hole_angles(
-        found_centers,
-        hole_order,
-        lps_axes,
-        orient_comparison_axis,
-        orient_lps_vector_dict,
-        orient_names,
-    )
-    design_centers_ang = find_hole_angles(
-        design_centers,
-        hole_order,
-        lps_axes,
-        orient_comparison_axis,
-        orient_lps_vector_dict,
-        orient_names,
-    )
+    found_centers_ang, design_centers_ang = [
+        find_hole_angles(
+            centers,
+            hole_order,
+            lps_axes,
+            orient_comparison_axis,
+            orient_lps_vector_dict,
+            orient_names,
+        )
+        for centers in (found_centers, design_centers)
+    ]
     hole_diffs = np.zeros((nhole, 3))
     for i, (orient, ap) in enumerate(itr.product(orient_names, ap_names)):
         hole_diffs[i, :] = (
             design_centers[orient][ap] - found_centers[orient][ap]
         )
-        offsets_init = np.nanmean(hole_diffs, axis=0)
-        Sinit.SetTranslation(tuple(offsets_init))
+    offsets_current = np.nanmean(hole_diffs, axis=0)
 
-    offsets_current = offsets_init.copy()
-    Rcurrent = Rinit.copy()
-    Scurrent = Sinit
-    n_iter = 10
     iter_angle_err = np.zeros((n_iter + 1, 2))
     iter_hole_diff_err = np.zeros((n_iter + 1, nhole, 3))
     found_centers_curr = found_centers
@@ -597,15 +590,14 @@ def find_rotation_to_match_hole_angles(
                 ang_err * orient_lps_vector_dict[orient]
             )
             R_update = Rot_update.as_matrix()
-            Rcurrent = R_update @ Rcurrent
-            Scurrent = rot.rotation_matrix_to_sitk(Rcurrent)
-            # Scurrent.SetTranslation(tuple(offsets_current))
-            Scurrent_inv = Scurrent.GetInverse()
+            R = R_update @ R
+            S = rot.rotation_matrix_to_sitk(R)
+            S_inv = S.GetInverse()
             seg_img_current = sv.resample3D(
-                seg_img, Scurrent_inv, interpolator=sitk.sitkNearestNeighbor
+                seg_img, S_inv, interpolator=sitk.sitkNearestNeighbor
             )
             img_current = sv.resample3D(
-                img, Scurrent_inv, interpolator=sitk.sitkNearestNeighbor
+                img, S_inv, interpolator=sitk.sitkNearestNeighbor
             )
             found_centers_curr = find_holes_by_orientation(
                 img_current,
@@ -630,8 +622,15 @@ def find_rotation_to_match_hole_angles(
                 hole_diffs[i, :] = (
                     design_centers[orient][ap] - found_centers_curr[orient][ap]
                 )
-                offsets_current = np.nanmean(hole_diffs, axis=0)
-    return Rcurrent, offsets_current
+            offsets_current = np.nanmean(hole_diffs, axis=0)
+    iter_angle_err[n_iter, :] = [
+        found_centers_ang_curr[orient] - design_centers_ang[orient]
+        for orient in orient_names
+    ]
+    iter_hole_diff_err[n_iter, :, :] = (
+        offsets_current[np.newaxis, :] - hole_diffs
+    )
+    return R, offsets_current
 
 
 def estimate_coms_from_image_and_segmentation(
