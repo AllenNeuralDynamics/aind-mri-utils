@@ -110,6 +110,21 @@ def signed_angle_lh(a, b, n):
 
 
 def unsigned_angle(a, b):
+    """
+    Calculate the unsigned angle between two vectors.
+
+    Parameters
+    ----------
+    a : array-like
+        First vector.
+    b : array-like
+        Second vector.
+
+    Returns
+    -------
+    angle : float
+        The unsigned angle between the two vectors in radians.
+    """
     an = norm_vec(a)
     bn = norm_vec(b)
     return np.arccos(np.clip(np.dot(an, bn), -1.0, 1.0))
