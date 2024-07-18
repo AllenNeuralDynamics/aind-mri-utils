@@ -78,7 +78,7 @@ def make_3d_ax_look_normal(ax: plt.Axes):
     set_axes_equal(ax)
 
 
-def get_prop_cycle():  # pragma: no cover
+def get_prop_cycle():
     """
     Returns the colors in the current prop cycle
     """
@@ -98,7 +98,7 @@ def create_single_colormap(
     start_color="white",
     is_transparent=True,
     is_reverse=False,
-):  # pragma: no cover
+):
     """ "
     Creates a colormap with a single color
 

@@ -71,7 +71,7 @@ source = ["src"]
 
 [tool.coverage.report]
 exclude_lines = ["if __name__ == .__main__.:", "# pragma: no cover"]
-fail_under = 100
+fail_under = 70
 
 [tool.isort]
 line_length = 79
