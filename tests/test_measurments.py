@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Feb  7 13:54:02 2023
-
-@author: yoni.browning
 """
 
 import unittest
@@ -12,7 +10,7 @@ import numpy as np
 from aind_mri_utils import measurement
 
 
-class MeasurmentTest(unittest.TestCase):
+class MeasurementTest(unittest.TestCase):
     def test_find_circle(self) -> None:
         x = np.array([1, 0, -1, 0])
         y = np.array([0, 1, 0, -1])

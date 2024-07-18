@@ -1,6 +1,9 @@
 """Utility functions"""
 
+import math
+
 import numpy as np
+from numpy import linalg
 
 
 def skew_symmetric_cross_product_matrix(v):
@@ -58,3 +61,70 @@ def mask_arr_by_annotations(arr, anno_arr, seg_vals, default_val=0):
 def find_indices_equal_to(arr, v):
     """Find array indices equal to v"""
     return np.column_stack(np.nonzero(arr == v))
+
+
+def get_first_pca_axis(pts):
+    """Find first PC of points"""
+    centered = pts - np.mean(pts, axis=0)[np.newaxis, :]
+    _, _, vh = linalg.svd(centered, full_matrices=False)
+    return vh[0, :]
+
+
+def signed_angle_rh(a, b, n):
+    """find right-handed angle between two vectors
+    Find the right-handled angle between a and b in the plane normal to n,
+    by rotating a to b
+    """
+    # Function by Adrian Leonhard: https://stackoverflow.com/a/33920320
+    # Let alpha be the direct angle between the vectors (0° to 180°) and beta
+    # the angle we are looking for (0° to 360°) with beta == alpha or
+    # beta == 360° - alpha
+    #
+    # Va . Vb == |Va| * |Vb| * cos(alpha) (by definition)
+    #         == |Va| * |Vb| * cos(beta)
+    # As cos(alpha) == cos(-alpha) == cos(360° - alpha)
+    #
+    #
+    # Va x Vb == |Va| * |Vb| * sin(alpha) * n1
+    # (by definition; n1 is a unit vector perpendicular to Va and Vb with
+    # orientation matching the right-hand rule)
+    #
+    # Therefore (again assuming Vn is normalized):
+    # n1 . Vn == 1 when beta < 180
+    # n1 . Vn == -1 when beta > 180
+    #
+    # ==>  (Va x Vb) . Vn == |Va| * |Vb| * sin(beta)
+    # Finally,
+    # tan(beta) = sin(beta) / cos(beta) == ((Va x Vb) . Vn) / (Va . Vb)
+
+    vn = norm_vec(n)
+    return math.atan2(np.dot(np.cross(a, b), vn), np.dot(a, b))
+
+
+def signed_angle_lh(a, b, n):
+    """find left-handed angle between two vectors
+
+    See `signed_angle_rh`
+    """
+    return signed_angle_rh(b, a, n)
+
+
+def unsigned_angle(a, b):
+    """
+    Calculate the unsigned angle between two vectors.
+
+    Parameters
+    ----------
+    a : array-like
+        First vector.
+    b : array-like
+        Second vector.
+
+    Returns
+    -------
+    angle : float
+        The unsigned angle between the two vectors in radians.
+    """
+    an = norm_vec(a)
+    bn = norm_vec(b)
+    return np.arccos(np.clip(np.dot(an, bn), -1.0, 1.0))

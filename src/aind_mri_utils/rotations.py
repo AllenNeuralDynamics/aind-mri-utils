@@ -6,6 +6,8 @@ import numpy as np
 import SimpleITK as sitk
 from scipy.spatial.transform import Rotation
 
+from . import utils as ut
+
 
 def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
     """
@@ -85,6 +87,34 @@ def rotate_about(points, rotation, pivot):
     return rotation.apply(points - pivot) + pivot
 
 
+def rotation_matrix_to_sitk(
+    rotation, center=np.array((0, 0, 0)), translation=np.array((0, 0, 0))
+):
+    """Convert numpy array rotation matrix to sitk affine
+
+    Parameters
+    ----------
+    rotation : np.ndarray (3 x 3)
+        matrix representing rotation matrix in three dimensions
+    center : np.ndarray (3)
+        vector representing center of rotation, default is origin
+    translation : np.ndarray (3)
+        vector representing translation of transform (after rotation), default
+        is zero
+
+    Returns
+    -------
+    SITK transform
+        with parameters matching the input object
+
+    """
+    S = sitk.AffineTransform(3)
+    S.SetMatrix(tuple(rotation.flatten()))
+    S.SetTranslation(translation.tolist())
+    S.SetCenter(center.tolist())
+    return S
+
+
 def scipy_rotation_to_sitk(
     rotation, center=np.array((0, 0, 0)), translation=np.array((0, 0, 0))
 ):
@@ -103,38 +133,38 @@ def scipy_rotation_to_sitk(
         with parameters matching the input object
 
     """
-
-    rotmat = rotation.as_matrix().reshape((9,))
-    params = np.concatenate((rotmat, np.zeros((3,), dtype=np.float64)))
-    newTransform = sitk.AffineTransform(3)
-    newTransform.SetParameters(params.tolist())
-    newTransform.SetTranslation(translation.tolist())
-    newTransform.SetCenter(center.tolist())
-    return newTransform
+    S = rotation_matrix_to_sitk(rotation.as_matrix(), center, translation)
+    return S
 
 
-# def sitk_rotation_to_scipy(transform):
-"""
-Convert sitk affine transform to the equivalent scipy 'Rotation' object
-Parameters
-----------
-transform : SimpleITK Rotation
-    Affine Transform
-Returns
--------
-Scipy Rotation
-    based on transform matrix
-translation
-    Rotation translation
-center
-    Rotation Center
-"""
-#    if transform.GetDimension()!=3:
-#        raise NotImplementedError('sitk_rotation_to_scipy only supports
-#                                  3d transforms at this time.')
-#
-#    params = tranform.GetParameters()
-#    R = Rotation.from_matrix(params[:10].reshape(3,3))
-#    translation = transfrom.GetTranslation()
-#    center = transform.GetCenter()
-#    return R,tr
+def rotation_matrix_from_vectors(a, b):
+    """Find rotation matrix to align a with b
+
+
+    Parameters
+    ----------
+    a : np.ndarray (N)
+        vector to be aligned with b
+    b : np.ndarray (N)
+        vector
+
+    Returns
+    -------
+    rmat : np.ndarray (NxN)
+        Rotation matrix such that `rmat @ a` is parallel to `b`
+    """
+    # Follows Rodrigues` rotation formula
+    # https://math.stackexchange.com/a/476311
+
+    nd = a.shape[0]
+    if nd != b.shape[0]:
+        raise ValueError("a must be same size as b")
+    na = ut.norm_vec(a)
+    nb = ut.norm_vec(b)
+    c = np.dot(na, nb)
+    if c == -1:
+        return -np.eye(nd)
+    v = np.cross(na, nb)
+    ax = ut.skew_symmetric_cross_product_matrix(v)
+    rotmat = np.eye(nd) + ax + ax @ ax * (1 / (1 + c))
+    return rotmat

@@ -125,10 +125,25 @@ def find_line_eig(points):
 
 def closet_points_on_two_lines(P1, V1, P2, V2):
     """
-    Taken, with modification, from:
-    https://math.stackexchange.com/questions/846054/...
-        closest-points-on-two-line-segments
+    Calculate the closest points on two lines in 3D space.
 
+    Parameters
+    ----------
+    P1 : array-like
+        A point on the first line.
+    V1 : array-like
+        The direction vector of the first line.
+    P2 : array-like
+        A point on the second line.
+    V2 : array-like
+        The direction vector of the second line.
+
+    Returns
+    -------
+    p_a : ndarray
+        The closest point on the first line.
+    p_b : ndarray
+        The closest point on the second line.
     """
     P1 = np.array(P1)
     V1 = np.array(V1)

@@ -1,6 +1,7 @@
 """Tests functions in `plots`."""
 
 import unittest
+from contextlib import contextmanager
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,13 +9,19 @@ import numpy as np
 from aind_mri_utils import plots as mrplt
 
 
+@contextmanager
+def managed_subplot(f, *args, **kwargs):
+    ax = f.add_subplot(*args, **kwargs)
+    try:
+        yield ax
+    finally:
+        f.clf()
+
+
 class PlotsTest(unittest.TestCase):
     """Tests functions in `plots`."""
 
     f1 = plt.figure(1)
-    f2 = plt.figure(2)
-    ax = f1.add_subplot()
-    ax3d = f2.add_subplot(projection="3d")
 
     vertices = np.array(
         [
@@ -52,33 +59,44 @@ class PlotsTest(unittest.TestCase):
 
     def test_make_3d_ax_look_normal(self) -> None:
         """Tests make_3d_ax_look_normal"""
-        mrplt.make_3d_ax_look_normal(self.ax3d)
-        box_aspect = self.ax3d.get_box_aspect()
-        self.assertTrue(
-            np.array_equal(
-                box_aspect / box_aspect[0], np.ones(3, dtype="float64")
+        with managed_subplot(self.f1, projection="3d") as ax3d:
+            mrplt.make_3d_ax_look_normal(ax3d)
+            box_aspect = ax3d.get_box_aspect()
+            self.assertTrue(
+                np.array_equal(
+                    box_aspect / box_aspect[0], np.ones(3, dtype="float64")
+                )
             )
-        )
 
     def test_set_axes_equal(self) -> None:
         """Tests set_axes_equal"""
-        mrplt.set_axes_equal(self.ax3d)
-        limits = np.array(
-            [
-                self.ax3d.get_xlim3d(),
-                self.ax3d.get_ylim3d(),
-                self.ax3d.get_zlim3d(),
-            ]
-        )
-        limits_diff = np.diff(limits)
-        self.assertTrue(np.all(limits_diff == limits_diff[0]))
+        with managed_subplot(self.f1, projection="3d") as ax3d:
+            mrplt.set_axes_equal(ax3d)
+            limits = np.array(
+                [
+                    ax3d.get_xlim3d(),
+                    ax3d.get_ylim3d(),
+                    ax3d.get_zlim3d(),
+                ]
+            )
+            limits_diff = np.diff(limits)
+            self.assertTrue(np.all(limits_diff == limits_diff[0]))
 
     def test_plot_tri_mesh(self) -> None:
         """Tests plot_tri_mesh"""
-        handles, tri = mrplt.plot_tri_mesh(
-            self.ax3d, self.vertices, self.faces
-        )
-        self.assertTrue(np.array_equal(tri.edges, self.expected_edges))
+        with managed_subplot(self.f1, projection="3d") as ax3d:
+            handles, tri = mrplt.plot_tri_mesh(ax3d, self.vertices, self.faces)
+            self.assertTrue(np.array_equal(tri.edges, self.expected_edges))
+
+    def test_plot_point_cloud_3d(self) -> None:
+        with managed_subplot(self.f1, projection="3d") as ax3d:
+            outs = mrplt.plot_point_cloud_3d(ax3d, self.faces)
+            self.assertTrue(outs.get_offsets().size == 10)
+
+    def test_plot_vector(self) -> None:
+        with managed_subplot(self.f1, projection="3d") as ax3d:
+            outs = mrplt.plot_vector(ax3d, self.faces[0, :])
+            self.assertTrue(len(outs) == 1)
 
     def create_single_colormap(self) -> None:
         """Tests create_single_color_map"""
