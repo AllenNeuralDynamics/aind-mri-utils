@@ -63,9 +63,7 @@ def find_seg_nrrd_header_segment_info(header):
     return segment_info
 
 
-def load_segmentation_points(
-    label_vol, order=None, image=None
-):  # pragma: no cover
+def load_segmentation_points(label_vol, order=None, image=None):
     """
     Load segmentation points from a 3D Slicer generated .seg.nrrd file
 
@@ -155,7 +153,7 @@ def load_segmentation_points(
         )
 
 
-def markup_json_to_numpy(filename):  # pragma: no cover
+def markup_json_to_numpy(filename):
     """
     Extract control points from a 3D Slicer generated markup JSON file
 
@@ -175,7 +173,7 @@ def markup_json_to_numpy(filename):  # pragma: no cover
     return extract_control_points(data)
 
 
-def markup_json_to_dict(filename):  # pragma: no cover
+def markup_json_to_dict(filename):
     """
     Extract control points from a 3D Slicer generated markup JSON file
 

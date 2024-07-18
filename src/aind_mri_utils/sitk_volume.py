@@ -21,7 +21,7 @@ def resample(
     output_origin=None,
     output_size=None,
     interpolator=sitk.sitkLinear,
-):  # pragma: no cover
+):
     """
     Wrapper to generically handle SimpleITK resampling on different image
     matrices. Includes optional application of a transform.
@@ -78,7 +78,7 @@ def resample3D(
     output_origin=None,
     output_size=None,
     interpolator=sitk.sitkLinear,
-):  # pragma: no cover
+):
     """
     Resample a 3D sitk image, with the option to apply a transform
 

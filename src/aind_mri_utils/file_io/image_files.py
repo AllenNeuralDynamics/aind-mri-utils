@@ -2,12 +2,12 @@
 IO functions for SITK
 """
 
-import os  # pragma: no cover
+import os
 
-import SimpleITK as sitk  # pragma: no cover
+import SimpleITK as sitk
 
 
-def read_image(filename):  # pragma: no cover
+def read_image(filename):
     """
     Reads generic image files/folders in SITK using
     Currently explicitly supported: .dcm, .nii, .tiff
@@ -56,7 +56,7 @@ def read_image(filename):  # pragma: no cover
             return sitk.ReadImage(filename)
 
 
-def read_dicom(filename):  # pragma: no cover
+def read_dicom(filename):
     """
     Reader to import Dicom file and convert to sitk image
     See https://simpleitk.readthedocs.io/en/master/...
@@ -90,7 +90,7 @@ def read_dicom(filename):  # pragma: no cover
     return reader.Execute()
 
 
-def read_dcm(filename):  # pragma: no cover
+def read_dcm(filename):
     """
     Reader to import Dicom file and convert to sitk image.
     This fucntion is a wrapper on read_dicom to handle multiple naming
@@ -111,7 +111,7 @@ def read_dcm(filename):  # pragma: no cover
     return read_dicom(filename)
 
 
-def read_nii(filename):  # pragma: no cover
+def read_nii(filename):
     """
     Reader to import nifti file and convert to sitk image
     This function is just a wrapper to match convention.
@@ -130,7 +130,7 @@ def read_nii(filename):  # pragma: no cover
     return sitk.ReadImage(filename)
 
 
-def read_nifti(filename):  # pragma: no cover
+def read_nifti(filename):
     """
     Reader to import nifti file and convert to sitk image
     This fucntion is a wrapper on read_nii to handle multiple naming
@@ -150,7 +150,7 @@ def read_nifti(filename):  # pragma: no cover
     return read_nii(filename)
 
 
-def read_tiff_stack(folder):  # pragma: no cover
+def read_tiff_stack(folder):
     """
     Code to read a tiff stack
     THIS CODE IS INCOMPLETE: needs metadata handling (resolution, etc.) and
@@ -180,7 +180,7 @@ def read_tiff_stack(folder):  # pragma: no cover
     return reader.Execute()
 
 
-def write_nii(image, filename):  # pragma: no cover
+def write_nii(image, filename):
     """
 
     Write an sitk image to .nii file
@@ -203,7 +203,7 @@ def write_nii(image, filename):  # pragma: no cover
     sitk.WriteImage(image, f_name + f_ext)
 
 
-def write_dicom(image, foldername):  # pragma: no cover
+def write_dicom(image, foldername):
     """
     Save SITK image as dicom stack.
     Heavily borrowed from
