@@ -70,7 +70,7 @@ def make_3d_ax_look_normal(ax: plt.Axes):
     Changes the aspect ratio of a 3d plot so that dimensions are approximately
     the same size
 
-     Parameters
+    Parameters
     ==========
     ax - matplotlib 3d axis
     """

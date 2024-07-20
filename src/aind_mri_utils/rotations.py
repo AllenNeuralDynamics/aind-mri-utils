@@ -168,3 +168,104 @@ def rotation_matrix_from_vectors(a, b):
     ax = ut.skew_symmetric_cross_product_matrix(v)
     rotmat = np.eye(nd) + ax + ax @ ax * (1 / (1 + c))
     return rotmat
+
+
+def _rotate_mat_by_single_euler(mat, axis, angle):
+    "Helper function that rotates a matrix by a single Euler angle"
+    rotmat = Rotation.from_euler(axis, angle).as_matrix().squeeze()
+    return mat @ rotmat
+
+
+def roll(input_mat, angle):  # rotation around x axis (bank angle)
+    """
+    Apply a rotation around the x-axis (roll/bank angle) to the input matrix.
+
+    Parameters
+    ----------
+    input_mat : numpy.ndarray
+        The input matrix to be rotated.
+    angle : float
+        The angle of rotation around the x-axis in radians.
+
+    Returns
+    -------
+    numpy.ndarray
+        The rotated matrix.
+    """
+    return _rotate_mat_by_single_euler(input_mat, "x", angle)
+
+
+def pitch(input_mat, angle):  # rotation around y axis (elevation angle)
+    """
+    Apply a rotation around the y-axis (pitch/elevation angle) to the input matrix.
+
+    Parameters
+    ----------
+    input_mat : numpy.ndarray
+        The input matrix to be rotated.
+    angle : float
+        The angle of rotation around the y-axis in radians.
+
+    Returns
+    -------
+    numpy.ndarray
+        The rotated matrix.
+    """
+    return _rotate_mat_by_single_euler(input_mat, "y", angle)
+
+
+def yaw(input_mat, angle):  # rotation around z axis (heading angle)
+    """
+    Apply a rotation around the z-axis (yaw/heading angle) to the input matrix.
+
+    Parameters
+    ----------
+    input_mat : numpy.ndarray
+        The input matrix to be rotated.
+    angle : float
+        The angle of rotation around the z-axis in radians.
+
+    Returns
+    -------
+    numpy.ndarray
+        The rotated matrix.
+    """
+    return _rotate_mat_by_single_euler(input_mat, "z", angle)
+
+
+def extract_angles(mat):
+    """
+    Extract the Euler angles (roll, pitch, yaw) from a rotation matrix.
+
+    Parameters
+    ----------
+    mat : numpy.ndarray
+        The rotation matrix from which to extract the Euler angles.
+
+    Returns
+    -------
+    tuple of float
+        The extracted Euler angles (roll, pitch, yaw) in radians.
+    """
+    return tuple(Rotation.from_matrix(mat).as_euler("xyz"))
+
+
+def combine_angles(x, y, z):
+    """
+    Combine Euler angles (roll, pitch, yaw) into a rotation matrix.
+
+    Parameters
+    ----------
+    x : float
+        The roll angle (rotation around the x-axis) in radians.
+    y : float
+        The pitch angle (rotation around the y-axis) in radians.
+    z : float
+        The yaw angle (rotation around the z-axis) in radians.
+
+    Returns
+    -------
+    numpy.ndarray
+        The resulting rotation matrix.
+    """
+    return Rotation.from_euler("xyz", [x, y, z]).as_matrix().squeeze()

@@ -4,7 +4,7 @@ Functions for optimizing volume fits.
 
 """
 import numpy as np
-from scipy.optimize import fmin
+from scipy import optimize as opt
 
 from .measurement import dist_point_to_line, dist_point_to_plane
 
@@ -276,7 +276,7 @@ def optimize_transform_labeled_lines(
 
     weights = _preprocess_weights(weights, positions, normalize, gamma)
 
-    output = fmin(
+    output = opt.fmin(
         cost_function_weighted_labeled_lines,
         init,
         args=(pts1, pts2, positions, labels, weights),
@@ -352,7 +352,7 @@ def optimize_transform_labeled_lines_with_plane(
     """
     weights = _preprocess_weights(weights, positions, normalize, gamma)
 
-    output_a = fmin(
+    output_a = opt.fmin(
         cost_function_weighted_labeled_lines,
         init,
         args=(pts1, pts2, positions, labels, weights),
@@ -360,7 +360,7 @@ def optimize_transform_labeled_lines_with_plane(
         maxfun=maxfun,
     )
 
-    output_b = fmin(
+    output_b = opt.fmin(
         cost_function_weighted_labeled_lines_with_plane,
         output_a,
         args=(pts1, pts2, pts_for_line, positions, labels, weights),
