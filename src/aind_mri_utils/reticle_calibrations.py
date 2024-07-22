@@ -9,7 +9,6 @@ from scipy import optimize as opt
 from scipy.spatial.transform import Rotation
 
 from . import rotations as rot
-from . import utils as ut
 
 
 def extract_calibration_metadata(ws):
@@ -303,7 +302,7 @@ def fit_rotation_params(
         raise ValueError("reticle_pts and probe_pts must have 3 columns")
 
     R_homog = np.eye(4)
-    reticle_pts_homog = ut.prepare_data_for_homogeneous_transform(reticle_pts)
+    reticle_pts_homog = rot.prepare_data_for_homogeneous_transform(reticle_pts)
     transformed_pts_homog = np.empty_like(reticle_pts_homog)
 
     def fun(theta):
@@ -351,53 +350,6 @@ def fit_rotation_params(
     return R, translation
 
 
-def apply_rotate_translate(pts, R, translation):
-    """
-    Apply rotation and translation to a set of points.
-
-    Parameters
-    ----------
-    pts : numpy.ndarray
-        The input points to be transformed.
-    R : numpy.ndarray
-        The 3x3 rotation matrix.
-    translation : numpy.ndarray
-        The 3-element translation vector.
-
-    Returns
-    -------
-    numpy.ndarray
-        The transformed points.
-    """
-    R_homog = ut.make_homogeneous_transform(R, translation)
-    pts_homog = ut.prepare_data_for_homogeneous_transform(pts)
-    # Transposed because points are assumed to be row vectors
-    transformed_pts_homog = pts_homog @ R_homog.T
-    return ut.extract_data_for_homogeneous_transform(transformed_pts_homog)
-
-
-def inverse_rotate_translate(R, translation):
-    """
-    Compute the inverse rotation and translation.
-
-    Parameters
-    ----------
-    R : numpy.ndarray
-        The 3x3 rotation matrix.
-    translation : numpy.ndarray
-        The 3-element translation vector.
-
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - R_inv (numpy.ndarray): The transpose of the rotation matrix.
-        - tinv (numpy.ndarray): The inverse translation vector.
-    """
-    tinv = -translation @ R
-    return R.T, tinv
-
-
 def transform_reticle_to_probe(reticle_pts, R, translation):
     """
     Transform reticle points to probe points using rotation and translation.
@@ -416,7 +368,7 @@ def transform_reticle_to_probe(reticle_pts, R, translation):
     np.array(N,3)
         Transformed points.
     """
-    return apply_rotate_translate(reticle_pts, R, translation)
+    return rot.apply_rotate_translate(reticle_pts, R, translation)
 
 
 def transform_probe_to_reticle(probe_pts, R, translation):
@@ -437,5 +389,5 @@ def transform_probe_to_reticle(probe_pts, R, translation):
     np.array(N,3)
         Transformed points.
     """
-    Rinv, tinv = inverse_rotate_translate(R, translation)
-    return apply_rotate_translate(probe_pts, Rinv, tinv)
+    Rinv, tinv = rot.inverse_rotate_translate(R, translation)
+    return rot.apply_rotate_translate(probe_pts, Rinv, tinv)

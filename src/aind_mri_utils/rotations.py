@@ -270,3 +270,131 @@ def combine_angles(x, y, z):
         The resulting rotation matrix.
     """
     return Rotation.from_euler("xyz", [x, y, z]).as_matrix().squeeze()
+
+
+def make_homogeneous_transform(R, translation):
+    """
+    Combines a rotation matrix and translation into a homogeneous transform.
+
+    Parameters
+    ----------
+    R : np.array(N,N)
+        Rotation matrix.
+    translation : np.array(N,)
+        Translation vector.
+
+    Returns
+    -------
+    np.array(N+1,N+1)
+        homogeneous transformation matrix
+    """
+    N, M = R.shape
+    if N != M:
+        raise ValueError("R must be square")
+    if N != translation.shape[0]:
+        raise ValueError("R and translation must have same size")
+    R_homog = np.eye(N + 1)
+    R_homog[0:N, 0:N] = R
+    R_homog[0:N, N] = translation
+    return R_homog
+
+
+def prepare_data_for_homogeneous_transform(pts):
+    """
+    Prepare points for homogeneous transformation.
+
+    Parameters
+    ----------
+    pts : np.array(N,M) or np.array(M)
+        array of N M-D points.
+
+    Returns
+    -------
+    np.array(N,M+1) or np.array(M+1)
+        (M+1)-D points with 1 in the last position.
+    """
+    nd = pts.ndim
+    if nd == 1:
+        M = pts.shape[0]
+        pts_homog = np.ones(M + 1)
+        pts_homog[0:M] = pts
+    elif nd == 2:
+        N, M = pts.shape
+        pts_homog = np.ones((N, M + 1))
+        pts_homog[:, 0:M] = pts
+    else:
+        raise ValueError("pts must be 1D or 2D")
+    return pts_homog
+
+
+def extract_data_for_homogeneous_transform(pts_homog):
+    """
+    Extract points formatted for homogeneous transformation.
+
+    Parameters
+    ----------
+    pts_homog : np.array(N,M+1) or np.array(M+1)
+        (M+1)-D points with 1 in the last position.
+
+    Returns
+    -------
+    np.array(N,M) or np.array(M)
+        array of N M-D points.
+    """
+    nd = pts_homog.ndim
+    if nd == 1:
+        M = pts_homog.shape[0] - 1
+        pts = pts_homog[0:M]
+    elif nd == 2:
+        N, M = pts_homog.shape
+        pts = pts_homog[:, 0 : (M - 1)]  # noqa: E203
+    else:
+        raise ValueError("pts_homog must be 1D or 2D")
+    return pts
+
+
+def apply_rotate_translate(pts, R, translation):
+    """
+    Apply rotation and translation to a set of points.
+
+    Parameters
+    ----------
+    pts : numpy.ndarray
+        The input points to be transformed.
+    R : numpy.ndarray
+        The 3x3 rotation matrix.
+    translation : numpy.ndarray
+        The 3-element translation vector.
+
+    Returns
+    -------
+    numpy.ndarray
+        The transformed points.
+    """
+    R_homog = make_homogeneous_transform(R, translation)
+    pts_homog = prepare_data_for_homogeneous_transform(pts)
+    # Transposed because points are assumed to be row vectors
+    transformed_pts_homog = pts_homog @ R_homog.T
+    return extract_data_for_homogeneous_transform(transformed_pts_homog)
+
+
+def inverse_rotate_translate(R, translation):
+    """
+    Compute the inverse rotation and translation.
+
+    Parameters
+    ----------
+    R : numpy.ndarray
+        The 3x3 rotation matrix.
+    translation : numpy.ndarray
+        The 3-element translation vector.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - R_inv (numpy.ndarray): The transpose of the rotation matrix.
+        - tinv (numpy.ndarray): The inverse translation vector.
+    """
+    tinv = -translation @ R
+    return R.T, tinv
