@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 from scipy import optimize as opt
 from scipy.spatial.transform import Rotation
 
-from . import rotations
+from . import rotations as rot
 from . import utils as ut
 
 
@@ -255,15 +255,27 @@ def read_reticle_calibration(
 
 def _unpack_theta(theta):
     """Helper function to unpack theta into rotation matrix and translation."""
-    R = rotations.combine_angles(*theta[0:3])
+    R = rot.combine_angles(*theta[0:3])
     offset = theta[3:6]
     return R, offset
 
 
-def fit_rotation_params(reticle_pts, probe_pts, legacy_outputs=False):
+def fit_rotation_params(
+    reticle_pts, probe_pts, legacy_outputs=False, **kwargs
+):
     """
     Fit rotation parameters to align reticle points with probe points using
-    least squares optimization.
+    least squares optimization. The rotation matrix and translation vector
+    are the solution for the equation
+
+    probe_pts = R @ reticle_pts + translation
+
+    where each point is a column vector.
+
+    Because numpy is row-major, points are often stored as row vectors. In this
+    case, you should use the transpose of this equation:
+
+    probe_pts = reticle_pts @ R.T + translation
 
     Parameters
     ----------
@@ -274,6 +286,9 @@ def fit_rotation_params(reticle_pts, probe_pts, legacy_outputs=False):
     legacy_outputs : bool, optional
         If True, return the translation in the global frame and the transpose
         of the rotation matrix.  The default is False.
+    **kwargs : dict
+        Additional keyword arguments to pass to the least squares optimization
+        function.
 
     Returns
     -------
@@ -282,6 +297,10 @@ def fit_rotation_params(reticle_pts, probe_pts, legacy_outputs=False):
         - R (numpy.ndarray): The 3x3 rotation matrix.
         - translation (numpy.ndarray): The 3-element translation vector.
     """
+    if reticle_pts.shape != probe_pts.shape:
+        raise ValueError("reticle_pts and probe_pts must have the same shape")
+    if reticle_pts.shape[1] != 3:
+        raise ValueError("reticle_pts and probe_pts must have 3 columns")
 
     R_homog = np.eye(4)
     reticle_pts_homog = ut.prepare_data_for_homogeneous_transform(reticle_pts)
@@ -289,25 +308,42 @@ def fit_rotation_params(reticle_pts, probe_pts, legacy_outputs=False):
 
     def fun(theta):
         """cost function for least squares optimization"""
-        R_homog[0:3, 0:3] = rotations.combine_angles(*theta[0:3])
+        R_homog[0:3, 0:3] = rot.combine_angles(*theta[0:3])
         R_homog[0:3, 3] = theta[3:6]  # translation
         np.matmul(reticle_pts_homog, R_homog.T, out=transformed_pts_homog)
         residuals = (transformed_pts_homog[:, 0:3] - probe_pts).flatten()
         return residuals
 
+    # Initial guess of parameters
     theta0 = np.zeros(6)
-    res = opt.least_squares(fun, theta0)
+
+    if probe_pts.shape[0] > 1:
+        # Initial guess of rotation: align the vectors between the first two points
+        probe_diff = np.diff(probe_pts[:2, :], axis=0)
+        reticle_diff = np.diff(reticle_pts[:2, :], axis=0)
+        Rinit = rot.rotation_matrix_from_vectors(
+            reticle_diff.squeeze(), probe_diff.squeeze()
+        )
+        theta0[0:3] = Rotation.from_matrix(Rinit).as_euler("xyz")
+
+    # Initial guess of translation: find the point on the reticle closest to zero
+    smallest_pt = np.argmin(np.linalg.norm(reticle_pts, axis=1))
+    theta0[3:6] = probe_pts[smallest_pt, :]
+
+    res = opt.least_squares(fun, theta0, **kwargs)
     R, translation = _unpack_theta(res.x)
     if legacy_outputs:
         # last version had translation in global frame
         #
+        # Also the last version for some reason calculated the tranpose of the
+        # rotation matrix. Application of the rotation matrix was consistently
+        # wrong in a way that accounted for this transpose, so the results were
+        # correct.
+        #
         # All of the transposes are confusing here: this is the inverse of the
         # rotation matrix, accounting for numpy being row-major, and
         # data points being row vectors
-        #
-        # Also the last version found the tranpose of the rotation matrix
-        # for some reason the application of the rotation matrix without
-        # tranpose and was consistent if not correct
+
         translation = translation @ R  # Not R.T!
         return translation, R.T  # Not R!
     return R, translation
