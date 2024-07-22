@@ -197,7 +197,8 @@ def roll(input_mat, angle):  # rotation around x axis (bank angle)
 
 def pitch(input_mat, angle):  # rotation around y axis (elevation angle)
     """
-    Apply a rotation around the y-axis (pitch/elevation angle) to the input matrix.
+    Apply a rotation around the y-axis (pitch/elevation angle) to the input
+    matrix.
 
     Parameters
     ----------

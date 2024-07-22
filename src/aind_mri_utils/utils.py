@@ -205,7 +205,7 @@ def extract_data_for_homogeneous_transform(pts_homog):
         pts = pts_homog[0:M]
     elif nd == 2:
         N, M = pts_homog.shape
-        pts = pts_homog[:, 0 : (M - 1)]
+        pts = pts_homog[:, 0 : (M - 1)]  # noqa: E203
     else:
         raise ValueError("pts_homog must be 1D or 2D")
     return pts

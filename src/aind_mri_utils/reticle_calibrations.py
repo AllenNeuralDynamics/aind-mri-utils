@@ -1,13 +1,37 @@
+"""
+Functions to read reticle calibration data, find a transformation between
+coordinate frames, and apply the transformation.
+"""
+
 import numpy as np
+from openpyxl import load_workbook
 from scipy import optimize as opt
 from scipy.spatial.transform import Rotation
+
 from . import rotations
 from . import utils as ut
 
-from openpyxl import load_workbook
-
 
 def extract_calibration_metadata(ws):
+    """
+    Extract calibration metadata from an Excel worksheet.
+
+    Parameters
+    ----------
+    ws : openpyxl.worksheet.worksheet.Worksheet
+        The worksheet object from which to extract the calibration metadata.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - global_factor (float): The global scale value.
+        - global_rotation_degrees (float): The global rotation in degrees.
+        - manipulator_factor (float): The manipulator scale value.
+        - global_offset (numpy.ndarray): The global offset as a 3-element
+          array.
+        - reticle_name (str): The name of the reticle.
+    """
     rowiter = ws.iter_rows(min_row=1, max_row=2, values_only=True)
     colname_lookup = {k: i for i, k in enumerate(next(rowiter))}
     metadata_values = next(rowiter)
@@ -19,7 +43,8 @@ def extract_calibration_metadata(ws):
     reticle_name = metadata_values[colname_lookup["Reticule"]]
     offset_x_pos = colname_lookup["GlobalOffsetX"]
     global_offset = np.array(
-        metadata_values[offset_x_pos : offset_x_pos + 3], dtype=float
+        metadata_values[offset_x_pos : offset_x_pos + 3],  # noqa: E203
+        dtype=float,
     )
     return (
         global_factor,
@@ -31,6 +56,20 @@ def extract_calibration_metadata(ws):
 
 
 def extract_calibration_pairs(ws):
+    """
+    Extract calibration pairs from an Excel worksheet.
+
+    Parameters
+    ----------
+    ws : openpyxl.worksheet.worksheet.Worksheet
+        The worksheet object from which to extract the calibration pairs.
+
+    Returns
+    -------
+    dict
+        A dictionary where keys are probe names and values are lists of tuples,
+        each containing a reticle point and a probe point as numpy arrays.
+    """
     pairs_by_probe = dict()
     for row in ws.iter_rows(min_row=2, max_col=7, values_only=True):
         probe_name = row[0]
@@ -45,6 +84,21 @@ def extract_calibration_pairs(ws):
 
 
 def _combine_pairs(list_of_pairs):
+    """
+    Combine lists of pairs into separate global and manipulator points
+    matrices.
+
+    Parameters
+    ----------
+    list_of_pairs : list of tuple
+        A list of tuples, each containing a reticle point and a probe point as
+        numpy arrays.
+
+    Returns
+    -------
+    tuple
+        Two numpy arrays, one for global points and one for manipulator points.
+    """
     global_pts, manipulator_pts = [np.vstack(x) for x in zip(*list_of_pairs)]
     return global_pts, manipulator_pts
 
@@ -57,6 +111,29 @@ def _apply_metadata_to_pair_mats(
     global_offset,
     manipulator_factor,
 ):
+    """
+    Apply calibration metadata to global and manipulator points matrices.
+
+    Parameters
+    ----------
+    global_pts : numpy.ndarray
+        The global points matrix.
+    manipulator_pts : numpy.ndarray
+        The manipulator points matrix.
+    global_factor : float
+        The global factor value.
+    global_rotation_degrees : float
+        The global rotation in degrees.
+    global_offset : numpy.ndarray
+        The global offset as a 3-element array.
+    manipulator_factor : float
+        The manipulator factor value.
+
+    Returns
+    -------
+    tuple
+        The adjusted global points and manipulator points matrices.
+    """
     if global_rotation_degrees != 0:
         rotmat = (
             Rotation.from_euler("z", global_rotation_degrees, degrees=True)
@@ -77,6 +154,28 @@ def _apply_metadata_to_pair_lists(
     global_offset,
     manipulator_factor,
 ):
+    """
+    Apply calibration metadata to lists of pairs.
+
+    Parameters
+    ----------
+    list_of_pairs : list of tuple
+        A list of tuples, each containing a reticle point and a probe point as
+        numpy arrays.
+    global_factor : float
+        The global factor value.
+    global_rotation_degrees : float
+        The global rotation in degrees.
+    global_offset : numpy.ndarray
+        The global offset as a 3-element array.
+    manipulator_factor : float
+        The manipulator factor value.
+
+    Returns
+    -------
+    tuple
+        The adjusted global points and manipulator points matrices.
+    """
     global_pts, manipulator_pts = _combine_pairs(list_of_pairs)
     return _apply_metadata_to_pair_mats(
         global_pts,
@@ -91,6 +190,36 @@ def _apply_metadata_to_pair_lists(
 def read_reticle_calibration(
     filename, points_sheet_name="points", metadata_sheet_name="metadata"
 ):
+    """
+    Read reticle calibration data from an Excel file.
+
+    Parameters
+    ----------
+    filename : str
+        The path to the Excel file containing the calibration data.
+    points_sheet_name : str, optional
+        The name of the sheet containing the calibration points.
+        The default is "points".
+    metadata_sheet_name : str, optional
+        The name of the sheet containing the calibration metadata.
+        The default is "metadata".
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - adjusted_pairs_by_probe (dict): Adjusted calibration pairs by probe
+          name.
+        - global_offset (numpy.ndarray): The global offset as a 3-element
+          array.
+        - global_rotation_degrees (float): The global rotation in degrees.
+        - reticle_name (str): The name of the reticle.
+
+    Raises
+    ------
+    ValueError
+        If the specified sheets are not found in the Excel file.
+    """
     wb = load_workbook(filename, read_only=True, data_only=True)
     if points_sheet_name not in wb.sheetnames:
         raise ValueError(f"Sheet {points_sheet_name} not found in {filename}")
@@ -125,17 +254,41 @@ def read_reticle_calibration(
 
 
 def _unpack_theta(theta):
+    """Helper function to unpack theta into rotation matrix and translation."""
     R = rotations.combine_angles(*theta[0:3])
     offset = theta[3:6]
     return R, offset
 
 
 def fit_rotation_params(reticle_pts, probe_pts, legacy_outputs=False):
+    """
+    Fit rotation parameters to align reticle points with probe points using
+    least squares optimization.
+
+    Parameters
+    ----------
+    reticle_pts : numpy.ndarray
+        The reticle points to be transformed.
+    probe_pts : numpy.ndarray
+        The probe points to align with.
+    legacy_outputs : bool, optional
+        If True, return the translation in the global frame and the transpose
+        of the rotation matrix.  The default is False.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - R (numpy.ndarray): The 3x3 rotation matrix.
+        - translation (numpy.ndarray): The 3-element translation vector.
+    """
+
     R_homog = np.eye(4)
     reticle_pts_homog = ut.prepare_data_for_homogeneous_transform(reticle_pts)
     transformed_pts_homog = np.empty_like(reticle_pts_homog)
 
     def fun(theta):
+        """cost function for least squares optimization"""
         R_homog[0:3, 0:3] = rotations.combine_angles(*theta[0:3])
         R_homog[0:3, 3] = theta[3:6]  # translation
         np.matmul(reticle_pts_homog, R_homog.T, out=transformed_pts_homog)
@@ -161,6 +314,23 @@ def fit_rotation_params(reticle_pts, probe_pts, legacy_outputs=False):
 
 
 def apply_rotate_translate(pts, R, translation):
+    """
+    Apply rotation and translation to a set of points.
+
+    Parameters
+    ----------
+    pts : numpy.ndarray
+        The input points to be transformed.
+    R : numpy.ndarray
+        The 3x3 rotation matrix.
+    translation : numpy.ndarray
+        The 3-element translation vector.
+
+    Returns
+    -------
+    numpy.ndarray
+        The transformed points.
+    """
     R_homog = ut.make_homogeneous_transform(R, translation)
     pts_homog = ut.prepare_data_for_homogeneous_transform(pts)
     # Transposed because points are assumed to be row vectors
@@ -169,6 +339,23 @@ def apply_rotate_translate(pts, R, translation):
 
 
 def inverse_rotate_translate(R, translation):
+    """
+    Compute the inverse rotation and translation.
+
+    Parameters
+    ----------
+    R : numpy.ndarray
+        The 3x3 rotation matrix.
+    translation : numpy.ndarray
+        The 3-element translation vector.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - R_inv (numpy.ndarray): The transpose of the rotation matrix.
+        - tinv (numpy.ndarray): The inverse translation vector.
+    """
     tinv = -translation @ R
     return R.T, tinv
 
