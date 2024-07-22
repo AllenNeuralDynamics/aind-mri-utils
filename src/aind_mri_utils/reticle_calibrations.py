@@ -318,7 +318,8 @@ def fit_rotation_params(
     theta0 = np.zeros(6)
 
     if probe_pts.shape[0] > 1:
-        # Initial guess of rotation: align the vectors between the first two points
+        # Initial guess of rotation: align the vectors between the first
+        # two points
         probe_diff = np.diff(probe_pts[:2, :], axis=0)
         reticle_diff = np.diff(reticle_pts[:2, :], axis=0)
         Rinit = rot.rotation_matrix_from_vectors(
@@ -326,7 +327,8 @@ def fit_rotation_params(
         )
         theta0[0:3] = Rotation.from_matrix(Rinit).as_euler("xyz")
 
-    # Initial guess of translation: find the point on the reticle closest to zero
+    # Initial guess of translation: find the point on the reticle closest to
+    # zero
     smallest_pt = np.argmin(np.linalg.norm(reticle_pts, axis=1))
     theta0[3:6] = probe_pts[smallest_pt, :]
 
