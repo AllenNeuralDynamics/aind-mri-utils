@@ -184,6 +184,8 @@ def find_points_equal_to(simage, val):
     """
     arr = sitk.GetArrayViewFromImage(simage)
     ndxs = ut.find_indices_equal_to(arr, val)
+    if ndxs.size == 0:
+        return np.empty((0, 3))
     ndxs_xyz = ndxs[
         :, [2, 1, 0]
     ]  # convert between numpy and simpleITK indexing
