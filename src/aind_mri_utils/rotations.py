@@ -115,6 +115,26 @@ def rotation_matrix_to_sitk(
     return S
 
 
+def sitk_to_rotation_matrix(S):
+    """Convert sitk affine transform to numpy array rotation matrix
+
+    Parameters
+    ----------
+    S : SITK transform
+        affine transform object
+
+    Returns
+    -------
+    np.ndarray (3 x 3)
+        matrix representing rotation matrix in three dimensions
+
+    """
+    R = np.array(S.GetMatrix()).reshape((3, 3))
+    translation = np.array(S.GetTranslation())
+    center = np.array(S.GetCenter())
+    return R, translation, center
+
+
 def scipy_rotation_to_sitk(
     rotation, center=np.array((0, 0, 0)), translation=np.array((0, 0, 0))
 ):

@@ -6,6 +6,7 @@ Functions for optimizing volume fits.
 import numpy as np
 from scipy import optimize as opt
 
+from . import rotations as rot
 from .measurement import dist_point_to_line, dist_point_to_plane
 
 
@@ -23,60 +24,13 @@ def append_ones_column(data):
     np.array
         Data with a column of ones appended to the end.
     """
-    return np.hstack([data, np.ones([data.shape[0], 1])])
+    return rot.prepare_data_for_homogeneous_transform(data)
 
 
-def create_rigid_transform(rx, ry, rz, cx, cy, cz):
-    """
-    Create a rigid transform matrix from the given parameters.
-
-    Parameters
-    ----------
-    rx : float
-        x rotation.
-    ry : float
-        y rotation.
-    rz : float
-        z rotation.
-    cx : float
-        x offset.
-    cy : float
-        y offset.
-    cz : float
-        z offset.
-
-    Returns
-    -------
-    R : np.array(4,3)
-        Rotation matrix (rigid transform).
-
-    """
-
-    RZ = np.array(
-        [
-            [np.cos(np.deg2rad(rz)), -np.sin(np.deg2rad(rz)), 0],
-            [np.sin(np.deg2rad(rz)), np.cos(np.deg2rad(rz)), 0],
-            [0, 0, 1],
-        ]
-    )
-    RX = np.array(
-        [
-            [1, 0, 0],
-            [0, np.cos(np.deg2rad(rx)), -np.sin(np.deg2rad(rx))],
-            [0, np.sin(np.deg2rad(rx)), np.cos(np.deg2rad(rx))],
-        ]
-    )
-    RY = np.array(
-        [
-            [np.cos(np.deg2rad(ry)), 0, np.sin(np.deg2rad(ry))],
-            [0, 1, 0],
-            [-np.sin(np.deg2rad(ry)), 0, np.cos(np.deg2rad(ry))],
-        ]
-    )
-
-    R = np.dot(np.dot(RX, RY), RZ)
-    R = np.vstack([R, np.array([cx, cy, cz])])
-    return R
+def _unpack_theta_apply_transform(theta, moving):
+    """Helper function to apply a transform to a set of points."""
+    R = rot.combine_angles(*theta[0:3])
+    return rot.apply_rotate_translate(moving, R, theta[3:])
 
 
 def cost_function_weighted_labeled_lines(
@@ -108,14 +62,7 @@ def cost_function_weighted_labeled_lines(
         their corresponding lines, weighted by weights.
 
     """
-    rx = T[0]
-    ry = T[1]
-    rz = T[2]
-    cx = T[3]
-    cy = T[4]
-    cz = T[5]
-    trans = create_rigid_transform(rx, ry, rz, cx, cy, cz)
-    transformed = np.dot(moving, trans)
+    transformed = _unpack_theta_apply_transform(T, moving)
 
     D = np.zeros((moving.shape[0], 1))
     for ii in range(pts1.shape[0]):
@@ -161,14 +108,7 @@ def cost_function_weighted_labeled_lines_with_plane(
         Sum of distances between points all points and
         their corresponding line or plane, weighted by weights.
     """
-    rx = T[0]
-    ry = T[1]
-    rz = T[2]
-    cx = T[3]
-    cy = T[4]
-    cz = T[5]
-    trans = create_rigid_transform(rx, ry, rz, cx, cy, cz)
-    transformed = np.dot(moving, trans)
+    transformed = _unpack_theta_apply_transform(T, moving)
 
     D = np.zeros((moving.shape[0], 1))
     for ii in range(pts1.shape[0]):
@@ -212,6 +152,14 @@ def _preprocess_weights(weights, positions, normalize, gamma):
             if normalize:
                 weights = (weights - np.min(weights)) / (scale)
     return weights
+
+
+def _unpack_theta_to_homogeneous(T):
+    """Helper function to unpack theta to a homogeneous transform."""
+    R = rot.combine_angles(*T[0:3])
+    translation = T[3:]
+    R_homog = rot.make_homogeneous_transform(R, translation)
+    return R_homog
 
 
 def optimize_transform_labeled_lines(
@@ -276,7 +224,7 @@ def optimize_transform_labeled_lines(
 
     weights = _preprocess_weights(weights, positions, normalize, gamma)
 
-    output = opt.fmin(
+    Tframe = opt.fmin(
         cost_function_weighted_labeled_lines,
         init,
         args=(pts1, pts2, positions, labels, weights),
@@ -284,12 +232,9 @@ def optimize_transform_labeled_lines(
         maxfun=maxfun,
     )
 
-    Tframe = output
-    print(output)
-    trans = create_rigid_transform(
-        Tframe[0], Tframe[1], Tframe[2], Tframe[3], Tframe[4], Tframe[5]
-    )
-    return trans, Tframe
+    print(Tframe)
+    R_homog = _unpack_theta_to_homogeneous(Tframe)
+    return R_homog, Tframe
 
 
 def optimize_transform_labeled_lines_with_plane(
@@ -369,10 +314,8 @@ def optimize_transform_labeled_lines_with_plane(
     )
 
     Tframe = output_b
-    trans = create_rigid_transform(
-        Tframe[0], Tframe[1], Tframe[2], Tframe[3], Tframe[4], Tframe[5]
-    )
-    return trans, Tframe
+    R_homog = _unpack_theta_to_homogeneous(Tframe)
+    return R_homog, Tframe
 
 
 def get_headframe_hole_lines(

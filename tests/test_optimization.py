@@ -80,7 +80,6 @@ class OptimaizationTest(unittest.TestCase):
 
         move_pts = np.vstack([pts1, pts2])
         move_pts[:, 2] = move_pts[:, 2] + 1
-        move_pts = append_ones_column(move_pts)
         labels = np.array(
             [
                 0,
@@ -145,7 +144,6 @@ class OptimaizationTest(unittest.TestCase):
 
         move_pts = np.vstack([pts1[:4, :], pts2[:4, :], pts2[-1, :]])
         move_pts[:, 2] = move_pts[:, 2] + 1
-        move_pts = append_ones_column(move_pts)
 
         labels = np.array([0, 1, 2, 3, 0, 1, 2, 3, 4])
         weights = np.ones(
