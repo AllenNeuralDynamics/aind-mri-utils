@@ -17,7 +17,7 @@ class OptimaizationTest(unittest.TestCase):
         """
         ant_hrz_hole_pts = np.array([[-6.34, 0, 2.5], [-6.34, 6.5, 2.5]])
         pts1, _, names = get_headframe_hole_lines(
-            version=0.1,
+            version="0.1",
             insert_underscores=False,
             coordinate_system="LPS",
             return_plane=False,
@@ -28,7 +28,7 @@ class OptimaizationTest(unittest.TestCase):
         self.assertTrue(len(names) == 4)
 
         pts1, pts2, names = get_headframe_hole_lines(
-            version=0.1,
+            version="0.1",
             insert_underscores=True,
             coordinate_system="RAS",
             return_plane=True,
@@ -49,11 +49,7 @@ class OptimaizationTest(unittest.TestCase):
         self.assertTrue(len(names) == 5)
 
         # Test that value error is raised if bad version in passed
-        try:
-            get_headframe_hole_lines(version=12)
-            self.assertTrue(False)
-        except ValueError:
-            self.assertTrue(True)
+        self.assertRaises(ValueError, get_headframe_hole_lines, version=12)
 
     def test_append_ones_column(self) -> None:
         """
@@ -136,7 +132,7 @@ class OptimaizationTest(unittest.TestCase):
         Test optimize_transform_labeled_lines_with_plane
         """
         pts1, pts2, _ = get_headframe_hole_lines(
-            version=0.1,
+            version="0.1",
             insert_underscores=False,
             coordinate_system="LPS",
             return_plane=True,
