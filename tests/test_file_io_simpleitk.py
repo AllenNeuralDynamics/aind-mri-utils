@@ -28,8 +28,6 @@ class SITKTest(unittest.TestCase):
         load_trans, _, _ = si.load_sitk_transform(test_save_path)
         self.assertTrue(np.allclose(R, load_trans))
 
-        print("R is shape {}".format(R.shape))
-        print(f"R: {R}")
         # Test more complicated transform
         R[0, -1] = 1
         si.save_sitk_transform(test_save_path, R)

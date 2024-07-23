@@ -9,6 +9,33 @@ from scipy import optimize as opt
 from . import rotations as rot
 from .measurement import dist_point_to_line, dist_point_to_plane
 
+headframe_hole_locations = {
+    "0.1": {
+        "RAS": {
+            "anterior_horizontal": np.array(
+                [[6.34, 0, 2.5], [6.34, -6.5, 2.5]]
+            ),
+            "anterior_vertical": np.array([[5.1, -3.2, -1], [5.1, -3.2, 4]]),
+            "posterior_horizontal": np.array(
+                [[5.04, -6.5, 1], [5.04, -12, 1]]
+            ),
+            "posterior_vertical": np.array([[6.85, -9.9, 0], [6.85, -9.9, 5]]),
+        }
+    }
+}
+
+headframe_plane_location = {"0.1": {"RAS": np.array([[0, 0, 2], [0, 0, 1]])}}
+
+RAS_LPS_conversion_factor = np.array([-1, -1, 1])
+for version in headframe_hole_locations:
+    lps_dict = dict()
+    for key, val in headframe_hole_locations[version]["RAS"].items():
+        lps_dict[key] = val * RAS_LPS_conversion_factor
+    headframe_hole_locations[version]["LPS"] = lps_dict
+    headframe_plane_location[version]["LPS"] = (
+        RAS_LPS_conversion_factor * headframe_plane_location[version]["RAS"]
+    )
+
 
 def append_ones_column(data):
     """
@@ -319,7 +346,7 @@ def optimize_transform_labeled_lines_with_plane(
 
 
 def get_headframe_hole_lines(
-    version=0.1,
+    version="0.1",
     insert_underscores=False,
     coordinate_system="LPS",
     return_plane=False,
@@ -330,9 +357,9 @@ def get_headframe_hole_lines(
 
     Parameters
     ----------
-    version : float, optional
+    version : string, optional
         headframe version to match.
-        The default is 0.1.,
+        The default is "0.1".,
         which corresponds to the first-gen zircona hole hemisphere headframe.
     insert_underscores : bool, optional
         If true, insert underscores into the names of the lines.
@@ -352,91 +379,28 @@ def get_headframe_hole_lines(
     names : list
         Name of each line.
     """
-    if version == 0.1:
-        if coordinate_system == "RAS":
-            # Idealized Headframe holes
-            ant_vert_hole_pts = np.array(
-                [[5.1, -3.2, -1], [5.1, -3.2, 4]]
-            )  # Z doesn't matter, just needs two points
-            post_vert_hole_pts = np.array(
-                [[6.85, -9.9, 0], [6.85, -9.9, 5]]
-            )  # Z doesn't matter, just needs two points
-            ant_hrz_hole_pts = np.array(
-                [[6.34, 0, 2.5], [6.34, -6.5, 2.5]]
-            )  # Y doesn't matter, just needs two points
-            post_hrz_hole_pts = np.array(
-                [[5.04, -6.5, 1], [5.04, -12, 1]]
-            )  # Y doesn't matter, just needs two points
-        elif coordinate_system == "LPS":
-            ant_vert_hole_pts = np.array(
-                [[-5.1, 3.2, -1], [-5.1, 3.2, 4]]
-            )  # Z doesn't matter, just needs two points
-            post_vert_hole_pts = np.array(
-                [[-6.85, 9.9, 0], [-6.85, 9.9, 5]]
-            )  # Z doesn't matter, just needs two points
-            ant_hrz_hole_pts = np.array(
-                [[-6.34, 0, 2.5], [-6.34, 6.5, 2.5]]
-            )  # Y doesn't matter, just needs two points
-            post_hrz_hole_pts = np.array(
-                [[-5.04, 6.5, 1], [-5.04, 12, 1]]
-            )  # Y doesn't matter, just needs two points
-
-        if insert_underscores:
-            names = [
-                "anterior_horizontal",
-                "anterior_vertical",
-                "posterior_horizontal",
-                "posterior_vertical",
-            ]
-        else:
-            names = [
-                "anterior horizontal",
-                "anterior vertical",
-                "posterior horizontal",
-                "posterior vertical",
-            ]
-
-        if return_plane:
-            # Last point is point on plane
-            pts1 = np.array(
-                [
-                    ant_hrz_hole_pts[0, :],
-                    ant_vert_hole_pts[0, :],
-                    post_hrz_hole_pts[0, :],
-                    post_vert_hole_pts[0, :],
-                    [0, 0, 2],
-                ],
-            )
-            # Last point is plane normal
-            pts2 = np.array(
-                [
-                    ant_hrz_hole_pts[1, :],
-                    ant_vert_hole_pts[1, :],
-                    post_hrz_hole_pts[1, :],
-                    post_vert_hole_pts[1, :],
-                    [0, 0, 1],
-                ]
-            )
-            names.append("plane")
-        else:
-            # Stack in a specific order
-            pts1 = np.array(
-                [
-                    ant_hrz_hole_pts[0, :],
-                    ant_vert_hole_pts[0, :],
-                    post_hrz_hole_pts[0, :],
-                    post_vert_hole_pts[0, :],
-                ]
-            )
-            pts2 = np.array(
-                [
-                    ant_hrz_hole_pts[1, :],
-                    ant_vert_hole_pts[1, :],
-                    post_hrz_hole_pts[1, :],
-                    post_vert_hole_pts[1, :],
-                ]
-            )
-
-        return pts1, pts2, names
-    else:
+    if version not in headframe_hole_locations:
         raise ValueError("Version not supported")
+    if coordinate_system not in headframe_hole_locations[version]:
+        raise ValueError("Coordinate system not supported")
+
+    names = []
+    pts1 = []
+    pts2 = []
+    pt_dict = headframe_hole_locations[version][coordinate_system]
+    for name, pts in pt_dict.items():
+        if insert_underscores:
+            store_name = name
+        else:
+            store_name = name.replace("_", " ")
+        names.append(store_name)
+        pts1.append(pts[0, :])
+        pts2.append(pts[1, :])
+    if return_plane:
+        names.append("plane")
+        headframe_pts = headframe_plane_location[version][coordinate_system]
+        pts1.append(headframe_pts[0, :])
+        pts2.append(headframe_pts[1, :])
+    pts1 = np.vstack(pts1)
+    pts2 = np.vstack(pts2)
+    return pts1, pts2, names
