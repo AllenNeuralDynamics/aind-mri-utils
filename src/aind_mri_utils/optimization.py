@@ -154,7 +154,7 @@ def _preprocess_weights(weights, positions, normalize, gamma):
     return weights
 
 
-def _unpack_theta_to_homogeneous(T):
+def unpack_theta_to_homogeneous(T):
     """Helper function to unpack theta to a homogeneous transform."""
     R = rot.combine_angles(*T[0:3])
     translation = T[3:]
@@ -233,7 +233,7 @@ def optimize_transform_labeled_lines(
     )
 
     print(Tframe)
-    R_homog = _unpack_theta_to_homogeneous(Tframe)
+    R_homog = unpack_theta_to_homogeneous(Tframe)
     return R_homog, Tframe
 
 
@@ -314,7 +314,7 @@ def optimize_transform_labeled_lines_with_plane(
     )
 
     Tframe = output_b
-    R_homog = _unpack_theta_to_homogeneous(Tframe)
+    R_homog = unpack_theta_to_homogeneous(Tframe)
     return R_homog, Tframe
 
 
