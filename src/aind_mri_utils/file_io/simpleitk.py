@@ -5,10 +5,16 @@ Functions for saving and loading transforms using SimpleITK.
 import numpy as np
 import SimpleITK as sitk
 
-from ..optimization import create_rigid_transform
+from .. import rotations as rot
 
 
-def save_sitk_transform(filename, T, transpose_matrix=False):
+def save_sitk_transform(
+    filename,
+    rotation_matrix,
+    translation=None,
+    transpose_matrix=False,
+    legacy=False,
+):
     """
     Save transform to a sitk file (readable by Slicer);
 
@@ -27,26 +33,39 @@ def save_sitk_transform(filename, T, transpose_matrix=False):
 
 
     """
-    if len(T) == 6:
-        trans = create_rigid_transform(T[0], T[1], T[2], T[3], T[4], T[5])
-
-    elif T.shape == (4, 3):
-        trans = T
-
+    if len(rotation_matrix) == 6:
+        R = rot.combine_angles(*rotation_matrix[:3])
+        found_translation = rotation_matrix[3:]
+    elif rotation_matrix.shape == (4, 4):
+        if legacy:
+            found_translation = rotation_matrix[3, :3]
+        else:
+            found_translation = rotation_matrix[:3, 3]
+        R = rotation_matrix[:3, :3]
+    elif rotation_matrix.shape == (3, 4) and not legacy:
+        R = rotation_matrix[:, :3]
+        found_translation = rotation_matrix[:, 3]
+    elif rotation_matrix.shape == (4, 3) and legacy:
+        R = rotation_matrix[:3, :]
+        found_translation = rotation_matrix[3, :]
+    elif rotation_matrix.shape == (3, 3):
+        R = rotation_matrix
+        found_translation = np.zeros(3)
     else:
-        NotImplementedError("T must be a 4x3 or 6x1 array")
-        return None
-
-    A = sitk.AffineTransform(3)
+        raise ValueError("Invalid transform shape and legacy flag")
+    if translation is not None:
+        found_translation = translation
     if transpose_matrix:
-        A.SetMatrix(trans[:3, :3].T.flatten())
-    else:
-        A.SetMatrix(trans[:3, :3].flatten())
-    A.SetTranslation(trans[3, :])
+        if not legacy:
+            raise ValueError(
+                "transpose_matrix only valid for legacy transforms"
+            )
+        R = R.T
+    A = rot.rotation_matrix_to_sitk(R, translation=found_translation)
     sitk.WriteTransform(A, filename)
 
 
-def load_sitk_transform(filename, transpose_matrix=False, outshape=(4, 3)):
+def load_sitk_transform(filename, homogeneous=False, legacy=False):
     """
     Convert a sitk transform file to a 4x3 numpy array.
 
@@ -54,25 +73,31 @@ def load_sitk_transform(filename, transpose_matrix=False, outshape=(4, 3)):
     ----------
     filename : string
         filename to load from.
-    invert = bool, optional
-        If true, invert the transform before saving.
-        Default is False.
+    homogeneous : bool, optional
+        If True, return a 4x4 homogeneous transform matrix. Default is False.
+    legacy : bool, optional
+        If True, return a 4x3 transform matrix with the translation as the
+        last row. Default is False
 
     Returns
     -------
-    trans: np.array(4,3)
-        Affine transform.
-
+    R: np.array(N,M)
+        Rotation matrix. For three dimensional transforms: np.array(3,3). If
+        homogeneous: np.array(4, 4), if legacy: np.array(4, 3)
+    translation: np.array(L,)
+        Translation vector. Not returned if legacy is True.
+    center: np.array(L,)
+        Center of rotation. Not returned if legacy is True.
     """
     A = sitk.ReadTransform(filename)
-
-    if outshape == (4, 3):
-        matrix = np.array(A.GetParameters())[:9].reshape((3, 3))
-        if transpose_matrix:
-            matrix = matrix.T
-        offset = np.array(A.GetParameters()[-3:])
-        trans = np.vstack([matrix, offset])
-        return trans
-
-    else:
-        NotImplementedError("outshape must be (4,3)")
+    R, translation, center = rot.sitk_to_rotation_matrix(A)
+    if legacy:
+        R = np.vstack((R, translation))
+        return R
+    if homogeneous:
+        if legacy:
+            raise ValueError(
+                "homogeneous only valid for non-legacy transforms"
+            )
+        R = rot.make_homogeneous_transform(R, translation)
+    return R, translation, center
