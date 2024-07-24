@@ -60,6 +60,31 @@ def _unpack_theta_apply_transform(theta, moving):
     return rot.apply_rotate_translate(moving, R, theta[3:])
 
 
+def revised_error_rotate_compare_weighted_lines(
+    theta, pts1, pts2, moving, weights, group_err_fun=None
+):
+    ngroup = len(pts1)
+    if not all(len(lst) == ngroup for lst in [pts2, moving, weights]):
+        raise ValueError(
+            "pts1, pts2, moving, and weights must have the same number of groups"
+        )
+    if group_err_fun is None:
+        group_err_fun = np.full(ngroup, dist_point_to_line)
+    else:
+        if len(group_err_fun) != ngroup:
+            raise ValueError(
+                "group_err_fun must have the same number of groups as pts1"
+            )
+
+    R = rot.combine_angles(*theta[0:3])
+    translation = theta[3:]
+    error = 0.0
+    for f, p1, p2, m, w in zip(group_err_fun, pts1, pts2, moving, weights):
+        transformed = rot.apply_rotate_translate(m, R, translation)
+        error += np.sum(f(p1, p2, transformed) * w)
+    return error
+
+
 def cost_function_weighted_labeled_lines(
     T, pts1, pts2, moving, labels, weights
 ):
@@ -93,7 +118,7 @@ def cost_function_weighted_labeled_lines(
 
     D = np.zeros((moving.shape[0], 1))
     for ii in range(pts1.shape[0]):
-        lst = np.where(labels == ii)[0]
+        lst = np.nonzero(labels == ii)[0]
         for jj in range(len(lst)):
             D[lst[jj]] = (
                 dist_point_to_line(

@@ -512,9 +512,9 @@ def find_rotation_to_match_hole_angles(
     Returns
     -------
     R : ndarray
-        Rotation matrix.
-    offsets : ndarray
-        Offsets for each hole.
+        Rotation matrix to align img with design centers.
+    translation : ndarray
+        Offsets to align img with design centers.
     """
     nhole = np.prod([len(x) for x in (orient_names, ap_names)])
     # Start measuring hole location and orientation using the estimated set of
@@ -571,7 +571,7 @@ def find_rotation_to_match_hole_angles(
         hole_diffs[i, :] = (
             design_centers[orient][ap] - found_centers[orient][ap]
         )
-    offsets = np.nanmean(hole_diffs, axis=0)
+    translation = np.nanmean(hole_diffs, axis=0)
 
     iter_angle_err = np.zeros((n_iter + 1, 2))
     iter_hole_diff_err = np.zeros((n_iter + 1, nhole, 3))
@@ -583,7 +583,7 @@ def find_rotation_to_match_hole_angles(
             found_centers_ang_curr[orient] - design_centers_ang[orient]
             for orient in orient_names
         ]
-        iter_hole_diff_err[iterno, :, :] = offsets[np.newaxis, :] - hole_diffs
+        iter_hole_diff_err[iterno, :, :] = translation[np.newaxis, :] - hole_diffs
         for orient in orient_names:
             ang_err = (
                 design_centers_ang[orient] - found_centers_ang_curr[orient]
@@ -623,13 +623,13 @@ def find_rotation_to_match_hole_angles(
                 hole_diffs[i, :] = (
                     design_centers[orient][ap] - found_centers_curr[orient][ap]
                 )
-            offsets = np.nanmean(hole_diffs, axis=0)
+            translation = np.nanmean(hole_diffs, axis=0)
     iter_angle_err[n_iter, :] = [
         found_centers_ang_curr[orient] - design_centers_ang[orient]
         for orient in orient_names
     ]
-    iter_hole_diff_err[n_iter, :, :] = offsets[np.newaxis, :] - hole_diffs
-    return R, offsets
+    iter_hole_diff_err[n_iter, :, :] = translation[np.newaxis, :] - hole_diffs
+    return R, translation
 
 
 def estimate_coms_from_image_and_segmentation(
@@ -739,7 +739,7 @@ def estimate_rotation_and_coms_from_image_and_segmentation(
         anterior-posterior name.
     R : ndarray
         Rotation matrix.
-    offsets : ndarray
+    translation : ndarray
         Offsets for each hole.
     """
 
@@ -763,7 +763,7 @@ def estimate_rotation_and_coms_from_image_and_segmentation(
         ap_names=ap_names,
     )
 
-    R, offsets = find_rotation_to_match_hole_angles(
+    R, translation = find_rotation_to_match_hole_angles(
         img,
         seg_img,
         orient_rotation_matrices,
@@ -779,4 +779,4 @@ def estimate_rotation_and_coms_from_image_and_segmentation(
         n_iter=n_iter,
     )
 
-    return coms, R, offsets
+    return coms, R, translation
