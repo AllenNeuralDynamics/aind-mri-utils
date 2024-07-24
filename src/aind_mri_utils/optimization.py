@@ -61,17 +61,17 @@ def _unpack_theta_apply_transform(theta, moving):
 
 
 def revised_error_rotate_compare_weighted_lines(
-    theta, pts1, pts2, moving, weights, group_err_fun=None
+    theta, pts1, pts2, moving, weights, group_err_funs=None
 ):
     ngroup = len(pts1)
     if not all(len(lst) == ngroup for lst in [pts2, moving, weights]):
         raise ValueError(
             "pts1, pts2, moving, and weights must have the same number of groups"
         )
-    if group_err_fun is None:
-        group_err_fun = np.full(ngroup, dist_point_to_line)
+    if group_err_funs is None:
+        group_err_funs = np.full(ngroup, dist_point_to_line)
     else:
-        if len(group_err_fun) != ngroup:
+        if len(group_err_funs) != ngroup:
             raise ValueError(
                 "group_err_fun must have the same number of groups as pts1"
             )
@@ -79,9 +79,11 @@ def revised_error_rotate_compare_weighted_lines(
     R = rot.combine_angles(*theta[0:3])
     translation = theta[3:]
     error = 0.0
-    for f, p1, p2, m, w in zip(group_err_fun, pts1, pts2, moving, weights):
+    for f, p1, p2, m, w in zip(group_err_funs, pts1, pts2, moving, weights):
         transformed = rot.apply_rotate_translate(m, R, translation)
-        error += np.sum(f(p1, p2, transformed) * w)
+        for ptnno in range(m.shape[0]):
+            res = f(p1, p2, transformed[ptnno, :])
+            error += res * w[ptnno]
     return error
 
 
