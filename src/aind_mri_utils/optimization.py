@@ -60,6 +60,67 @@ def _unpack_theta_apply_transform(theta, moving):
     return rot.apply_rotate_translate(moving, R, theta[3:])
 
 
+def revised_error_rotate_compare_weighted_lines(
+    theta, pts1, pts2, moving, weights, group_err_funs=None
+):
+    """
+    Calculate the error of rotating and translating the `moving` points to
+    align with `pts1` and `pts2`, taking into account the weights assigned to
+    each point.
+
+    Parameters
+    ----------
+    theta : array-like
+        The rotation angles and translation parameters.
+    pts1 : list
+        List of points to align with.
+    pts2 : list
+        List of corresponding points to align with.
+    moving : list
+        List of points to be transformed.
+    weights : list
+        List of weights assigned to each point.
+    group_err_funs : list, optional
+        List of error functions for each group of points. If not provided, the
+        default error function `dist_point_to_line` will be used for all
+        groups.
+
+    Returns
+    -------
+    error : float
+        The calculated error.
+
+    Raises
+    ------
+    ValueError
+        If the lengths of `pts1`, `pts2`, `moving`, and `weights` are not the
+        same.
+    ValueError
+        If the length of `group_err_funs` is not the same as the number of
+        groups in `pts1`.
+    """
+    ngroup = len(pts1)
+    if not all(len(lst) == ngroup for lst in [pts2, moving, weights]):
+        raise ValueError("pts1, pts2, moving, and weights must be same length")
+    if group_err_funs is None:
+        group_err_funs = np.full(ngroup, dist_point_to_line)
+    else:
+        if len(group_err_funs) != ngroup:
+            raise ValueError(
+                "group_err_fun must have the same number of groups as pts1"
+            )
+
+    R = rot.combine_angles(*theta[0:3])
+    translation = theta[3:]
+    error = 0.0
+    for f, p1, p2, m, w in zip(group_err_funs, pts1, pts2, moving, weights):
+        transformed = rot.apply_rotate_translate(m, R, translation)
+        for ptnno in range(m.shape[0]):
+            res = f(p1, p2, transformed[ptnno, :])
+            error += res * w[ptnno]
+    return error
+
+
 def cost_function_weighted_labeled_lines(
     T, pts1, pts2, moving, labels, weights
 ):
@@ -93,7 +154,7 @@ def cost_function_weighted_labeled_lines(
 
     D = np.zeros((moving.shape[0], 1))
     for ii in range(pts1.shape[0]):
-        lst = np.where(labels == ii)[0]
+        lst = np.nonzero(labels == ii)[0]
         for jj in range(len(lst)):
             D[lst[jj]] = (
                 dist_point_to_line(

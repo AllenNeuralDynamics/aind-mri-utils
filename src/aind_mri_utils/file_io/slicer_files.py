@@ -165,7 +165,7 @@ def markup_json_to_numpy(filename):
     Returns
     -------
     pts, names - numpy.ndarray (N x 3) of point positions and list of
-                 controlPoint names
+    controlPoint names
 
     """
     with open(filename) as f:

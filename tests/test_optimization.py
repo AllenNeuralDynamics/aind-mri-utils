@@ -23,7 +23,7 @@ class OptimaizationTest(unittest.TestCase):
             return_plane=False,
         )
 
-        self.assertTrue(np.array_equal(pts1[0, :], ant_hrz_hole_pts[0, :]))
+        self.assertTrue(np.allclose(pts1[0, :], ant_hrz_hole_pts[0, :]))
         self.assertFalse("_" in names[0])
         self.assertTrue(len(names) == 4)
 

@@ -6,11 +6,15 @@ import itertools as itr
 
 import numpy as np
 import SimpleITK as sitk
+from scipy import optimize as opt
 from scipy.spatial.transform import Rotation
 
+from . import measurement as mrmsr
+from . import optimization as mropt
 from . import rotations as rot
 from . import sitk_volume as sv
 from . import utils as ut
+from .file_io import slicer_files as sf
 
 lps_axes = dict(
     ap=np.array([0, 1, 0]), dv=np.array([0, 0, 1]), ml=np.array([1, 0, 0])
@@ -512,9 +516,9 @@ def find_rotation_to_match_hole_angles(
     Returns
     -------
     R : ndarray
-        Rotation matrix.
-    offsets : ndarray
-        Offsets for each hole.
+        Rotation matrix to align img with design centers.
+    translation : ndarray
+        Offsets to align img with design centers.
     """
     nhole = np.prod([len(x) for x in (orient_names, ap_names)])
     # Start measuring hole location and orientation using the estimated set of
@@ -571,7 +575,7 @@ def find_rotation_to_match_hole_angles(
         hole_diffs[i, :] = (
             design_centers[orient][ap] - found_centers[orient][ap]
         )
-    offsets = np.nanmean(hole_diffs, axis=0)
+    translation = np.nanmean(hole_diffs, axis=0)
 
     iter_angle_err = np.zeros((n_iter + 1, 2))
     iter_hole_diff_err = np.zeros((n_iter + 1, nhole, 3))
@@ -583,7 +587,9 @@ def find_rotation_to_match_hole_angles(
             found_centers_ang_curr[orient] - design_centers_ang[orient]
             for orient in orient_names
         ]
-        iter_hole_diff_err[iterno, :, :] = offsets[np.newaxis, :] - hole_diffs
+        iter_hole_diff_err[iterno, :, :] = (
+            translation[np.newaxis, :] - hole_diffs
+        )
         for orient in orient_names:
             ang_err = (
                 design_centers_ang[orient] - found_centers_ang_curr[orient]
@@ -623,13 +629,13 @@ def find_rotation_to_match_hole_angles(
                 hole_diffs[i, :] = (
                     design_centers[orient][ap] - found_centers_curr[orient][ap]
                 )
-            offsets = np.nanmean(hole_diffs, axis=0)
+            translation = np.nanmean(hole_diffs, axis=0)
     iter_angle_err[n_iter, :] = [
         found_centers_ang_curr[orient] - design_centers_ang[orient]
         for orient in orient_names
     ]
-    iter_hole_diff_err[n_iter, :, :] = offsets[np.newaxis, :] - hole_diffs
-    return R, offsets
+    iter_hole_diff_err[n_iter, :, :] = translation[np.newaxis, :] - hole_diffs
+    return R, translation
 
 
 def estimate_coms_from_image_and_segmentation(
@@ -739,7 +745,7 @@ def estimate_rotation_and_coms_from_image_and_segmentation(
         anterior-posterior name.
     R : ndarray
         Rotation matrix.
-    offsets : ndarray
+    translation : ndarray
         Offsets for each hole.
     """
 
@@ -763,7 +769,7 @@ def estimate_rotation_and_coms_from_image_and_segmentation(
         ap_names=ap_names,
     )
 
-    R, offsets = find_rotation_to_match_hole_angles(
+    R, translation = find_rotation_to_match_hole_angles(
         img,
         seg_img,
         orient_rotation_matrices,
@@ -779,4 +785,256 @@ def estimate_rotation_and_coms_from_image_and_segmentation(
         n_iter=n_iter,
     )
 
-    return coms, R, offsets
+    return coms, R, translation
+
+
+def make_segment_dict(
+    segment_info,
+    segment_format=None,
+    ap_names=def_ap_names,
+    orient_names=def_orient_names,
+):
+    """
+    Create a dictionary of segment values based on the provided segment
+    information.
+
+    Parameters
+    ----------
+    segment_info : dict
+        A dictionary containing segment information.
+    segment_format : str, optional
+        The format string used to generate the segment keys. Defaults to None.
+    ap_names : list, optional
+        A list of names for the anterior-posterior (AP) segments. Defaults to
+        def_ap_names.
+    orient_names : list, optional
+        A list of names for the orientation segments. Defaults to
+        def_orient_names.
+
+    Returns
+    -------
+    dict
+        A dictionary of segment values, organized by orientation and AP
+        segment.
+
+    """
+    if segment_format is None:
+        segment_format = "{}_{}"
+    seg_vals = dict()
+    for orient in orient_names:
+        seg_vals[orient] = dict()
+        for ap in ap_names:
+            key_name = segment_format.format(ap, orient)
+            if key_name in segment_info:
+                seg_vals[orient][ap] = segment_info[key_name]
+    return seg_vals
+
+
+def segment_dict_from_seg_odict(
+    seg_odict,
+    segment_format=None,
+    ap_names=def_ap_names,
+    orient_names=def_orient_names,
+):
+    """
+    Create a dictionary of segments from a segmentation ordered dictionary.
+
+    Parameters
+    ----------
+    seg_odict : OrderedDict
+        The segmentation ordered dictionary.
+    segment_format : str, optional
+        The format of the segment names. Defaults to None.
+    ap_names : list, optional
+        The list of anatomical plane names. Defaults to def_ap_names.
+    orient_names : list, optional
+        The list of orientation names. Defaults to def_orient_names.
+
+    Returns
+    -------
+    dict
+        A dictionary of segments, where the keys are the segment names and the
+        values are the segment information.
+
+    Raises
+    ------
+    ValueError
+        If no segments are found in the segmentation ordered dictionary.
+    """
+    segment_info = sf.find_seg_nrrd_header_segment_info(seg_odict)
+    segment_dict = make_segment_dict(
+        segment_info, segment_format, ap_names, orient_names
+    )
+    if all([len(d) == 0 for d in segment_dict.values()]):
+        raise ValueError(
+            "No segments found. Is the key format {key_format} correct?"
+        )
+    return segment_dict
+
+
+def _nested_compress(mask, *args):
+    """
+    Compresses the given arguments based on the provided mask.
+
+    Parameters
+    ----------
+    mask : iterable
+        A boolean mask indicating which elements to keep.
+    *args : iterable
+        Variable number of iterables to compress.
+
+    Returns
+    -------
+    list
+        A list of compressed elements from the input iterables.
+
+    Examples
+    --------
+    >>> mask = [True, False, True]
+    >>> arg1 = [1, 2, 3]
+    >>> arg2 = ['a', 'b', 'c']
+    >>> _nested_compress(mask, arg1, arg2)
+    [(1, 'a'), (3, 'c')]
+    """
+    return list(zip(*itr.compress(zip(*args), mask)))
+
+
+def find_hf_rotation_from_seg_and_lowerplane(
+    img,
+    seg_img,
+    seg_odict,
+    plane_pts,
+    segment_format=None,
+    ap_names=def_ap_names,
+    orient_names=def_orient_names,
+    niter_rot=10,
+    niter_com=50000,
+    niter_com_plane=10000,
+    xtol=1e-12,
+):
+    """
+    Calculate the headframe rotation and translation from segmentation data and
+    a lower plane.
+
+    Parameters
+    ----------
+    img : ndarray
+        The input image.
+    seg_img : ndarray
+        The segmented image.
+    seg_odict : dict
+        Dictionary containing segmentation information.
+    plane_pts : ndarray
+        Points defining the lower plane.
+    segment_format : optional
+        Format of the segment dictionary. Default is None.
+    ap_names : list, optional
+        List of anterior-posterior names. Default is `def_ap_names`.
+    orient_names : list, optional
+        List of orientation names. Default is `def_orient_names`.
+    niter_rot : int, optional
+        Number of iterations for the initial rotation estimation. Default is
+        10.
+    niter_com : int, optional
+        Number of iterations for the optimization considering only holes.
+        Default is 50000.
+    niter_com_plane : int, optional
+        Number of iterations for the optimization including the lower plane.
+        Default is 10000.
+    xtol : float, optional
+        Tolerance for termination by change in the optimization. Default is
+        1e-12.
+
+    Returns
+    -------
+    theta0 : ndarray
+        Initial guess for the rotation and translation parameters.
+    output_holes_only : ndarray
+        Optimized parameters considering only the headframe holes.
+    output_all : ndarray
+        Final optimized parameters including the lower plane.
+
+    Notes
+    -----
+    The function performs the following steps:
+    1. Converts the segmentation dictionary.
+    2. Estimates centers of mass and initial rotation and translation.
+    3. Retrieves design centers and hole locations.
+    4. Prepares data for optimization.
+    5. Optimizes the transformation considering only the headframe holes.
+    6. Refines the optimization by including the lower plane.
+    """
+    segment_dict = segment_dict_from_seg_odict(
+        seg_odict, segment_format, ap_names, orient_names
+    )
+
+    # Get centers of mass and initial guess at rotation and translation
+    coms, R, translation = (
+        estimate_rotation_and_coms_from_image_and_segmentation(
+            img, seg_img, segment_dict, n_iter=niter_rot
+        )
+    )
+    euler0 = Rotation.from_matrix(R).as_euler("xyz")
+    theta0 = np.concatenate((euler0, translation))
+
+    # Get design centers and hole locations
+    pts1, pts2, names = mropt.get_headframe_hole_lines(
+        insert_underscores=True, return_plane=True
+    )
+
+    # slice and dice data for optimization
+    moving = []
+    pts1l = []
+    pts2l = []
+    weights = []
+    plane_ndx = -1
+    for i, name in enumerate(names):
+        if name == "plane":
+            plane_ndx = i
+            moving.append(plane_pts)
+            pts1l.append(pts1[i, :])
+            pts2l.append(pts2[i, :])
+            npt_plane = plane_pts.shape[0]
+            weights.append(np.full(npt_plane, 1 / npt_plane))
+        else:
+            pos, orient = name.split("_")
+            if orient in coms:
+                d = coms[orient]
+                if pos in d:
+                    these_coms = d[pos]
+                    npt = these_coms.shape[0]
+                    moving.append(these_coms)
+                    pts1l.append(pts1[i, :])
+                    pts2l.append(pts2[i, :])
+                    weights.append(np.full(npt, 1 / npt))
+
+    hole_mask = np.full(len(moving), True)
+    hole_mask[plane_ndx] = False
+    hole_only_list_of_lists = _nested_compress(
+        hole_mask, pts1l, pts2l, moving, weights
+    )
+
+    # Optimize transform only considering holes in the headframe
+    output_holes_only = opt.fmin(
+        mropt.revised_error_rotate_compare_weighted_lines,
+        theta0,
+        args=tuple(hole_only_list_of_lists),
+        xtol=xtol,
+        maxfun=niter_com,
+        retall=1,
+    )
+
+    # Now include the lower plane
+    group_err_funs = [mrmsr.dist_point_to_line] * len(moving)
+    group_err_funs[plane_ndx] = mrmsr.dist_point_to_plane
+
+    output_all = opt.fmin(
+        mropt.revised_error_rotate_compare_weighted_lines,
+        output_holes_only[0],
+        args=(pts1l, pts2l, moving, weights, group_err_funs),
+        xtol=xtol,
+        maxfun=niter_com_plane,
+        retall=1,
+    )
+
+    return theta0, output_holes_only[0], output_all[0]
