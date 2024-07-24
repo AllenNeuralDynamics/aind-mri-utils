@@ -63,11 +63,45 @@ def _unpack_theta_apply_transform(theta, moving):
 def revised_error_rotate_compare_weighted_lines(
     theta, pts1, pts2, moving, weights, group_err_funs=None
 ):
+    """
+    Calculate the error of rotating and translating the `moving` points to
+    align with `pts1` and `pts2`, taking into account the weights assigned to
+    each point.
+
+    Parameters
+    ----------
+    theta : array-like
+        The rotation angles and translation parameters.
+    pts1 : list
+        List of points to align with.
+    pts2 : list
+        List of corresponding points to align with.
+    moving : list
+        List of points to be transformed.
+    weights : list
+        List of weights assigned to each point.
+    group_err_funs : list, optional
+        List of error functions for each group of points. If not provided, the
+        default error function `dist_point_to_line` will be used for all
+        groups.
+
+    Returns
+    -------
+    error : float
+        The calculated error.
+
+    Raises
+    ------
+    ValueError
+        If the lengths of `pts1`, `pts2`, `moving`, and `weights` are not the
+        same.
+    ValueError
+        If the length of `group_err_funs` is not the same as the number of
+        groups in `pts1`.
+    """
     ngroup = len(pts1)
     if not all(len(lst) == ngroup for lst in [pts2, moving, weights]):
-        raise ValueError(
-            "pts1, pts2, moving, and weights must have the same number of groups"
-        )
+        raise ValueError("pts1, pts2, moving, and weights must be same length")
     if group_err_funs is None:
         group_err_funs = np.full(ngroup, dist_point_to_line)
     else:

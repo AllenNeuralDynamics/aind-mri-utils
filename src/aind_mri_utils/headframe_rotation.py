@@ -6,16 +6,15 @@ import itertools as itr
 
 import numpy as np
 import SimpleITK as sitk
-from scipy.spatial.transform import Rotation
 from scipy import optimize as opt
+from scipy.spatial.transform import Rotation
 
+from . import measurement as mrmsr
+from . import optimization as mropt
 from . import rotations as rot
 from . import sitk_volume as sv
 from . import utils as ut
-from . import optimization as mropt
-from . import measurement as mrmsr
 from .file_io import slicer_files as sf
-
 
 lps_axes = dict(
     ap=np.array([0, 1, 0]), dv=np.array([0, 0, 1]), ml=np.array([1, 0, 0])
@@ -796,7 +795,8 @@ def make_segment_dict(
     orient_names=def_orient_names,
 ):
     """
-    Create a dictionary of segment values based on the provided segment information.
+    Create a dictionary of segment values based on the provided segment
+    information.
 
     Parameters
     ----------
@@ -805,14 +805,17 @@ def make_segment_dict(
     segment_format : str, optional
         The format string used to generate the segment keys. Defaults to None.
     ap_names : list, optional
-        A list of names for the anterior-posterior (AP) segments. Defaults to def_ap_names.
+        A list of names for the anterior-posterior (AP) segments. Defaults to
+        def_ap_names.
     orient_names : list, optional
-        A list of names for the orientation segments. Defaults to def_orient_names.
+        A list of names for the orientation segments. Defaults to
+        def_orient_names.
 
     Returns
     -------
     dict
-        A dictionary of segment values, organized by orientation and AP segment.
+        A dictionary of segment values, organized by orientation and AP
+        segment.
 
     """
     if segment_format is None:
@@ -850,7 +853,8 @@ def segment_dict_from_seg_odict(
     Returns
     -------
     dict
-        A dictionary of segments, where the keys are the segment names and the values are the segment information.
+        A dictionary of segments, where the keys are the segment names and the
+        values are the segment information.
 
     Raises
     ------
