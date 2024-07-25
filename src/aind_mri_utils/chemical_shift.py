@@ -4,7 +4,6 @@ Functions for correcting for chemical shift in MRI images
 
 import numpy as np
 
-from . import utils as ut
 from . import rotations as rot
 
 def compute_chemical_shift(
