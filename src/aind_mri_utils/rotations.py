@@ -4,6 +4,7 @@ Code for rotations of points
 
 import numpy as np
 import SimpleITK as sitk
+import trimesh
 from scipy.spatial.transform import Rotation
 
 from . import utils as ut
@@ -416,5 +417,30 @@ def inverse_rotate_translate(R, translation):
         - R_inv (numpy.ndarray): The transpose of the rotation matrix.
         - tinv (numpy.ndarray): The inverse translation vector.
     """
+
     tinv = -translation @ R
     return R.T, tinv
+
+
+def apply_transform_to_trimesh(mesh, T):
+    """
+    Apply a transform to a trimesh.
+
+    mesh : trimesh Mesh
+        With transform applied to verticies
+
+    Parameters
+    ----------
+    mesh : trimesh Mesh
+        Mesh to transform
+    T : (4x4) np array
+        Transform
+
+    Returns
+    -------
+    mesh : trimesh Mesh
+        With transform applied to verticies
+    """
+
+    mesh.vertices = trimesh.transform_points(mesh.vertices, T)
+    return mesh
