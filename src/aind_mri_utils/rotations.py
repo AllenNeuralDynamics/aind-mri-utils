@@ -444,3 +444,34 @@ def apply_transform_to_trimesh(mesh, T):
 
     mesh.vertices = trimesh.transform_points(mesh.vertices, T)
     return mesh
+
+
+def create_homogeneous_from_euler_and_translation(rx, ry, rz, tx, ty, tz):
+    """
+    Create a homogeneous transformation matrix from Euler angles and
+    translation.
+
+    Parameters
+    ----------
+    rx : float
+        Rotation angle around the x-axis in radians.
+    ry : float
+        Rotation angle around the y-axis in radians.
+    rz : float
+        Rotation angle around the z-axis in radians.
+    tx : float
+        Translation along the x-axis.
+    ty : float
+        Translation along the y-axis.
+    tz : float
+        Translation along the z-axis.
+
+    Returns
+    -------
+    numpy.ndarray
+        Homogeneous transformation matrix.
+
+    """
+    R = combine_angles(rx, ry, rz)
+    t = np.array([tx, ty, tz])
+    return make_homogeneous_transform(R, t)
