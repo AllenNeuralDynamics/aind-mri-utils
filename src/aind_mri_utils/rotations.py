@@ -293,7 +293,7 @@ def combine_angles(x, y, z):
     return Rotation.from_euler("xyz", [x, y, z]).as_matrix().squeeze()
 
 
-def make_homogeneous_transform(R, translation):
+def make_homogeneous_transform(R, translation, scaling=None):
     """
     Combines a rotation matrix and translation into a homogeneous transform.
 
@@ -314,8 +314,17 @@ def make_homogeneous_transform(R, translation):
         raise ValueError("R must be square")
     if N != translation.shape[0]:
         raise ValueError("R and translation must have same size")
+    if scaling is not None and scaling.shape[0] != N:
+        raise ValueError("scaling must have same size as R")
+
+    if scaling is None:
+        Radj = R
+    else:
+        Rscaling = np.zeros((N, N))
+        np.fill_diagonal(Rscaling, scaling)
+        Radj = R @ Rscaling
     R_homog = np.eye(N + 1)
-    R_homog[0:N, 0:N] = R
+    R_homog[0:N, 0:N] = Radj
     R_homog[0:N, N] = translation
     return R_homog
 
@@ -417,9 +426,9 @@ def inverse_rotate_translate(R, translation):
         - R_inv (numpy.ndarray): The transpose of the rotation matrix.
         - tinv (numpy.ndarray): The inverse translation vector.
     """
-
     tinv = -translation @ R
-    return R.T, tinv
+    Rinv = R.T
+    return Rinv, tinv
 
 
 def apply_transform_to_trimesh(mesh, T):

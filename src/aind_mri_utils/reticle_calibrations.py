@@ -260,7 +260,7 @@ def _unpack_theta(theta):
 
 
 def fit_rotation_params(
-    reticle_pts, probe_pts, legacy_outputs=False, **kwargs
+    reticle_pts, probe_pts, legacy_outputs=False, find_scaling=True, **kwargs
 ):
     """
     Fit rotation parameters to align reticle points with probe points using
@@ -300,6 +300,13 @@ def fit_rotation_params(
         raise ValueError("reticle_pts and probe_pts must have the same shape")
     if reticle_pts.shape[1] != 3:
         raise ValueError("reticle_pts and probe_pts must have 3 columns")
+
+    if find_scaling:
+        if legacy_outputs:
+            raise NotImplementedError(
+                "find_scaling=True not valid when legacy_outputs=True"
+            )
+        return _fit_params_with_scaling(reticle_pts, probe_pts, **kwargs)
 
     R_homog = np.eye(4)
     reticle_pts_homog = rot.prepare_data_for_homogeneous_transform(reticle_pts)
@@ -347,10 +354,107 @@ def fit_rotation_params(
 
         translation = translation @ R  # Not R.T!
         return translation, R.T  # Not R!
-    return R, translation
+    return R, translation, res
 
 
-def transform_reticle_to_probe(reticle_pts, R, translation):
+def _unpack_theta_scale(theta):
+    """Helper function to unpack theta into rotation matrix and translation."""
+    R = rot.combine_angles(*theta[0:3])
+    scale = theta[3:6]
+    translation = theta[6:]
+    return R, scale, translation
+
+
+def _fit_params_with_scaling(reticle_pts, probe_pts, **kwargs):
+    """
+    Fit rotation parameters to align reticle points with probe points using
+    least squares optimization. The rotation matrix and translation vector
+    are the solution for the equation
+
+    probe_pts = R @ reticle_pts + translation
+
+    where each point is a column vector.
+
+    Because numpy is row-major, points are often stored as row vectors. In this
+    case, you should use the transpose of this equation:
+
+    probe_pts = reticle_pts @ R.T + translation
+
+    Parameters
+    ----------
+    reticle_pts : numpy.ndarray
+        The reticle points to be transformed.
+    probe_pts : numpy.ndarray
+        The probe points to align with.
+    find_scaling : bool, optional
+        If True, find a scaling factor to apply to the reticle points.
+        The default is True.
+    **kwargs : dict
+        Additional keyword arguments to pass to the least squares optimization
+        function.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - R (numpy.ndarray): The 3x3 rotation matrix.
+        - translation (numpy.ndarray): The 3-element translation vector.
+        - scaling (float): The scaling factor.
+    """
+
+    def fun(theta):
+        """cost function for least squares optimization"""
+        R, scale, translation = _unpack_theta_scale(theta)
+        transformed_reticle = reticle_pts @ R.T * scale + translation
+        residuals = (transformed_reticle - probe_pts).flatten()
+        return residuals
+
+    # Initial guess of parameters
+    theta0 = np.zeros(9)
+    theta0[3:6] = 1.0
+
+    if probe_pts.shape[0] > 1:
+        # Initial guess of rotation: align the vectors between the first
+        # two points
+        probe_diff = np.diff(probe_pts[:2, :], axis=0)
+        reticle_diff = np.diff(reticle_pts[:2, :], axis=0)
+        Rinit = rot.rotation_matrix_from_vectors(
+            reticle_diff.squeeze(), probe_diff.squeeze()
+        )
+        theta0[0:3] = Rotation.from_matrix(Rinit).as_euler("xyz")
+
+    # Initial guess of translation: find the point on the reticle closest to
+    # zero
+    smallest_pt = np.argmin(np.linalg.norm(reticle_pts, axis=1))
+    theta0[6:] = probe_pts[smallest_pt, :]
+
+    res = opt.least_squares(fun, theta0, **kwargs)
+    R, scale, translation = _unpack_theta_scale(res.x)
+    return R, scale, translation, res
+
+
+def _apply_scale_to_rotation(R, scale):
+    """
+    Apply a scaling factor to a rotation matrix.
+
+    Parameters
+    ----------
+    R : numpy.ndarray
+        The 3x3 rotation matrix.
+    scale : float
+        The scaling factor.
+
+    Returns
+    -------
+    numpy.ndarray
+        The scaled rotation matrix.
+    """
+    scalemat = np.zeros((3, 3))
+    np.fill_diagonal(scalemat, scale)
+    return scalemat @ R
+
+
+def transform_reticle_to_probe(reticle_pts, R, translation, scale=None):
     """
     Transform reticle points to probe points using rotation and translation.
 
@@ -368,10 +472,12 @@ def transform_reticle_to_probe(reticle_pts, R, translation):
     np.array(N,3)
         Transformed points.
     """
+    if scale is not None:
+        R = _apply_scale_to_rotation(R, scale)
     return rot.apply_rotate_translate(reticle_pts, R, translation)
 
 
-def transform_probe_to_reticle(probe_pts, R, translation):
+def transform_probe_to_reticle(probe_pts, R, translation, scale=None):
     """
     Transform probe points to reticle points using rotation and translation.
 
@@ -390,4 +496,7 @@ def transform_probe_to_reticle(probe_pts, R, translation):
         Transformed points.
     """
     Rinv, tinv = rot.inverse_rotate_translate(R, translation)
+    if scale is not None:
+        scale_inv = 1.0 / scale
+        Rinv = _apply_scale_to_rotation(Rinv, scale_inv)
     return rot.apply_rotate_translate(probe_pts, Rinv, tinv)
