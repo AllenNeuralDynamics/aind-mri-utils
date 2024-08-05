@@ -472,9 +472,13 @@ def transform_reticle_to_probe(reticle_pts, R, translation, scale=None):
     np.array(N,3)
         Transformed points.
     """
-    if scale is not None:
-        R = _apply_scale_to_rotation(R, scale)
-    return rot.apply_rotate_translate(reticle_pts, R, translation)
+    if scale is None:
+        transformed = rot.apply_rotate_translate(reticle_pts, R, translation)
+    else:
+        transformed = rot.apply_rotate_translate_scale(
+            reticle_pts, R, translation, scale
+        )
+    return transformed
 
 
 def transform_probe_to_reticle(probe_pts, R, translation, scale=None):
@@ -495,8 +499,11 @@ def transform_probe_to_reticle(probe_pts, R, translation, scale=None):
     np.array(N,3)
         Transformed points.
     """
-    Rinv, tinv = rot.inverse_rotate_translate(R, translation)
+    if scale is None:
+        Rinv, tinv = rot.inverse_rotate_translate(R, translation)
+        transformed = rot.apply_rotate_translate(probe_pts, Rinv, tinv)
     if scale is not None:
-        scale_inv = 1.0 / scale
-        Rinv = _apply_scale_to_rotation(Rinv, scale_inv)
-    return rot.apply_rotate_translate(probe_pts, Rinv, tinv)
+        transformed = rot.apply_inverse_rotate_translate_scale(
+            probe_pts, R, translation, scale
+        )
+    return transformed

@@ -320,9 +320,8 @@ def make_homogeneous_transform(R, translation, scaling=None):
     if scaling is None:
         Radj = R
     else:
-        Rscaling = np.zeros((N, N))
-        np.fill_diagonal(Rscaling, scaling)
-        Radj = R @ Rscaling
+        Rscaling = np.diag(scaling)
+        Radj = Rscaling @ R
     R_homog = np.eye(N + 1)
     R_homog[0:N, 0:N] = Radj
     R_homog[0:N, N] = translation
@@ -383,6 +382,12 @@ def extract_data_for_homogeneous_transform(pts_homog):
     return pts
 
 
+def _apply_homogeneous_transform_to_transposed_pts(pts, R_homog):
+    pts_homog = prepare_data_for_homogeneous_transform(pts)
+    transformed_pts_homog = pts_homog @ R_homog.T
+    return extract_data_for_homogeneous_transform(transformed_pts_homog)
+
+
 def apply_rotate_translate(pts, R, translation):
     """
     Apply rotation and translation to a set of points.
@@ -402,10 +407,20 @@ def apply_rotate_translate(pts, R, translation):
         The transformed points.
     """
     R_homog = make_homogeneous_transform(R, translation)
-    pts_homog = prepare_data_for_homogeneous_transform(pts)
-    # Transposed because points are assumed to be row vectors
-    transformed_pts_homog = pts_homog @ R_homog.T
-    return extract_data_for_homogeneous_transform(transformed_pts_homog)
+    return _apply_homogeneous_transform_to_transposed_pts(pts, R_homog)
+
+
+def apply_rotate_translate_scale(pts, R, translation, scaling):
+    R_homog = make_homogeneous_transform(R, translation, scaling)
+    return _apply_homogeneous_transform_to_transposed_pts(pts, R_homog)
+
+
+def apply_inverse_rotate_translate_scale(pts, R, translation, scaling):
+    scaling_inv = 1 / scaling
+    R_inv = R.T @ np.diag(scaling_inv)
+    t_inv = -R_inv @ translation
+    R_homog = make_homogeneous_transform(R_inv, t_inv)
+    return _apply_homogeneous_transform_to_transposed_pts(pts, R_homog)
 
 
 def inverse_rotate_translate(R, translation):
