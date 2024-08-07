@@ -54,6 +54,11 @@ def extract_calibration_metadata(ws):
     )
 
 
+def _contains_none(arr):
+    """Checks if all arguments are not None."""
+    return any(x is None for x in arr)
+
+
 def extract_calibration_pairs(ws):
     """
     Extract calibration pairs from an Excel worksheet.
@@ -76,6 +81,8 @@ def extract_calibration_pairs(ws):
             continue
         reticle_pt = np.array(row[1:4])
         probe_pt = np.array(row[4:7])
+        if _contains_none(reticle_pt) or _contains_none(probe_pt):
+            continue
         if probe_name not in pairs_by_probe:
             pairs_by_probe[probe_name] = []
         pairs_by_probe[probe_name].append((reticle_pt, probe_pt))
