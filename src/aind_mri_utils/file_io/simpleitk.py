@@ -65,7 +65,9 @@ def save_sitk_transform(
     sitk.WriteTransform(A, filename)
 
 
-def load_sitk_transform(filename, homogeneous=False, legacy=False):
+def load_sitk_transform(
+    filename, homogeneous=False, legacy=False, invert=False
+):
     """
     Convert a sitk transform file to a 4x3 numpy array.
 
@@ -90,6 +92,8 @@ def load_sitk_transform(filename, homogeneous=False, legacy=False):
         Center of rotation. Not returned if legacy is True.
     """
     A = sitk.ReadTransform(filename)
+    if invert:
+        A = A.GetInverse()
     R, translation, center = rot.sitk_to_rotation_matrix(A)
     if legacy:
         R = np.vstack((R, translation))

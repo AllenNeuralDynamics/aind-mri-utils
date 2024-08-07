@@ -4,6 +4,7 @@ Code for rotations of points
 
 import numpy as np
 import SimpleITK as sitk
+import trimesh
 from scipy.spatial.transform import Rotation
 
 from . import utils as ut
@@ -292,7 +293,7 @@ def combine_angles(x, y, z):
     return Rotation.from_euler("xyz", [x, y, z]).as_matrix().squeeze()
 
 
-def make_homogeneous_transform(R, translation):
+def make_homogeneous_transform(R, translation, scaling=None):
     """
     Combines a rotation matrix and translation into a homogeneous transform.
 
@@ -313,8 +314,16 @@ def make_homogeneous_transform(R, translation):
         raise ValueError("R must be square")
     if N != translation.shape[0]:
         raise ValueError("R and translation must have same size")
+    if scaling is not None and scaling.shape[0] != N:
+        raise ValueError("scaling must have same size as R")
+
+    if scaling is None:
+        Radj = R
+    else:
+        Rscaling = np.diag(scaling)
+        Radj = Rscaling @ R
     R_homog = np.eye(N + 1)
-    R_homog[0:N, 0:N] = R
+    R_homog[0:N, 0:N] = Radj
     R_homog[0:N, N] = translation
     return R_homog
 
@@ -373,6 +382,12 @@ def extract_data_for_homogeneous_transform(pts_homog):
     return pts
 
 
+def _apply_homogeneous_transform_to_transposed_pts(pts, R_homog):
+    pts_homog = prepare_data_for_homogeneous_transform(pts)
+    transformed_pts_homog = pts_homog @ R_homog.T
+    return extract_data_for_homogeneous_transform(transformed_pts_homog)
+
+
 def apply_rotate_translate(pts, R, translation):
     """
     Apply rotation and translation to a set of points.
@@ -392,10 +407,20 @@ def apply_rotate_translate(pts, R, translation):
         The transformed points.
     """
     R_homog = make_homogeneous_transform(R, translation)
-    pts_homog = prepare_data_for_homogeneous_transform(pts)
-    # Transposed because points are assumed to be row vectors
-    transformed_pts_homog = pts_homog @ R_homog.T
-    return extract_data_for_homogeneous_transform(transformed_pts_homog)
+    return _apply_homogeneous_transform_to_transposed_pts(pts, R_homog)
+
+
+def apply_rotate_translate_scale(pts, R, translation, scaling):
+    R_homog = make_homogeneous_transform(R, translation, scaling)
+    return _apply_homogeneous_transform_to_transposed_pts(pts, R_homog)
+
+
+def apply_inverse_rotate_translate_scale(pts, R, translation, scaling):
+    scaling_inv = 1 / scaling
+    R_inv = R.T @ np.diag(scaling_inv)
+    t_inv = -R_inv @ translation
+    R_homog = make_homogeneous_transform(R_inv, t_inv)
+    return _apply_homogeneous_transform_to_transposed_pts(pts, R_homog)
 
 
 def inverse_rotate_translate(R, translation):
@@ -417,4 +442,60 @@ def inverse_rotate_translate(R, translation):
         - tinv (numpy.ndarray): The inverse translation vector.
     """
     tinv = -translation @ R
-    return R.T, tinv
+    Rinv = R.T
+    return Rinv, tinv
+
+
+def apply_transform_to_trimesh(mesh, T):
+    """
+    Apply a transform to a trimesh.
+
+    mesh : trimesh Mesh
+        With transform applied to verticies
+
+    Parameters
+    ----------
+    mesh : trimesh Mesh
+        Mesh to transform
+    T : (4x4) np array
+        Transform
+
+    Returns
+    -------
+    mesh : trimesh Mesh
+        With transform applied to verticies
+    """
+
+    mesh.vertices = trimesh.transform_points(mesh.vertices, T)
+    return mesh
+
+
+def create_homogeneous_from_euler_and_translation(rx, ry, rz, tx, ty, tz):
+    """
+    Create a homogeneous transformation matrix from Euler angles and
+    translation.
+
+    Parameters
+    ----------
+    rx : float
+        Rotation angle around the x-axis in radians.
+    ry : float
+        Rotation angle around the y-axis in radians.
+    rz : float
+        Rotation angle around the z-axis in radians.
+    tx : float
+        Translation along the x-axis.
+    ty : float
+        Translation along the y-axis.
+    tz : float
+        Translation along the z-axis.
+
+    Returns
+    -------
+    numpy.ndarray
+        Homogeneous transformation matrix.
+
+    """
+    R = combine_angles(rx, ry, rz)
+    t = np.array([tx, ty, tz])
+    return make_homogeneous_transform(R, t)
