@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import trimesh
+from itertools import product
 
 import SimpleITK as sitk
 
@@ -391,3 +392,121 @@ def make_scene_for_insertion(
         )
 
     return scene
+
+
+def _apply_rotation_and_transform(mesh, angle, ap, ml, target_loc):
+    """
+    Apply rotation and transformation to a mesh based on the provided angle, AP, ML, and target location.
+
+    Parameters
+    ----------
+    mesh : trimesh.Trimesh
+        The mesh to transform.
+    angle : float
+        The rotation angle in degrees.
+    ap : float
+        The AP angle for the transformation.
+    ml : float
+        The ML angle for the transformation.
+    target_loc : ndarray
+        The target location for the transformation.
+
+    Returns
+    -------
+    trimesh.Trimesh
+        The transformed mesh.
+    """
+    TA = trimesh.transformations.euler_matrix(0, 0, np.deg2rad(angle))
+    TB = transform_matrix_from_angles_and_target(ap, -ml, target_loc)
+
+    apply_transform_to_trimesh(mesh, TA)
+    apply_transform_to_trimesh(mesh, TB)
+
+    return mesh
+
+
+def _add_meshes_to_collision_manager(CM, insert_list, probe_mesh, df, angles):
+    """
+    Add transformed probe meshes to the collision manager for a given set of angles.
+
+    Parameters
+    ----------
+    CM : trimesh.collision.CollisionManager
+        The collision manager to which meshes will be added.
+    insert_list : list
+        List of insertion indices.
+    probe_mesh : trimesh.Trimesh
+        The mesh of the probe.
+    df : DataFrame
+        DataFrame containing insertion data.
+    angles : list
+        List of angles for each insertion.
+
+    Returns
+    -------
+    None
+    """
+    for idx, insertion_idx in enumerate(insert_list):
+        transformed_mesh = _apply_rotation_and_transform(
+            probe_mesh.copy(),
+            angles[idx],
+            df.ap[insertion_idx],
+            -df.ml[insertion_idx],
+            df.target_loc[insertion_idx],
+        )
+        CM.add_object(f"mesh{insertion_idx}", transformed_mesh)
+
+
+def _remove_meshes_from_collision_manager(CM, insert_list):
+    """
+    Remove probe meshes from the collision manager.
+
+    Parameters
+    ----------
+    CM : trimesh.collision.CollisionManager
+        The collision manager from which meshes will be removed.
+    insert_list : list
+        List of insertion indices.
+
+    Returns
+    -------
+    None
+    """
+    for idx in insert_list:
+        CM.remove_object(f"mesh{idx}")
+
+
+def test_for_collisions(insert_list, probe_mesh, df, rotations_to_test):
+    """
+    Test for collisions among different probe insertion angles.
+
+    Parameters
+    ----------
+    insert_list : list
+        List of insertion indices.
+    probe_mesh : trimesh.Trimesh
+        The mesh of the probe.
+    df : DataFrame
+        DataFrame containing insertion data.
+    rotations_to_test : list of lists
+        List of lists of rotation angles to test for each insertion.
+
+    Returns
+    -------
+    tuple or None
+        Returns the first set of angles that do not result in a collision, or None if all sets collide.
+    """
+    angle_sets = list(product(*rotations_to_test))
+    CM = trimesh.collision.CollisionManager()
+
+    for angle_set in angle_sets:
+        _add_meshes_to_collision_manager(
+            CM, insert_list, probe_mesh, df, angle_set
+        )
+
+        if not CM.in_collision_internal(return_names=False, return_data=False):
+            return angle_set
+
+        _remove_meshes_from_collision_manager(CM, insert_list)
+
+    return None
