@@ -99,6 +99,10 @@ def load_sitk_transform(
         R = np.vstack((R, translation))
         return R
     if homogeneous:
+        if not np.allclose(center, 0):
+            raise NotImplementedError(
+                "homogeneous only valid for transforms with center at 0"
+            )
         if legacy:
             raise ValueError(
                 "homogeneous only valid for non-legacy transforms"

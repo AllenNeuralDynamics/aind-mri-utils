@@ -8,6 +8,11 @@ import numpy as np
 import SimpleITK as sitk
 
 from aind_mri_utils.coordinate_systems import convert_coordinate_system
+from ..sitk_volume import (
+    find_points_equal_to,
+    transform_sitk_indices_to_physical_points,
+)
+from ..utils import find_indices_equal_to
 
 
 def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
@@ -63,6 +68,29 @@ def find_seg_nrrd_header_segment_info(header):
     return segment_info
 
 
+def get_segmented_labels(label_vol):
+    """
+    Extract metadata from the implant volume and return the segmentation label
+    dictionary.
+
+    Parameters
+    ----------
+    label_vol : SimpleITK.Image
+        The label volume from which to extract segmentation information.
+
+    Returns
+    -------
+    dict
+        A dictionary mapping segmentation labels to their corresponding values
+        in the volume.
+    """
+    metadata_dict = {
+        k: label_vol.GetMetaData(k) for k in label_vol.GetMetaDataKeys()
+    }
+    label_dict = find_seg_nrrd_header_segment_info(metadata_dict)
+    return label_dict
+
+
 def load_segmentation_points(label_vol, order=None, image=None):
     """
     Load segmentation points from a 3D Slicer generated .seg.nrrd file
@@ -100,52 +128,39 @@ def load_segmentation_points(label_vol, order=None, image=None):
         label_vol = sitk.ReadImage(label_vol)
 
     # Get the labels from the header
-    odict = {k: label_vol.GetMetaData(k) for k in label_vol.GetMetaDataKeys()}
-    label_dict = find_seg_nrrd_header_segment_info(odict)
+    label_dict = get_segmented_labels(label_vol)
 
     if order is None:
         order = list(label_dict.keys())
 
     labels = []
     positions = []
-    if image is None:  # Do not extract weights
-        # Loop through and Load the labels
-        for jj, key in enumerate(order):
-            filt = sitk.EqualImageFilter()
-            is_label = filt.Execute(label_vol, label_dict[key])
-            idxx = np.where(is_label)
-            idx = np.vstack((idxx[2], idxx[1], idxx[0])).T  # convert to xyz
-            this_position = np.zeros(idx.shape)
-            for ii in range(idx.shape[0]):
-                this_position[ii, :] = is_label.TransformIndexToPhysicalPoint(
-                    idx[ii, :].tolist()
-                )
-            positions.append(this_position)
-            labels.append(np.ones(this_position.shape[0], 1) * jj)
+    if image is None:
+        for label_ndx, label in enumerate(order):
+            these_positions = find_points_equal_to(
+                label_vol, label_dict[label]
+            )
+            label_ndxs = np.full(these_positions.shape[0], label_ndx)
+            positions.append(these_positions)
+            labels.append(label_ndxs)
         return np.concatenate(positions), np.concatenate(labels)
     else:
         weights = []
-        for jj, key in enumerate(order):
-            filt = sitk.EqualImageFilter()
-            is_label = filt.Execute(label_vol, label_dict[key])
-            this_masked_image = sitk.Mask(image, is_label)
-            idxx = np.where(sitk.GetArrayViewFromImage(this_masked_image))
-            idx = np.vstack((idxx[2], idxx[1], idxx[0])).T
-            this_weight = np.zeros(idx.shape[0])
-            this_position = np.zeros(idx.shape)
-            for ii in range(idx.shape[0]):
-                this_weight[ii] = this_masked_image.GetPixel(
-                    idx[ii, :].tolist()
-                )
-                this_position[ii, :] = (
-                    this_masked_image.TransformIndexToPhysicalPoint(
-                        idx[ii, :].tolist()
-                    )
-                )
-
-            weights.append(this_weight)
-            positions.append(this_position)
-            labels.append(np.ones(this_weight.shape) * jj)
+        label_arr = sitk.GetArrayViewFromImage(label_vol)
+        img_arr = sitk.GetArrayViewFromImage(image)
+        for label_ndx, label in enumerate(order):
+            val = label_dict[label]
+            ndxs = find_indices_equal_to(label_arr, val)
+            sitk_ndxs = ndxs[:, ::-1]
+            these_positions = transform_sitk_indices_to_physical_points(
+                label_vol, sitk_ndxs
+            )
+            label_ndxs = np.full(these_positions.shape[0], label_ndx)
+            np_ndxs = tuple(ndxs.T)
+            these_weights = img_arr[np_ndxs]
+            positions.append(these_positions)
+            weights.append(these_weights)
+            labels.append(label_ndxs)
         return (
             np.concatenate(positions),
             np.concatenate(labels),
