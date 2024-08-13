@@ -74,7 +74,9 @@ def candidate_insertions(
         for implant_idx, implant_point in enumerate(transformed_implant):
             implant_name = implant_names[implant_idx]
 
-            ap, ml = calculate_arc_angles(target_point, implant_point)
+            ap, ml = calculate_arc_angles(
+                target_point, implant_point, ap_offset=0
+            )
             rig_ap = ap + 14
 
             circle_points = _generate_circle_points(implant_point)
