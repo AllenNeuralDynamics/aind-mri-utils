@@ -1,20 +1,18 @@
+from itertools import product
+
 import numpy as np
 import pandas as pd
 import trimesh
-from itertools import product
-
-import SimpleITK as sitk
 
 from .arc_angles import (
     calculate_arc_angles,
     transform_matrix_from_angles_and_target,
 )
-from .sitk_volume import find_points_equal_to
 from .file_io.slicer_files import (
-    find_seg_nrrd_header_segment_info,
     get_segmented_labels,
 )
 from .meshes import apply_transform_to_trimesh, create_uv_spheres
+from .sitk_volume import find_points_equal_to
 
 
 def _generate_circle_points(center, radius=0.3, num_points=360):
@@ -40,7 +38,8 @@ def candidate_insertions(
     transformed_annotation, transformed_implant, target_names, implant_names
 ):
     """
-    Generate candidate insertions for targets and implant holes by calculating arc angles.
+    Generate candidate insertions for targets and implant holes by calculating
+    arc angles.
 
     Parameters
     ----------
@@ -49,9 +48,11 @@ def candidate_insertions(
     transformed_implant : ndarray
         Array of transformed implant locations with shape (n_implants, 3).
     target_names : list of str
-        List of target names corresponding to each row in `transformed_annotation`.
+        List of target names corresponding to each row in
+        `transformed_annotation`.
     implant_names : list of str
-        List of implant names corresponding to each row in `transformed_implant`.
+        List of implant names corresponding to each row in
+        `transformed_implant`.
 
     Returns
     -------
@@ -134,12 +135,14 @@ def _are_insertions_compatible(row1, row2, ap_wiggle, ap_min, ml_min):
 
 def compatible_insertion_pairs(df, ap_wiggle=1, ap_min=16, ml_min=16):
     """
-    Generate a boolean matrix indicating valid insertion pairs based on AP and ML criteria.
+    Generate a boolean matrix indicating valid insertion pairs based on AP and
+    ML criteria.
 
     Parameters
     ----------
     df : DataFrame
-        DataFrame containing insertion data with 'ap', 'ml', and 'hole' columns.
+        DataFrame containing insertion data with 'ap', 'ml', and 'hole'
+        columns.
     ap_wiggle : float, optional
         Allowable wiggle room for AP difference, by default 1.
     ap_min : float, optional
@@ -200,7 +203,8 @@ def get_implant_targets(implant_vol):
     -------
     tuple
         A tuple containing:
-        - implant_targets: ndarray of mean physical positions of each implant target.
+        - implant_targets: ndarray of mean physical positions of each implant
+        target.
         - implant_indices: list of indices corresponding to each target.
     """
     label_dict = get_segmented_labels(implant_vol)
@@ -398,7 +402,8 @@ def make_scene_for_insertion(
 
 def _apply_rotation_and_transform(mesh, angle, ap, ml, target_loc):
     """
-    Apply rotation and transformation to a mesh based on the provided angle, AP, ML, and target location.
+    Apply rotation and transformation to a mesh based on the provided angle,
+    AP, ML, and target location.
 
     Parameters
     ----------
@@ -429,7 +434,8 @@ def _apply_rotation_and_transform(mesh, angle, ap, ml, target_loc):
 
 def _add_meshes_to_collision_manager(CM, insert_list, probe_mesh, df, angles):
     """
-    Add transformed probe meshes to the collision manager for a given set of angles.
+    Add transformed probe meshes to the collision manager for a given set of
+    angles.
 
     Parameters
     ----------
@@ -496,7 +502,8 @@ def test_for_collisions(insert_list, probe_mesh, df, rotations_to_test):
     Returns
     -------
     tuple or None
-        Returns the first set of angles that do not result in a collision, or None if all sets collide.
+        Returns the first set of angles that do not result in a collision, or
+        None if all sets collide.
     """
     angle_sets = list(product(*rotations_to_test))
     CM = trimesh.collision.CollisionManager()

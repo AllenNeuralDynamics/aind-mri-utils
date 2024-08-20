@@ -3,7 +3,6 @@ Tools specific to computing arc angles
 """
 
 import numpy as np
-
 from scipy.spatial.transform import Rotation
 
 from .rotations import make_homogeneous_transform

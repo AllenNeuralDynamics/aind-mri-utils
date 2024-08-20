@@ -11,8 +11,6 @@ import itertools as itr
 import numpy as np
 import SimpleITK as sitk
 
-from . import utils as ut
-
 
 def resample(
     image,
@@ -180,7 +178,8 @@ def transform_sitk_indices_to_physical_points(simage, index_arr):
 
 def find_points_equal_to(simage, label_value):
     """
-    Get the physical positions of all voxels in the implant volume that match the given label value.
+    Get the physical positions of all voxels in the implant volume that match
+    the given label value.
 
     Parameters
     ----------

@@ -4,7 +4,6 @@ Code for rotations of points
 
 import numpy as np
 import SimpleITK as sitk
-import trimesh
 from scipy.spatial.transform import Rotation
 
 from . import utils as ut

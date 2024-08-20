@@ -8,6 +8,7 @@ import numpy as np
 import SimpleITK as sitk
 
 from aind_mri_utils.coordinate_systems import convert_coordinate_system
+
 from ..sitk_volume import (
     find_points_equal_to,
     transform_sitk_indices_to_physical_points,
