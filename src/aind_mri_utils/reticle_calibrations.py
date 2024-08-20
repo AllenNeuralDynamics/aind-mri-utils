@@ -3,6 +3,8 @@ Functions to read reticle calibration data, find a transformation between
 coordinate frames, and apply the transformation.
 """
 
+import io
+
 import numpy as np
 from openpyxl import load_workbook
 from scipy import optimize as opt
@@ -226,7 +228,10 @@ def read_reticle_calibration(
     ValueError
         If the specified sheets are not found in the Excel file.
     """
-    wb = load_workbook(filename, read_only=True, data_only=True)
+    in_mem_file = None
+    with open(filename, "rb") as f:
+        in_mem_file = io.BytesIO(f.read())
+    wb = load_workbook(in_mem_file, read_only=True, data_only=True)
     if points_sheet_name not in wb.sheetnames:
         raise ValueError(f"Sheet {points_sheet_name} not found in {filename}")
     if metadata_sheet_name not in wb.sheetnames:
