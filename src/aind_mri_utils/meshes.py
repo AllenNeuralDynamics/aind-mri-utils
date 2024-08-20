@@ -57,3 +57,31 @@ def apply_transform_to_trimesh(mesh, T):
     """
     mesh.vertices = trimesh.transform_points(mesh.vertices, T)
     return mesh
+
+
+def create_uv_spheres(positions, radius=0.25, color=[255, 0, 255, 255]):
+    """
+    Create UV spheres at specified positions with a given radius and color.
+
+    Parameters
+    ----------
+    positions : ndarray
+        Array of positions where spheres should be created.
+    radius : float, optional
+        Radius of the spheres, by default 0.25.
+    color : list, optional
+        RGBA color of the spheres, by default [255, 0, 255, 255].
+
+    Returns
+    -------
+    list
+        List of trimesh objects representing the spheres.
+    """
+    meshes = [
+        trimesh.creation.uv_sphere(radius=radius)
+        for _ in range(len(positions))
+    ]
+    for i, mesh in enumerate(meshes):
+        mesh.apply_translation(positions[i, :])
+        mesh.visual.vertex_colors = color
+    return meshes

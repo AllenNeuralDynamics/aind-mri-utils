@@ -34,7 +34,7 @@ class RotationTransformation:
         return x, y, z
 
     def combineAngles(self, x, y, z, reflect_z=False):
-        """Combines separate roll, pitch, and yaw angles into a single rotation matrix."""
+        """Combines separate roll, pitch, and yaw angles into a single rotation matrix."""  # noqa E501
         eye = np.identity(3)
         R = self.roll(self.pitch(self.yaw(eye, z), y), x)
 
@@ -58,7 +58,9 @@ class RotationTransformation:
             global_pt = global_pts[i, :].T
             measured_pt = measured_pts[i, :].T * scale
             global_pt_exp = R @ measured_pt + origin
-            error_values[i * 3 : (i + 1) * 3] = global_pt - global_pt_exp
+            error_values[i * 3 : (i + 1) * 3] = (  # noqa E203
+                global_pt - global_pt_exp
+            )  # noqa E203
 
         return error_values
 
@@ -69,7 +71,7 @@ class RotationTransformation:
         # Calculate the L2 error for each point
         l2_errors = np.zeros(len(global_pts))
         for i in range(len(global_pts)):
-            error_vector = error_values[i * 3 : (i + 1) * 3]
+            error_vector = error_values[i * 3 : (i + 1) * 3]  # noqa E203
             l2_errors[i] = np.linalg.norm(error_vector)
 
         # Calculate the average L2 error
@@ -79,7 +81,7 @@ class RotationTransformation:
 
     def fit_params(self, measured_pts, global_pts):
         """Fits parameters to minimize the error defined in func"""
-        # x0 = np.array([0, 0, 0, 0, 0, 0])  # initial guess: (x, y, z, x_t, y_t, z_t)
+        # initial guess: (x, y, z, x_t, y_t, z_t)
         x0 = np.array(
             [0, 0, 0, 0, 0, 0, 1, 1, 1]
         )  # initial guess: (x, y, z, x_t, y_t, z_t, s_x, s_y, s_z)
