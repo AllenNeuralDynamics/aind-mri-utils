@@ -171,6 +171,9 @@ def compatible_insertion_pairs(df, ap_wiggle=1, ap_min=16, ml_min=16):
 
 
 def is_insertion_valid(compatibility_mat, insertion_ndxs):
+    if len(set(insertion_ndxs)) != len(insertion_ndxs):
+        # Duplicate insertions are invalid
+        return False
     mask = np.full(compatibility_mat.shape[0], True)
     for ndx in insertion_ndxs:
         mask = mask & compatibility_mat[ndx, :]
@@ -178,8 +181,10 @@ def is_insertion_valid(compatibility_mat, insertion_ndxs):
 
 
 def find_other_compatible_insertions(
-    compatibility_mat, considered_ndxs, seed_ndxs
+    compatibility_mat, seed_ndxs, considered_ndxs=None
 ):
+    if considered_ndxs is None:
+        considered_ndxs = np.arange(compatibility_mat.shape[0])
     mask = np.full(compatibility_mat.shape[0], False)
     mask[considered_ndxs] = True
     for ndx in seed_ndxs:
