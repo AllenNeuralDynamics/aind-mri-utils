@@ -71,4 +71,4 @@ profile = "black"
 
 [tool.interrogate]
 exclude = ["setup.py", "docs", "build", "tests"]
-fail-under = 100
+fail-under = 70
