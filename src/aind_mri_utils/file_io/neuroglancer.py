@@ -95,7 +95,7 @@ def read_neuroglancer_probes_and_annotations(filename,
     
     
     annotations = {}
-    if annotation_layers=-1:
+    if annotation_layers==-1:
         annotations = False
     elif annotation_layers == None:
         if probe_layers==None:
