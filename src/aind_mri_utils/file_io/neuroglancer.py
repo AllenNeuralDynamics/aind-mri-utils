@@ -62,74 +62,51 @@ def read_neuroglancer_probes_and_annotations(
 
     # Get the dimension order/spacing for file.
     dimension_order = list(data["dimensions"].keys())[:3]
-    spacing = np.zeros(len(dimension_order))
+    spacing = np.empty(len(dimension_order))
     for ii, key in enumerate(dimension_order):
         spacing[ii] = data["dimensions"][key][0]
     # For reordering data into xyz
     dim_order = list(np.argsort(dimension_order))
 
-    layers = data["layers"]
-    probes = {}
+    anno_layers_by_name = {
+        layer["name"].strip(): layer
+        for layer in data["layers"]
+        if layer["type"] == "annotation"
+    }
 
     if probe_layers == -1:
         probes = False
-    elif probe_layers == None:
-        for ii, this_layer in enumerate(layers):
-            if this_layer["type"] != "annotation":
-                continue
-            if this_layer["name"].isdigit():
-                probes[this_layer["name"]] = []
-                for jj, this_point in enumerate(this_layer["annotations"]):
-                    probes[this_layer["name"]].append(this_point["point"][:-1])
-                probes[this_layer["name"]] = (
-                    np.array(probes[this_layer["name"]]) * spacing
-                )
-                probes[this_layer["name"]] = probes[this_layer["name"]][
-                    :, dim_order
-                ]
     else:
-        for ii, this_layer in enumerate(probe_layers):
-            probes[this_layer["name"]] = []
-            for jj, this_point in enumerate(this_layer["annotations"]):
-                probes[this_layer["name"]].append(this_point["point"][:-1])
-            probes[this_layer["name"]] = (
-                np.array(probes[this_layer["name"]]) * spacing
-            )
-            probes[this_layer["name"]] = probes[this_layer["name"]][
-                :, dim_order
+        if probe_layers is None:
+            probe_layers = [
+                n for n in anno_layers_by_name.keys() if n.isdigit()
             ]
+        probes = {}
+        for layer_name in probe_layers:
+            layer = anno_layers_by_name[layer_name]
+            pts = []
+            for point in layer["annotations"]:
+                pts.append(point["point"][:-1])
+            pts_scaled = np.array(pts) * spacing
+            probes[layer_name] = pts_scaled[:, dim_order]
 
-    annotations = {}
     if annotation_layers == -1:
         annotations = False
-    elif annotation_layers == None:
-        if probe_layers == None:
-            probe_layers = list(probes.keys())
-        for ii, this_layer in enumerate(layers):
-            if (this_layer["type"] != "annotation") or (
-                this_layer["name"] in probe_layers
-            ):
-                continue
-            else:
-                print(this_layer["name"])
-
-                for jj, this_point in enumerate(this_layer["annotations"]):
-                    annotations[this_point["description"][:-1]] = (
-                        np.array(this_point["point"][:-1]) * spacing
-                    )
-                    annotations[this_point["description"][:-1]] = annotations[
-                        this_point["description"][:-1]
-                    ][dim_order]
     else:
-        for ii, this_layer in enumerate(annotation_layers):
-            for jj, this_point in enumerate(this_layer["annotations"]):
-                annotations[this_point["description"][:-1]] = (
-                    np.array(this_point["point"][:-1]) * spacing
-                )
-                annotations[this_point["description"][:-1]] = annotations[
-                    this_point["description"][:-1]
-                ][dim_order]
-
+        if annotation_layers is None:
+            annotation_layers = [
+                n
+                for n in anno_layers_by_name.keys()
+                if n not in set(probe_layers)
+            ]
+        annotations = {}
+        for layer_name in annotation_layers:
+            layer = anno_layers_by_name[layer_name]
+            for point in layer["annotations"]:
+                descr = point["description"].strip()
+                pt = point["point"][:-1]
+                pt_scaled = np.array(pt) * spacing
+                annotations[descr] = pt_scaled[dim_order]
     return (
         probes,
         annotations,
