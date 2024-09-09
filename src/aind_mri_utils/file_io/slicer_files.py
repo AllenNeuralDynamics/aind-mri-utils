@@ -231,7 +231,7 @@ def create_slicer_fcsv(filename, pts_dict, direction="LPS"):
             )
 
 
-def read_slicer_fcsv(filename, direction="LPS"):
+def read_slicer_fcsv(filename, direction="LPS", verbose=False):
     """
     Read fscv into dictionary.
     While reading, points will be converted to the specified direction.
@@ -244,6 +244,9 @@ def read_slicer_fcsv(filename, direction="LPS"):
         direction of the coordinate system of the points in the file.
         Must be one of 'LPS','RAS','LAS','LAI','RAI','RPI','LPI','LAI'
         Default is 'LPS'
+    verbose : bool (optional)
+        If True, print filename and direction to stdout.
+        Default is False
 
     Returns
     -------
@@ -255,7 +258,8 @@ def read_slicer_fcsv(filename, direction="LPS"):
     valid_directions = {"LPS", "RAS", "LAS", "LAI", "RAI", "RPI", "LPI", "LAI"}
     if direction not in valid_directions:
         raise ValueError(f"Direction must be one of {valid_directions}")
-    print(f"Reading {filename} with direction {direction}")
+    if verbose:
+        print(f"Reading {filename} with direction {direction}")
 
     point_dictionary = {}
     coordinate_system = None
@@ -263,7 +267,7 @@ def read_slicer_fcsv(filename, direction="LPS"):
 
     with open(filename, "r") as f:
 
-        for ii, line in enumerate(f):
+        for line in f:
             if line.startswith("#"):
                 if "CoordinateSystem" in line:
                     coordinate_system = line.split("=")[1].strip()
