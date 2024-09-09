@@ -366,7 +366,17 @@ def fit_rotation_params(
 
         translation = translation @ R  # Not R.T!
         return translation, R.T  # Not R!
-    return R, translation, res
+    scaling = None
+    return R, translation, scaling
+
+
+def fit_rotation_params_from_excel(filename, *args, **kwargs):
+    adjusted_pairs_by_probe = read_reticle_calibration(filename)[0]
+    cal_by_probe = {
+        k: fit_rotation_params(*v, *args, **kwargs)
+        for k, v in adjusted_pairs_by_probe.items()
+    }
+    return cal_by_probe
 
 
 def _unpack_theta_scale(theta):
@@ -442,7 +452,7 @@ def _fit_params_with_scaling(reticle_pts, probe_pts, **kwargs):
 
     res = opt.least_squares(fun, theta0, **kwargs)
     R, scale, translation = _unpack_theta_scale(res.x)
-    return R, scale, translation, res
+    return R, translation, scale
 
 
 def _apply_scale_to_rotation(R, scale):
