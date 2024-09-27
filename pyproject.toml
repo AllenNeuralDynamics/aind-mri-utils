@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ['black', 'coverage', 'flake8', 'interrogate', 'isort', 'Sphinx', 'furo']
+dev = ['black', 'coverage', 'flake8', 'interrogate', 'isort', 'Sphinx', 'furo', 'scipy-stubs']
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -72,3 +72,18 @@ profile = "black"
 [tool.interrogate]
 exclude = ["setup.py", "docs", "build", "tests"]
 fail-under = 70
+
+[tool.mypy]
+exclude = ["docs", "tests"]
+python_version = "3.12"  # Specify your Python version here
+ignore_missing_imports = true
+strict = true  # Enables all strict settings, can be overridden individually below
+warn_unused_configs = true  # Warn about unused '[mypy-<pattern>]' sections
+show_error_codes = true
+pretty = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_return_any = true
+allow_redefinition = false
