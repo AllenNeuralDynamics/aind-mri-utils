@@ -793,6 +793,7 @@ def make_segment_dict(
     segment_format=None,
     ap_names=def_ap_names,
     orient_names=def_orient_names,
+    ignore_list=[],
 ):
     """
     Create a dictionary of segment values based on the provided segment
@@ -810,6 +811,8 @@ def make_segment_dict(
     orient_names : list, optional
         A list of names for the orientation segments. Defaults to
         def_orient_names.
+    ignore_list : list, optional
+        A list of segment names to ignore. Defaults to an empty list.
 
     Returns
     -------
@@ -821,11 +824,12 @@ def make_segment_dict(
     if segment_format is None:
         segment_format = "{}_{}"
     seg_vals = dict()
+    ignore_set = set(ignore_list)
     for orient in orient_names:
         seg_vals[orient] = dict()
         for ap in ap_names:
             key_name = segment_format.format(ap, orient)
-            if key_name in segment_info:
+            if key_name in segment_info and key_name not in ignore_set:
                 seg_vals[orient][ap] = segment_info[key_name]
     return seg_vals
 
@@ -835,6 +839,7 @@ def segment_dict_from_seg_odict(
     segment_format=None,
     ap_names=def_ap_names,
     orient_names=def_orient_names,
+    ignore_list=[],
 ):
     """
     Create a dictionary of segments from a segmentation ordered dictionary.
@@ -863,7 +868,7 @@ def segment_dict_from_seg_odict(
     """
     segment_info = sf.find_seg_nrrd_header_segment_info(seg_odict)
     segment_dict = make_segment_dict(
-        segment_info, segment_format, ap_names, orient_names
+        segment_info, segment_format, ap_names, orient_names, ignore_list
     )
     if all([len(d) == 0 for d in segment_dict.values()]):
         raise ValueError(
@@ -872,9 +877,9 @@ def segment_dict_from_seg_odict(
     return segment_dict
 
 
-def _nested_compress(mask, *args):
+def _compress_each(mask, *args):
     """
-    Compresses the given arguments based on the provided mask.
+    Compresses each iterable in `*args` using `mask`.
 
     Parameters
     ----------
@@ -886,15 +891,15 @@ def _nested_compress(mask, *args):
     Returns
     -------
     list
-        A list of compressed elements from the input iterables.
+        A list of iterables, each compressed using `mask`.
 
     Examples
     --------
     >>> mask = [True, False, True]
     >>> arg1 = [1, 2, 3]
     >>> arg2 = ['a', 'b', 'c']
-    >>> _nested_compress(mask, arg1, arg2)
-    [(1, 'a'), (3, 'c')]
+    >>> _compress_each(mask, arg1, arg2)
+    [(1, 3), ('a', 'c')]
     """
     return list(zip(*itr.compress(zip(*args), mask)))
 
@@ -911,6 +916,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
     niter_com=50000,
     niter_com_plane=10000,
     xtol=1e-12,
+    ignore_list=[],
 ):
     """
     Calculate the headframe rotation and translation from segmentation data and
@@ -944,6 +950,8 @@ def find_hf_rotation_from_seg_and_lowerplane(
     xtol : float, optional
         Tolerance for termination by change in the optimization. Default is
         1e-12.
+    ignore_list : list, optional
+        List of segment names to ignore. Default is an empty list.
 
     Returns
     -------
@@ -965,7 +973,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
     6. Refines the optimization by including the lower plane.
     """
     segment_dict = segment_dict_from_seg_odict(
-        seg_odict, segment_format, ap_names, orient_names
+        seg_odict, segment_format, ap_names, orient_names, ignore_list
     )
 
     # Get centers of mass and initial guess at rotation and translation
@@ -1010,7 +1018,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
 
     hole_mask = np.full(len(moving), True)
     hole_mask[plane_ndx] = False
-    hole_only_list_of_lists = _nested_compress(
+    hole_only_list_of_lists = _compress_each(
         hole_mask, pts1l, pts2l, moving, weights
     )
 
