@@ -434,16 +434,21 @@ def _fit_params_with_scaling(reticle_pts, probe_pts, **kwargs):
     # Initial guess of parameters
     theta0 = np.zeros(9)
     theta0[3:6] = 1.0
-
-    if probe_pts.shape[0] > 1:
+    npt = probe_pts.shape[0]
+    if npt > 1:
         # Initial guess of rotation: align the vectors between the first
         # two points
-        probe_diff = np.diff(probe_pts[:2, :], axis=0)
-        reticle_diff = np.diff(reticle_pts[:2, :], axis=0)
-        Rinit = rot.rotation_matrix_from_vectors(
-            reticle_diff.squeeze(), probe_diff.squeeze()
-        )
-        theta0[0:3] = Rotation.from_matrix(Rinit).as_euler("xyz")
+        for otherpt in range(1, npt):
+            probe_diff = probe_pts[otherpt, :] - probe_pts[0, :]
+            reticle_diff = reticle_pts[otherpt, :] - reticle_pts[0, :]
+            reticle_norm = np.linalg.norm(reticle_diff.squeeze())
+            if reticle_norm > 0:
+                break
+        if reticle_norm > 0:
+            Rinit = rot.rotation_matrix_from_vectors(
+                reticle_diff.squeeze(), probe_diff.squeeze()
+            )
+            theta0[0:3] = Rotation.from_matrix(Rinit).as_euler("xyz")
 
     # Initial guess of translation: find the point on the reticle closest to
     # zero
