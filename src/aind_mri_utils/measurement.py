@@ -36,13 +36,12 @@ THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import numpy as np
+from typing import Tuple, List
 
 
-def find_circle(x, y):
-    """Fit a circle to a set of points
-
-    Fit a circle to a set of points using a linearized least-squares
-    algorithm
+def find_circle(x: np.ndarray, y: np.ndarray) -> Tuple[float, float, float]:
+    """
+    Fit a circle to a set of points using a linearized least-squares algorithm
 
     Borrowed, with modification, from:
     https://scipy-cookbook.readthedocs.io/items/Least_Squares_Circle.html
@@ -102,7 +101,7 @@ def find_circle(x, y):
     return xc_1, yc_1, radius
 
 
-def find_line_eig(points):
+def find_line_eig(points: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Returns first normalized eigenvector of data, for use in line fitting.
 
@@ -124,8 +123,11 @@ def find_line_eig(points):
     return b[:, 0], points_mean
 
 
-def closet_points_on_two_lines(P1, V1, P2, V2):
-    """Calculate the closest points on two lines in 3D space.
+def closet_points_on_two_lines(
+    P1: List[float], V1: List[float], P2: List[float], V2: List[float]
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Calculate the closest points on two lines in 3D space.
 
     Parameters
     ----------
@@ -170,7 +172,7 @@ def closet_points_on_two_lines(P1, V1, P2, V2):
     return p_a, p_b
 
 
-def angle(v1, v2):
+def angle(v1: np.ndarray, v2: np.ndarray) -> float:
     """
     Angle (in degrees) between two vectors
 
@@ -189,9 +191,11 @@ def angle(v1, v2):
     return np.rad2deg(rad)
 
 
-def dist_point_to_line(pt_1, pt_2, query_pt):
-    """Distance between line defined by two points and a query point
-
+def dist_point_to_line(
+    pt_1: np.ndarray, pt_2: np.ndarray, query_pt: np.ndarray
+) -> float:
+    """
+    Distance between line defined by two points and a query point
     inspiration from:
         https://stackoverflow.com/questions/39840030/...
         distance-between-point-and-a-line-from-two-points
@@ -217,7 +221,9 @@ def dist_point_to_line(pt_1, pt_2, query_pt):
     ) / np.linalg.norm(ln_norm)
 
 
-def dist_point_to_plane(pt_0, normal, query_pt):
+def dist_point_to_plane(
+    pt_0: np.ndarray, normal: np.ndarray, query_pt: np.ndarray
+) -> float:
     """
     Distance between plane defined by point and normal and a query point
 
