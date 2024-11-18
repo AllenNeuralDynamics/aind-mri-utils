@@ -8,16 +8,19 @@ def read_neuroglancer_probes_and_annotations(
     filename, probe_layers=None, annotation_layers=None
 ):
     """
-    Reads a Neuroglancer JSON file and extracts probe locations and annotation data.
+    Reads a Neuroglancer JSON file and extracts probe locations and annotation
+    data.
 
     Parameters
     ----------
     filename : str
         Path to the Neuroglancer JSON file.
     probe_layers : list of str, optional
-        Specific probe layers to extract. If None, auto-detects numeric layers. Use -1 to skip.
+        Specific probe layers to extract. If None, auto-detects numeric layers.
+        Use -1 to skip.
     annotation_layers : list of str, optional
-        Specific annotation layers to extract. If None, auto-detects layers excluding probes. Use -1 to skip.
+        Specific annotation layers to extract. If None, auto-detects layers
+        excluding probes. Use -1 to skip.
 
     Returns
     -------
@@ -37,18 +40,21 @@ def read_neuroglancer_probes_and_annotations(
         DeprecationWarning,
     )
     data = _load_json_file(filename)
-    dimension_order, spacing, dim_order = _extract_spacing_and_order(data)
+    dimension_order, spacing, dim_order = _extract_spacing_and_order(
+        data["dimensions"]
+    )
+    layers = data["layers"]
     if probe_layers == -1:
         probes = False
     else:
         probes = _extract_layers(
-            data, probe_layers, spacing, dim_order, layer_type="probe"
+            layers, probe_layers, spacing, dim_order, layer_type="probe"
         )
     if annotation_layers == -1:
         annotations = False
     else:
         annotations = _extract_layers(
-            data,
+            layers,
             annotation_layers,
             spacing,
             dim_order,
@@ -75,7 +81,8 @@ def read_neuroglancer_annotation_layers(
     filename : str
         Path to the Neuroglancer JSON file.
     layer_names : str, list of str, or None, optional
-        Names of annotation layers to extract. If None, auto-detects all annotation layers.
+        Names of annotation layers to extract. If None, auto-detects all
+        annotation layers.
     return_description : bool, optional, default=False
         If True, returns annotation descriptions alongside points.
 
@@ -84,16 +91,18 @@ def read_neuroglancer_annotation_layers(
     annotations : dict
         Dictionary of annotation coordinates for each layer.
     descriptions : dict, optional
-        Dictionary of annotation descriptions for each layer. Returned only if `return_description` is True.
+        Dictionary of annotation descriptions for each layer. Returned only if
+        `return_description` is True.
     """
     data = _load_json_file(filename)
-    _, spacing, dim_order = _extract_spacing_and_order(data)
+    _, spacing, dim_order = _extract_spacing_and_order(data["dimensions"])
 
+    layers = data["layers"]
     layer_names = _resolve_layer_names(
-        data, layer_names, layer_type="annotation"
+        layers, layer_names, layer_type="annotation"
     )
     annotations, descriptions = _process_annotation_layers(
-        data, layer_names, spacing, dim_order, return_description
+        layers, layer_names, spacing, dim_order, return_description
     )
 
     if return_description:
@@ -119,7 +128,7 @@ def _load_json_file(filename):
         return json.load(f)
 
 
-def _extract_spacing_and_order(data):
+def _extract_spacing_and_order(dimension_data):
     """
     Extracts voxel spacing and dimension order from the Neuroglancer file.
 
@@ -137,20 +146,21 @@ def _extract_spacing_and_order(data):
     dim_order : numpy.ndarray
         Indices to reorder dimensions into x, y, z order.
     """
-    dimension_order = list(data["dimensions"].keys())[:3]
-    spacing = np.array([data["dimensions"][key][0] for key in dimension_order])
+    dimension_order = list(dimension_data.keys())[:3]
+    spacing = np.array([dimension_data[key][0] for key in dimension_order])
     dim_order = np.argsort(dimension_order)
     return dimension_order, spacing, dim_order
 
 
-def _resolve_layer_names(data, layer_names, layer_type):
+def _resolve_layer_names(layers, layer_names, layer_type):
     """
-    Resolves layer names based on user input or auto-detects layers of the given type.
+    Resolves layer names based on user input or auto-detects layers of the
+    given type.
 
     Parameters
     ----------
-    data : dict
-        Neuroglancer JSON data.
+    layers : list
+        Neuroglancer JSON layers.
     layer_names : str, list of str, or None
         User-specified layer names or None to auto-detect.
     layer_type : str
@@ -166,7 +176,6 @@ def _resolve_layer_names(data, layer_names, layer_type):
     ValueError
         If the input `layer_names` is invalid.
     """
-    layers = data["layers"]
     if isinstance(layer_names, str):
         return [layer_names]
     if layer_names is None:
@@ -176,22 +185,24 @@ def _resolve_layer_names(data, layer_names, layer_type):
     if isinstance(layer_names, list):
         return layer_names
     raise ValueError(
-        f"Invalid input for layer_names. Expected a string, list of strings, or None."
+        "Invalid input for layer_names. Expected a string, list of strings, "
+        "or None."
     )
 
 
 def _extract_layers(
-    data, layer_names, spacing, dim_order, layer_type, exclude_layers=None
+    layers, layer_names, spacing, dim_order, layer_type, exclude_layers=None
 ):
     """
     Extracts data for specified layers of a given type.
 
     Parameters
     ----------
-    data : dict
+    layers : list
         Neuroglancer JSON data.
     layer_names : list of str or None
-        Names of layers to extract. If None, auto-detects layers of the given type.
+        Names of layers to extract. If None, auto-detects layers of the given
+        type.
     spacing : numpy.ndarray
         Voxel spacing for scaling.
     dim_order : numpy.ndarray
@@ -206,19 +217,21 @@ def _extract_layers(
     dict
         Dictionary of layer data, keyed by layer name.
     """
-    resolved_layer_names = _resolve_layer_names(data, layer_names, layer_type)
+    resolved_layer_names = _resolve_layer_names(
+        layers, layer_names, layer_type
+    )
     if exclude_layers:
         resolved_layer_names = [
             name for name in resolved_layer_names if name not in exclude_layers
         ]
 
-    layers = {
+    sel_layers = {
         name: _process_layer(
-            _get_layer_by_name(data, name), spacing, dim_order
+            _get_layer_by_name(layers, name), spacing, dim_order
         )
         for name in resolved_layer_names
     }
-    return layers
+    return sel_layers
 
 
 def _process_layer(layer, spacing, dim_order):
@@ -244,7 +257,7 @@ def _process_layer(layer, spacing, dim_order):
 
 
 def _process_annotation_layers(
-    data, layer_names, spacing, dim_order, return_description
+    layers, layer_names, spacing, dim_order, return_description
 ):
     """
     Processes annotation layers to extract points and descriptions.
@@ -271,9 +284,8 @@ def _process_annotation_layers(
     """
     annotations = {}
     descriptions = {} if return_description else None
-
     for layer_name in layer_names:
-        layer = _get_layer_by_name(data, layer_name)
+        layer = _get_layer_by_name(layers, layer_name)
         points, layer_descriptions = _process_layer_and_descriptions(
             layer, spacing, dim_order, return_description
         )
@@ -284,7 +296,7 @@ def _process_annotation_layers(
     return annotations, descriptions
 
 
-def _get_layer_by_name(data, name):
+def _get_layer_by_name(layers, name):
     """
     Retrieves a layer by its name.
 
@@ -305,7 +317,7 @@ def _get_layer_by_name(data, name):
     ValueError
         If the layer is not found.
     """
-    for layer in data["layers"]:
+    for layer in layers:
         if layer["name"] == name:
             return layer
     raise ValueError(f'Layer "{name}" not found in the Neuroglancer file.')
