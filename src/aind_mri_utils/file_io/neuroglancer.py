@@ -33,41 +33,11 @@ def read_neuroglancer_probes_and_annotations(
     dimension_order : numpy.ndarray
         Reordered dimension order for consistency.
     """
-    warnings.warn(
-        "This function is deprecated and will be removed soon. Please use "
-        "read_neuroglancer_annotation_layers for a more stable/long term "
-        "solution",
-        DeprecationWarning,
+    raise NotImplementedError(
+        "This function is deprecated is no longer supported. Please use"
+        "read_neuroglancer_annotation_layers instead."
     )
-    data = _load_json_file(filename)
-    dimension_order, spacing, dim_order = _extract_spacing_and_order(
-        data["dimensions"]
-    )
-    layers = data["layers"]
-    if probe_layers == -1:
-        probes = False
-    else:
-        probes = _extract_layers(
-            layers, probe_layers, spacing, dim_order, layer_type="probe"
-        )
-    if annotation_layers == -1:
-        annotations = False
-    else:
-        annotations = _extract_layers(
-            layers,
-            annotation_layers,
-            spacing,
-            dim_order,
-            layer_type="annotation",
-            exclude_layers=list(probes.keys()) if probes else [],
-        )
 
-    return (
-        probes,
-        annotations,
-        spacing[dim_order],
-        np.array(dimension_order)[dim_order],
-    )
 
 
 def read_neuroglancer_annotation_layers(
