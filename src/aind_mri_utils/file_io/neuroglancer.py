@@ -1,43 +1,6 @@
 import json
-import warnings
 
 import numpy as np
-
-
-def read_neuroglancer_probes_and_annotations(
-    filename, probe_layers=None, annotation_layers=None
-):
-    """
-    Reads a Neuroglancer JSON file and extracts probe locations and annotation
-    data.
-
-    Parameters
-    ----------
-    filename : str
-        Path to the Neuroglancer JSON file.
-    probe_layers : list of str, optional
-        Specific probe layers to extract. If None, auto-detects numeric layers.
-        Use -1 to skip.
-    annotation_layers : list of str, optional
-        Specific annotation layers to extract. If None, auto-detects layers
-        excluding probes. Use -1 to skip.
-
-    Returns
-    -------
-    probes : dict or bool
-        Dictionary of probe coordinates, or False if skipped.
-    annotations : dict or bool
-        Dictionary of annotation coordinates, or False if skipped.
-    spacing : numpy.ndarray
-        Voxel spacing in x, y, z order.
-    dimension_order : numpy.ndarray
-        Reordered dimension order for consistency.
-    """
-    raise NotImplementedError(
-        "This function is deprecated is no longer supported. Please use"
-        "read_neuroglancer_annotation_layers instead."
-    )
-
 
 
 def read_neuroglancer_annotation_layers(
