@@ -231,6 +231,36 @@ def create_slicer_fcsv(filename, pts_dict, direction="LPS"):
             )
 
 
+def _parse_slicer_fcsv_header(file):
+    "Parse the header of a slicer fcsv file, returning the last line read"
+    line = file.readline()
+    source_coordinate_system = None
+    column_headers = []
+    # Parse the header
+    while line and line.startswith("#"):
+        key, _, value = line.partition("=")
+        value = value.strip()
+        if "CoordinateSystem" in key:
+            source_coordinate_system = value
+        elif "columns" in key:
+            column_headers = [col.strip() for col in value.split(",")]
+        line = file.readline()
+    if not column_headers:
+        raise ValueError("No column headers found in file")
+    if source_coordinate_system is None:
+        raise ValueError("No CoordinateSystem found in file")
+    col_ndxs = {col: i for i, col in enumerate(column_headers)}
+    if "label" not in col_ndxs:
+        raise ValueError("No 'label' column found in file")
+
+    # Get the indices of the needed columns
+    label_ndx = col_ndxs["label"]
+    coord_ndxs = [col_ndxs[axis] for axis in ["x", "y", "z"]]
+    last_line = line
+
+    return last_line, source_coordinate_system, label_ndx, coord_ndxs
+
+
 def read_slicer_fcsv(filename, direction="LPS", verbose=False):
     """
     Read fscv into dictionary.
@@ -262,36 +292,24 @@ def read_slicer_fcsv(filename, direction="LPS", verbose=False):
         print(f"Reading {filename} with direction {direction}")
 
     point_dictionary = {}
-    coordinate_system = None
-    columns = []
 
-    with open(filename, "r") as f:
+    with open(filename, "r") as file:
+        line, source_coordinate_system, label_ndx, coord_ndxs = (
+            _parse_slicer_fcsv_header(file)
+        )
+        need_conversion = source_coordinate_system != direction
 
-        for line in f:
-            if line.startswith("#"):
-                if "CoordinateSystem" in line:
-                    coordinate_system = line.split("=")[1].strip()
-                elif "columns" in line:
-                    columns = [
-                        col.strip() for col in line.split("=")[1].split(",")
-                    ]
-            else:
-                point_data = line.strip().split(",")
-                if "label" in columns and all(
-                    axis in columns for axis in ["x", "y", "z"]
-                ):
-                    point_key = point_data[columns.index("label")]
-                    point_values = np.array(
-                        [
-                            float(point_data[columns.index(axis)])
-                            for axis in ["x", "y", "z"]
-                        ]
-                    )
-                    point_dictionary[point_key] = point_values
-    if coordinate_system and coordinate_system != direction:
-        for key, value in point_dictionary.items():
-            point_dictionary[key] = convert_coordinate_system(
-                value, coordinate_system, direction
+        while line:
+            point_parts = line.strip().split(",")
+            point_key = point_parts[label_ndx]
+            point_values = np.array(
+                [float(point_parts[i]) for i in coord_ndxs]
             )
+            if need_conversion:
+                point_values = convert_coordinate_system(
+                    point_values, source_coordinate_system, direction
+                )
+            point_dictionary[point_key] = point_values
+            line = file.readline()
 
     return point_dictionary
