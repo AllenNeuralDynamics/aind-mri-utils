@@ -37,23 +37,6 @@ for version in headframe_hole_locations:
     )
 
 
-def append_ones_column(data):
-    """
-    Add a column of ones to the end of a matrix.
-
-    Parameters
-    ----------
-    data : np.array
-        Data to append a column of ones to.
-
-    Returns
-    -------
-    np.array
-        Data with a column of ones appended to the end.
-    """
-    return rot.prepare_data_for_homogeneous_transform(data)
-
-
 def _unpack_theta_apply_transform(theta, moving):
     """Helper function to apply a transform to a set of points."""
     R = rot.combine_angles(*theta[0:3])

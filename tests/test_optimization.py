@@ -3,7 +3,6 @@ import unittest
 import numpy as np
 
 from aind_mri_utils.optimization import (
-    append_ones_column,
     get_headframe_hole_lines,
     optimize_transform_labeled_lines,
     optimize_transform_labeled_lines_with_plane,
@@ -50,21 +49,6 @@ class OptimaizationTest(unittest.TestCase):
 
         # Test that value error is raised if bad version in passed
         self.assertRaises(ValueError, get_headframe_hole_lines, version=12)
-
-    def test_append_ones_column(self) -> None:
-        """
-        Tests append_ones_column
-
-        Note that copilot wrote this function... so it's probably fine
-        """
-        test_array = np.array([[1, 2, 3], [4, 5, 6]])
-        test_array = append_ones_column(test_array)
-        self.assertTrue(np.array_equal(test_array[:, 3], np.array([1, 1])))
-        self.assertTrue(
-            np.array_equal(
-                test_array[:, 0:3], np.array([[1, 2, 3], [4, 5, 6]])
-            )
-        )
 
     def test_optimize_transform_labeled_lines(self) -> None:
         """
