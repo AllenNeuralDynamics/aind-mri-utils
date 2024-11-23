@@ -10,6 +10,7 @@ import unittest
 import numpy as np
 
 from aind_mri_utils import rotations
+from aind_mri_utils.rotations import prepare_data_for_homogeneous_transform
 
 
 class RotationsTest(unittest.TestCase):
@@ -89,6 +90,21 @@ class RotationsTest(unittest.TestCase):
         self.assertTrue(np.allclose(rotmat, -np.eye(a.size)))
         self.assertRaises(
             ValueError, rotations.rotation_matrix_from_vectors, a, np.zeros(1)
+        )
+
+    def test_prepare_data_for_homogeneous_transform(self) -> None:
+        """
+        Tests prepare_data_for_homogeneous_transform
+
+        Note that copilot wrote this function... so it's probably fine
+        """
+        test_array = np.array([[1, 2, 3], [4, 5, 6]])
+        test_array = prepare_data_for_homogeneous_transform(test_array)
+        self.assertTrue(np.array_equal(test_array[:, 3], np.array([1, 1])))
+        self.assertTrue(
+            np.array_equal(
+                test_array[:, 0:3], np.array([[1, 2, 3], [4, 5, 6]])
+            )
         )
 
 
