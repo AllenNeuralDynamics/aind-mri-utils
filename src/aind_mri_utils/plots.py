@@ -92,7 +92,7 @@ def plot_point_cloud_3d(a, pts, *args, **kwargs):
 
 
 def create_single_colormap(
-    colorname,
+    color_name,
     N=256,
     saturation=0,
     start_color="white",
@@ -104,7 +104,7 @@ def create_single_colormap(
 
     Parameters
     ==========
-    colorname - string name of color
+    color_name - string name of color
     N - number of colors in colormap
     saturation - number of colors to add to the colormap
     start_color - color to start the colormap with
@@ -115,7 +115,7 @@ def create_single_colormap(
     cmap - matplotlib colormap
 
     """
-    cmap = ListedColormap([start_color, colorname])
+    cmap = ListedColormap([start_color, color_name])
     start_color = np.array(cmap(0))
     if is_transparent:
         start_color[-1] = 0

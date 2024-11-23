@@ -222,11 +222,11 @@ def create_slicer_fcsv(filename, pts_dict, direction="LPS"):
             "# columns = id,x,y,z,ow,ox,oy,oz,vis,sel,lock,label,desc,associatedNodeID\n"  # noqa: E501
         )
 
-        for ptno, key in enumerate(pts_dict.keys()):
+        for pt_no, key in enumerate(pts_dict.keys()):
             x, y, z = pts_dict[key]
             f.write(
                 "{:d},{:f},{:f},{:f},0,0,0,1,1,1,0,{!s},,vtkMRMLScalarVolumeNode1\n".format(  # noqa: E501"
-                    ptno + 1, x, y, z, key
+                    pt_no + 1, x, y, z, key
                 )
             )
 

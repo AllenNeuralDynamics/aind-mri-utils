@@ -330,14 +330,14 @@ def make_final_insertion_scene(
     """
     scene = trimesh.scene.Scene([headframe_mesh])
 
-    cstep = 256 // len(insert_list)
+    c_step = 256 // len(insert_list)
 
     scene.add_geometry(cone)
     _add_spheres_to_scene(scene, transformed_implant, transformed_annotation)
     for idx, insertion_idx in enumerate(insert_list):
         mesh_copy = probe_mesh.copy()
         mesh_copy.visual.vertex_colors = (
-            np.array(cm(idx * cstep)) * 255
+            np.array(cm(idx * c_step)) * 255
         ).astype(int)
         apply_transform_and_add_mesh(
             scene,
