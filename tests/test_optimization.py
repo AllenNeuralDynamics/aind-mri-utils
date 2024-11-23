@@ -9,7 +9,7 @@ from aind_mri_utils.optimization import (
 )
 
 
-class OptimaizationTest(unittest.TestCase):
+class OptimizationTest(unittest.TestCase):
     def test_get_headframe_hole_lines(self) -> None:
         """
         Tests for get_headframe_hole_lines
@@ -86,19 +86,19 @@ class OptimaizationTest(unittest.TestCase):
         )  # To test that the weights are being used
         # Test with default weights input
         init = np.zeros((6,))
-        trans, Tframe = optimize_transform_labeled_lines(
+        trans, T_frame = optimize_transform_labeled_lines(
             init,
             pts1,
             pts2,
             move_pts,
             labels,
         )
-        self.assertTrue(Tframe[-1] - 1 < 1e-6)
+        self.assertTrue(T_frame[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)
 
         # Test with non-default weights input
         init = np.zeros((6,))
-        trans, Tframe = optimize_transform_labeled_lines(
+        trans, T_frame = optimize_transform_labeled_lines(
             init,
             pts1,
             pts2,
@@ -108,7 +108,7 @@ class OptimaizationTest(unittest.TestCase):
             gamma=0.5,
             normalize=True,
         )
-        self.assertTrue(Tframe[-1] - 1 < 1e-6)
+        self.assertTrue(T_frame[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)
 
     def test_optimize_transform_labeled_lines_with_plane(self) -> None:
@@ -134,16 +134,16 @@ class OptimaizationTest(unittest.TestCase):
         pts_for_line[-1] = False
         # Test with all no weights added
         init = np.zeros((6,))
-        trans, Tframe = optimize_transform_labeled_lines_with_plane(
+        trans, T_frame = optimize_transform_labeled_lines_with_plane(
             init, pts1, pts2, pts_for_line, move_pts, labels
         )
 
-        self.assertTrue(Tframe[-1] - 1 < 1e-6)
+        self.assertTrue(T_frame[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)
 
         # Test with weights input
         init = np.zeros((6,))
-        trans, Tframe = optimize_transform_labeled_lines_with_plane(
+        trans, T_frame = optimize_transform_labeled_lines_with_plane(
             init,
             pts1,
             pts2,
@@ -155,7 +155,7 @@ class OptimaizationTest(unittest.TestCase):
             normalize=True,
         )
 
-        self.assertTrue(Tframe[-1] - 1 < 1e-6)
+        self.assertTrue(T_frame[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)
 
 

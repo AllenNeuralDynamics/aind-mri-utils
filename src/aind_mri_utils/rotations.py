@@ -46,7 +46,7 @@ def rotate_about_and_translate(points, rotation, pivot, translation):
     ----------
     points : (Nx3) numpy array
         Points to rotate. Each point gets its own row.
-    rototation : Scipy `Rotation` object
+    rotation : Scipy `Rotation` object
         use `define_euler_rotation` or
         `scipy.spatial.transform.Rotation` constructor to create
     pivot : (1x3) numpy array
@@ -72,7 +72,7 @@ def rotate_about(points, rotation, pivot):
     ----------
     points : (Nx3) numpy array
         Points to rotate. Each point gets its own row.
-    rototation : Scipy `Rotation` object
+    rotation : Scipy `Rotation` object
         use `define_euler_rotation` or
         `scipy.spatial.transform.Rotation` constructor to create
     pivot : (1x3) numpy array
@@ -170,8 +170,8 @@ def rotation_matrix_from_vectors(a, b):
 
     Returns
     -------
-    rmat : np.ndarray (NxN)
-        Rotation matrix such that `rmat @ a` is parallel to `b`
+    rotation_matrix : np.ndarray (NxN)
+        Rotation matrix such that `rotation_matrix @ a` is parallel to `b`
     """
     # Follows Rodrigues` rotation formula
     # https://math.stackexchange.com/a/476311
@@ -186,14 +186,14 @@ def rotation_matrix_from_vectors(a, b):
         return -np.eye(nd)
     v = np.cross(na, nb)
     ax = ut.skew_symmetric_cross_product_matrix(v)
-    rotmat = np.eye(nd) + ax + ax @ ax * (1 / (1 + c))
-    return rotmat
+    rotation_matrix = np.eye(nd) + ax + ax @ ax * (1 / (1 + c))
+    return rotation_matrix
 
 
 def _rotate_mat_by_single_euler(mat, axis, angle):
     "Helper function that rotates a matrix by a single Euler angle"
-    rotmat = Rotation.from_euler(axis, angle).as_matrix().squeeze()
-    return mat @ rotmat
+    rotation_matrix = Rotation.from_euler(axis, angle).as_matrix().squeeze()
+    return mat @ rotation_matrix
 
 
 def roll(input_mat, angle):  # rotation around x axis (bank angle)
@@ -317,12 +317,12 @@ def make_homogeneous_transform(R, translation, scaling=None):
         raise ValueError("scaling must have same size as R")
 
     if scaling is None:
-        Radj = R
+        R_adj = R
     else:
-        Rscaling = np.diag(scaling)
-        Radj = Rscaling @ R
+        R_scaling = np.diag(scaling)
+        R_adj = R_scaling @ R
     R_homog = np.eye(N + 1)
-    R_homog[0:N, 0:N] = Radj
+    R_homog[0:N, 0:N] = R_adj
     R_homog[0:N, N] = translation
     return R_homog
 
@@ -438,11 +438,11 @@ def inverse_rotate_translate(R, translation):
     tuple
         A tuple containing:
         - R_inv (numpy.ndarray): The transpose of the rotation matrix.
-        - tinv (numpy.ndarray): The inverse translation vector.
+        - t_inv (numpy.ndarray): The inverse translation vector.
     """
-    tinv = -translation @ R
-    Rinv = R.T
-    return Rinv, tinv
+    t_inv = -translation @ R
+    R_inv = R.T
+    return R_inv, t_inv
 
 
 def create_homogeneous_from_euler_and_translation(rx, ry, rz, tx, ty, tz):

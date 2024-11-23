@@ -93,7 +93,7 @@ def read_dicom(filename):
 def read_dcm(filename):
     """
     Reader to import Dicom file and convert to sitk image.
-    This fucntion is a wrapper on read_dicom to handle multiple naming
+    This function is a wrapper on read_dicom to handle multiple naming
     conventions
 
     Parameters
@@ -133,7 +133,7 @@ def read_nii(filename):
 def read_nifti(filename):
     """
     Reader to import nifti file and convert to sitk image
-    This fucntion is a wrapper on read_nii to handle multiple naming
+    This function is a wrapper on read_nii to handle multiple naming
     conventions, which is in turn just an sitk wrapper.
 
     Parameters

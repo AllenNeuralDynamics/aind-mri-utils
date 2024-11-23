@@ -103,7 +103,7 @@ def find_circle(x, y):
 
 def find_line_eig(points):
     """
-    Returns first normalized eigenvetor of data, for use in line fitting.
+    Returns first normalized eigenvector of data, for use in line fitting.
 
     Parameters
     ----------
@@ -192,7 +192,7 @@ def angle(v1, v2):
 def dist_point_to_line(pt_1, pt_2, query_pt):
     """
     Distance between line defined by two points and a query point
-    insperation from:
+    inspiration from:
         https://stackoverflow.com/questions/39840030/...
         distance-between-point-and-a-line-from-two-points
 

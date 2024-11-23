@@ -116,7 +116,7 @@ def resample3D(
     )
 
     extrema_arr = np.vstack(extrema_transformed)
-    minmax = np.vstack(
+    min_max = np.vstack(
         list(map(lambda x: x(extrema_arr, axis=0), [np.min, np.max]))
     )
 
@@ -127,12 +127,12 @@ def resample3D(
         output_spacing = tuple(spacing)
 
     if output_origin is None:
-        output_origin = minmax[0, :].tolist()
+        output_origin = min_max[0, :].tolist()
 
     # Compute grid size based on the physical size and spacing.
     if output_size is None:
         output_size = (
-            np.round(np.diff(minmax, axis=0).squeeze() / spacing)
+            np.round(np.diff(min_max, axis=0).squeeze() / spacing)
             .astype(int)
             .tolist()
         )
@@ -149,17 +149,17 @@ def resample3D(
     return resampled_image
 
 
-def transform_sitk_indices_to_physical_points(simage, index_arr):
-    """Transforms indices indices of simage to physical points
+def transform_sitk_indices_to_physical_points(image, index_arr):
+    """Transforms indices indices of image to physical points
 
-    For a SimpleITK image `simage` and a list of indices `index_arr`, transform
+    For a SimpleITK image `image` and a list of indices `index_arr`, transform
     each index to a physical point.
 
     Parameters
     ----------
-    simage : M-d SimpleITK image
+    image : M-d SimpleITK image
     index_arr : numpy.ndarray (NxM)
-        matrix of indices of `simage`, where each row is an index
+        matrix of indices of `image`, where each row is an index
 
     Returns
     -------
@@ -168,22 +168,22 @@ def transform_sitk_indices_to_physical_points(simage, index_arr):
     """
     position_arr = np.zeros_like(index_arr, dtype="float32")
     npt = index_arr.shape[0]
-    for ptno in range(npt):
-        ndx = tuple(map(lambda x: x.item(), index_arr[ptno, :]))
-        position_arr[ptno, :] = simage.TransformContinuousIndexToPhysicalPoint(
+    for pt_no in range(npt):
+        ndx = tuple(map(lambda x: x.item(), index_arr[pt_no, :]))
+        position_arr[pt_no, :] = image.TransformContinuousIndexToPhysicalPoint(
             ndx
         )
     return position_arr
 
 
-def find_points_equal_to(simage, label_value):
+def find_points_equal_to(image, label_value):
     """
     Get the physical positions of all voxels in the implant volume that match
     the given label value.
 
     Parameters
     ----------
-    simage: SimpleITK.Image
+    image: SimpleITK.Image
         The implant volume to query.
     label_value : int
         The label value to search for in the volume.
@@ -193,16 +193,14 @@ def find_points_equal_to(simage, label_value):
     ndarray
         A NumPy array of physical positions corresponding to the label value.
     """
-    implant_vol_arr = sitk.GetArrayViewFromImage(simage)
+    implant_vol_arr = sitk.GetArrayViewFromImage(image)
     indices = np.nonzero(implant_vol_arr == label_value)
 
     if len(indices[0]) == 0:
         return np.empty((0, implant_vol_arr.ndim))
 
     positions = [
-        simage.TransformIndexToPhysicalPoint(
-            tuple([int(x) for x in idx[::-1]])
-        )
+        image.TransformIndexToPhysicalPoint(tuple([int(x) for x in idx[::-1]]))
         for idx in zip(*indices)
     ]
     return np.vstack(positions)
