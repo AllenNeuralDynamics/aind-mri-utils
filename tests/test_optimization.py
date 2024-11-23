@@ -9,7 +9,7 @@ from aind_mri_utils.optimization import (
 )
 
 
-class OptimaizationTest(unittest.TestCase):
+class OptimizationTest(unittest.TestCase):
     def test_get_headframe_hole_lines(self) -> None:
         """
         Tests for get_headframe_hole_lines

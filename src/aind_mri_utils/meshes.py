@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Functions for Loading and manipulating meshes durring insertion planning.
+Functions for Loading and manipulating meshes during insertion planning.
 """
 
 import trimesh

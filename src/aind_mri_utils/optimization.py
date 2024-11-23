@@ -82,13 +82,13 @@ def revised_error_rotate_compare_weighted_lines(
         If the length of `group_err_funs` is not the same as the number of
         groups in `pts1`.
     """
-    ngroup = len(pts1)
-    if not all(len(lst) == ngroup for lst in [pts2, moving, weights]):
+    n_group = len(pts1)
+    if not all(len(lst) == n_group for lst in [pts2, moving, weights]):
         raise ValueError("pts1, pts2, moving, and weights must be same length")
     if group_err_funs is None:
-        group_err_funs = np.full(ngroup, dist_point_to_line)
+        group_err_funs = np.full(n_group, dist_point_to_line)
     else:
-        if len(group_err_funs) != ngroup:
+        if len(group_err_funs) != n_group:
             raise ValueError(
                 "group_err_fun must have the same number of groups as pts1"
             )
@@ -98,9 +98,9 @@ def revised_error_rotate_compare_weighted_lines(
     error = 0.0
     for f, p1, p2, m, w in zip(group_err_funs, pts1, pts2, moving, weights):
         transformed = rot.apply_rotate_translate(m, R, translation)
-        for ptnno in range(m.shape[0]):
-            res = f(p1, p2, transformed[ptnno, :])
-            error += res * w[ptnno]
+        for pt_no in range(m.shape[0]):
+            res = f(p1, p2, transformed[pt_no, :])
+            error += res * w[pt_no]
     return error
 
 
@@ -169,7 +169,7 @@ def cost_function_weighted_labeled_lines_with_plane(
         False if the plane should be used.
     moving : np.array(M,3)
         position of points to be transformed.
-    labels : np.array(M,dtye=int)
+    labels : np.array(M,dtype=int)
         Labels of points, corresponding to index in pts1,pts2,and pts_for_line.
     weights : np.array(M,)
 
@@ -266,10 +266,10 @@ def optimize_transform_labeled_lines(
         specifying which line that point too.
     weights : np.array(M,1), optional
         Weights for each point in positions.
-        If None is passed, assumes all wieghts are 1.
+        If None is passed, assumes all weights are 1.
         Default is None.
     xtol : float, optional
-        Stopping tolerence for optimizer. The default is 1e-12.
+        Stopping tolerance for optimizer. The default is 1e-12.
     maxfun : int, optional
         Max number of function calls for optimizer.
         The default is 10000.
@@ -295,7 +295,7 @@ def optimize_transform_labeled_lines(
 
     weights = _preprocess_weights(weights, positions, normalize, gamma)
 
-    Tframe = opt.fmin(
+    T_frame = opt.fmin(
         cost_function_weighted_labeled_lines,
         init,
         args=(pts1, pts2, positions, labels, weights),
@@ -303,9 +303,9 @@ def optimize_transform_labeled_lines(
         maxfun=maxfun,
     )
 
-    print(Tframe)
-    R_homog = unpack_theta_to_homogeneous(Tframe)
-    return R_homog, Tframe
+    print(T_frame)
+    R_homog = unpack_theta_to_homogeneous(T_frame)
+    return R_homog, T_frame
 
 
 def optimize_transform_labeled_lines_with_plane(
@@ -344,10 +344,10 @@ def optimize_transform_labeled_lines_with_plane(
         specifying which line that point too.
     weights : np.array(M,1), optional
         Weights for each point in positions.
-        If None is passed, assumes all wieghts are 1.
+        If None is passed, assumes all weights are 1.
         Default is None.
     xtol : float, optional
-        Stopping tolerence for optimizer. The default is 1e-12.
+        Stopping tolerance for optimizer. The default is 1e-12.
     maxfun : int, optional
         Max number of function calls for optimizer.
         The default is 10000.
@@ -384,9 +384,9 @@ def optimize_transform_labeled_lines_with_plane(
         maxfun=maxfun,
     )
 
-    Tframe = output_b
-    R_homog = unpack_theta_to_homogeneous(Tframe)
-    return R_homog, Tframe
+    T_frame = output_b
+    R_homog = unpack_theta_to_homogeneous(T_frame)
+    return R_homog, T_frame
 
 
 def get_headframe_hole_lines(
@@ -404,7 +404,7 @@ def get_headframe_hole_lines(
     version : string, optional
         headframe version to match.
         The default is "0.1".,
-        which corresponds to the first-gen zircona hole hemisphere headframe.
+        which corresponds to the first-gen zirconia hole hemisphere headframe.
     insert_underscores : bool, optional
         If true, insert underscores into the names of the lines.
         The default is False.

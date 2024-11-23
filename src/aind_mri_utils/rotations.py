@@ -46,7 +46,7 @@ def rotate_about_and_translate(points, rotation, pivot, translation):
     ----------
     points : (Nx3) numpy array
         Points to rotate. Each point gets its own row.
-    rototation : Scipy `Rotation` object
+    rotation : Scipy `Rotation` object
         use `define_euler_rotation` or
         `scipy.spatial.transform.Rotation` constructor to create
     pivot : (1x3) numpy array
@@ -72,7 +72,7 @@ def rotate_about(points, rotation, pivot):
     ----------
     points : (Nx3) numpy array
         Points to rotate. Each point gets its own row.
-    rototation : Scipy `Rotation` object
+    rotation : Scipy `Rotation` object
         use `define_euler_rotation` or
         `scipy.spatial.transform.Rotation` constructor to create
     pivot : (1x3) numpy array
@@ -170,8 +170,8 @@ def rotation_matrix_from_vectors(a, b):
 
     Returns
     -------
-    rmat : np.ndarray (NxN)
-        Rotation matrix such that `rmat @ a` is parallel to `b`
+    rotation_matrix : np.ndarray (NxN)
+        Rotation matrix such that `rotation_matrix @ a` is parallel to `b`
     """
     # Follows Rodrigues` rotation formula
     # https://math.stackexchange.com/a/476311
@@ -186,8 +186,8 @@ def rotation_matrix_from_vectors(a, b):
         return -np.eye(nd)
     v = np.cross(na, nb)
     ax = ut.skew_symmetric_cross_product_matrix(v)
-    rotmat = np.eye(nd) + ax + ax @ ax * (1 / (1 + c))
-    return rotmat
+    rotation_matrix = np.eye(nd) + ax + ax @ ax * (1 / (1 + c))
+    return rotation_matrix
 
 
 def _rotate_mat_by_single_euler(mat, axis, angle):

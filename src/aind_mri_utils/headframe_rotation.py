@@ -83,7 +83,7 @@ def slices_centers_of_mass(
     or equal to `slice_seg_thresh` calculates the center of mass of the masked
     `img` on that slice. Centers of mass are based on the physical points
     corresponding to each index in `seg_img` found with
-    `transform_stik_indices_to_physical_points`.
+    `transform_sitk_indices_to_physical_points`.
 
     Parameters
     ----------
@@ -530,11 +530,11 @@ def find_rotation_to_match_hole_angles(
     )  # S
     bases[:, 0] = np.cross(bases[:, 1], bases[:, 2])  # L
 
-    srot = (
+    s_rot = (
         initial_orient_rotation_matrices["horizontal"] @ bases[:, 2]
     )  # rotated S axis
     rad = ut.signed_angle_rh(
-        srot,
+        s_rot,
         lps_axes["dv"],
         lps_axes["ap"],
     )
@@ -542,14 +542,14 @@ def find_rotation_to_match_hole_angles(
     R_y = Rot_y.as_matrix()
     R = R_y @ initial_orient_rotation_matrices["horizontal"]
 
-    Sinit = rot.rotation_matrix_to_sitk(R)
-    Sinit_inv = Sinit.GetInverse()
+    S_init = rot.rotation_matrix_to_sitk(R)
+    S_init_inv = S_init.GetInverse()
 
     seg_img_current = sv.resample3D(
-        seg_img, Sinit_inv, interpolator=sitk.sitkNearestNeighbor
+        seg_img, S_init_inv, interpolator=sitk.sitkNearestNeighbor
     )
     img_current = sv.resample3D(
-        img, Sinit_inv, interpolator=sitk.sitkNearestNeighbor
+        img, S_init_inv, interpolator=sitk.sitkNearestNeighbor
     )
 
     found_centers = find_holes_by_orientation(
@@ -582,12 +582,12 @@ def find_rotation_to_match_hole_angles(
     found_centers_curr = found_centers
     found_centers_ang_curr = found_centers_ang
 
-    for iterno in range(n_iter):
-        iter_angle_err[iterno, :] = [
+    for iter_no in range(n_iter):
+        iter_angle_err[iter_no, :] = [
             found_centers_ang_curr[orient] - design_centers_ang[orient]
             for orient in orient_names
         ]
-        iter_hole_diff_err[iterno, :, :] = (
+        iter_hole_diff_err[iter_no, :, :] = (
             translation[np.newaxis, :] - hole_diffs
         )
         for orient in orient_names:
@@ -679,7 +679,7 @@ def estimate_coms_from_image_and_segmentation(
         seg_img, seg_vals_dict, orient_axes_dict, orient_names, ap_names
     )
 
-    # Find centers of mass (COM) for slices perpendicular to intial axes
+    # Find centers of mass (COM) for slices perpendicular to initial axes
     coms = calculate_centers_of_mass_for_image_and_segmentation(
         img,
         seg_img,

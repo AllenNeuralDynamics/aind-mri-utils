@@ -33,16 +33,16 @@ def extract_calibration_metadata(ws):
           array.
         - reticle_name (str): The name of the reticle.
     """
-    rowiter = ws.iter_rows(min_row=1, max_row=2, values_only=True)
-    colname_lookup = {k: i for i, k in enumerate(next(rowiter))}
-    metadata_values = next(rowiter)
-    global_factor = metadata_values[colname_lookup["GlobalFactor"]]
+    row_iter = ws.iter_rows(min_row=1, max_row=2, values_only=True)
+    col_name_lookup = {k: i for i, k in enumerate(next(row_iter))}
+    metadata_values = next(row_iter)
+    global_factor = metadata_values[col_name_lookup["GlobalFactor"]]
     global_rotation_degrees = metadata_values[
-        colname_lookup["GlobalRotationDegrees"]
+        col_name_lookup["GlobalRotationDegrees"]
     ]
-    manipulator_factor = metadata_values[colname_lookup["ManipulatorFactor"]]
-    reticle_name = metadata_values[colname_lookup["Reticule"]]
-    offset_x_pos = colname_lookup["GlobalOffsetX"]
+    manipulator_factor = metadata_values[col_name_lookup["ManipulatorFactor"]]
+    reticle_name = metadata_values[col_name_lookup["Reticule"]]
+    offset_x_pos = col_name_lookup["GlobalOffsetX"]
     global_offset = np.array(
         metadata_values[offset_x_pos : offset_x_pos + 3],  # noqa: E203
         dtype=float,
@@ -143,13 +143,13 @@ def _apply_metadata_to_pair_mats(
         The adjusted global points and manipulator points matrices.
     """
     if global_rotation_degrees != 0:
-        rotmat = (
+        rot_mat = (
             Rotation.from_euler("z", global_rotation_degrees, degrees=True)
             .as_matrix()
             .squeeze()
         )
         # Transposed because points are row vectors
-        global_pts = global_pts @ rotmat.T
+        global_pts = global_pts @ rot_mat.T
     global_pts = global_pts * global_factor + global_offset
     manipulator_pts = manipulator_pts * manipulator_factor
     return global_pts, manipulator_pts
@@ -340,10 +340,10 @@ def fit_rotation_params(
         # two points
         probe_diff = np.diff(probe_pts[:2, :], axis=0)
         reticle_diff = np.diff(reticle_pts[:2, :], axis=0)
-        Rinit = rot.rotation_matrix_from_vectors(
+        R_init = rot.rotation_matrix_from_vectors(
             reticle_diff.squeeze(), probe_diff.squeeze()
         )
-        theta0[0:3] = Rotation.from_matrix(Rinit).as_euler("xyz")
+        theta0[0:3] = Rotation.from_matrix(R_init).as_euler("xyz")
 
     # Initial guess of translation: find the point on the reticle closest to
     # zero
@@ -355,7 +355,7 @@ def fit_rotation_params(
     if legacy_outputs:
         # last version had translation in global frame
         #
-        # Also the last version for some reason calculated the tranpose of the
+        # Also the last version for some reason calculated the transpose of the
         # rotation matrix. Application of the rotation matrix was consistently
         # wrong in a way that accounted for this transpose, so the results were
         # correct.
@@ -438,17 +438,17 @@ def _fit_params_with_scaling(reticle_pts, probe_pts, **kwargs):
     if npt > 1:
         # Initial guess of rotation: align the vectors between the first
         # two points
-        for otherpt in range(1, npt):
-            probe_diff = probe_pts[otherpt, :] - probe_pts[0, :]
-            reticle_diff = reticle_pts[otherpt, :] - reticle_pts[0, :]
+        for other_pt in range(1, npt):
+            probe_diff = probe_pts[other_pt, :] - probe_pts[0, :]
+            reticle_diff = reticle_pts[other_pt, :] - reticle_pts[0, :]
             reticle_norm = np.linalg.norm(reticle_diff.squeeze())
             if reticle_norm > 0:
                 break
         if reticle_norm > 0:
-            Rinit = rot.rotation_matrix_from_vectors(
+            R_init = rot.rotation_matrix_from_vectors(
                 reticle_diff.squeeze(), probe_diff.squeeze()
             )
-            theta0[0:3] = Rotation.from_matrix(Rinit).as_euler("xyz")
+            theta0[0:3] = Rotation.from_matrix(R_init).as_euler("xyz")
 
     # Initial guess of translation: find the point on the reticle closest to
     # zero
@@ -476,9 +476,9 @@ def _apply_scale_to_rotation(R, scale):
     numpy.ndarray
         The scaled rotation matrix.
     """
-    scalemat = np.zeros((3, 3))
-    np.fill_diagonal(scalemat, scale)
-    return scalemat @ R
+    scale_mat = np.zeros((3, 3))
+    np.fill_diagonal(scale_mat, scale)
+    return scale_mat @ R
 
 
 def transform_reticle_to_probe(reticle_pts, R, translation, scale=None):
@@ -527,8 +527,8 @@ def transform_probe_to_reticle(probe_pts, R, translation, scale=None):
         Transformed points.
     """
     if scale is None:
-        Rinv, tinv = rot.inverse_rotate_translate(R, translation)
-        transformed = rot.apply_rotate_translate(probe_pts, Rinv, tinv)
+        R_inv, t_inv = rot.inverse_rotate_translate(R, translation)
+        transformed = rot.apply_rotate_translate(probe_pts, R_inv, t_inv)
     if scale is not None:
         transformed = rot.apply_inverse_rotate_translate_scale(
             probe_pts, R, translation, scale
