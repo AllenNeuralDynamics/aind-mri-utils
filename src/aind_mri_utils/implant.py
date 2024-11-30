@@ -108,7 +108,7 @@ def fit_implant_to_mri(hole_seg_dict, hole_mesh_dict, initialization_hole=4):
     output = fmin(
         _implant_cost_fun,
         T,
-        args=(hole_mesh_dict, hole_seg_dict),  # ,hole_plot_dict),
+        args=(hole_mesh_dict, hole_seg_dict),
         xtol=1e-6,
         maxiter=2000,
     )
