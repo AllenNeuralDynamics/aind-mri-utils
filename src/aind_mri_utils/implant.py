@@ -72,8 +72,8 @@ def _implant_cost_fun(T, hole_mesh_dict, hole_seg_dict):
     total_distance = 0.0
     with ProcessPoolExecutor() as executor:
         futures = [executor.submit(func, *args) for func, args in tasks]
-        for result in as_completed(futures):
-            distances, _ = result.result()
+        for future in as_completed(futures):
+            distances, _ = future.result()
             total_distance += np.sum(distances)
     return total_distance
 
