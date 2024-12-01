@@ -1,22 +1,18 @@
 """Module to fit implant rotations to MRI data."""
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from pathlib import Path
 
 import numpy as np
-import SimpleITK as sitk
-import trimesh
 from scipy.optimize import fmin
 
-from aind_mri_utils import coordinate_systems as cs
 from aind_mri_utils.file_io.slicer_files import get_segmented_labels
 from aind_mri_utils.meshes import (
     distance_to_all_triangles_in_mesh,
     distance_to_closest_point_for_each_triangle_in_mesh,
 )
 from aind_mri_utils.rotations import (
-    create_homogeneous_from_euler_and_translation,
-    prepare_data_for_homogeneous_transform,
+    combine_angles,
+    apply_rotate_translate,
 )
 from aind_mri_utils.sitk_volume import find_points_equal_to
 
@@ -44,31 +40,24 @@ def _implant_cost_fun(T, hole_mesh_dict, hole_seg_dict):
         The total distance cost calculated by summing the distances between
         transformed points and mesh triangles.
     """
-    trans = create_homogeneous_from_euler_and_translation(*T)
-
+    rotation_matrix = combine_angles(*T[:3])
+    translation = T[3:]
     tasks = []
     for hole_id in hole_mesh_dict.keys():
-        if hole_id not in hole_seg_dict.keys():
+        # TODO: Fix this so it actually works for the brain outline
+        if hole_id not in hole_seg_dict:
             continue
-        if hole_id != -1:
-            this_hole_mesh = hole_mesh_dict[hole_id]
-            these_hole_pts = hole_seg_dict[hole_id]
-
-            transformed_hole_pts = np.dot(
-                prepare_data_for_homogeneous_transform(these_hole_pts), trans
-            )
-            func = distance_to_all_triangles_in_mesh
-            args = (this_hole_mesh, transformed_hole_pts)
-            tasks.append((func, args))
-        elif hole_id == -1:
-            lower_mesh = hole_mesh_dict[hole_id]
-            brain_outline = hole_seg_dict[hole_id]
-            transformed_brain_outline = np.dot(
-                prepare_data_for_homogeneous_transform(brain_outline), trans
-            )
+        mesh = hole_mesh_dict[hole_id]
+        pts = hole_seg_dict[hole_id]
+        transformed_pts = apply_rotate_translate(
+            pts, rotation_matrix, translation
+        )
+        args = (mesh, transformed_pts)
+        if hole_id == -1:
             func = distance_to_closest_point_for_each_triangle_in_mesh
-            args = (lower_mesh, transformed_brain_outline)
-            tasks.append((func, args))
+        else:
+            func = distance_to_all_triangles_in_mesh
+        tasks.append((func, args))
     total_distance = 0.0
     with ProcessPoolExecutor() as executor:
         futures = [executor.submit(func, *args) for func, args in tasks]
@@ -90,7 +79,8 @@ def fit_implant_to_mri(hole_seg_dict, hole_mesh_dict, initialization_hole=4):
         identifiers, and values are numpy arrays of coordinates.
     hole_mesh_dict : dict
         Dictionary containing mesh data for the implant model. Keys are hole
-        identifiers, and values are mesh objects with vertex coordinates.
+        identifiers, and values are mesh objects with vertex coordinates. Lower
+        face has key -1.
     initialization_hole : int, optional
         The hole to use for initialization, by default 4.
 
@@ -115,43 +105,6 @@ def fit_implant_to_mri(hole_seg_dict, hole_mesh_dict, initialization_hole=4):
     return output
 
 
-def make_hole_mesh_dict(hole_files, lower_face_file):
-    """
-    Creates a dictionary of hole meshes and a lower face mesh.
-
-    Parameters
-    ----------
-    hole_files : list of str
-        List of file paths to the hole mesh files.
-    lower_face_file : str
-        File path to the lower face mesh file.
-
-    Returns
-    -------
-    dict
-        A dictionary where the keys are hole numbers (int) and the values are
-        the corresponding trimesh objects. The lower face mesh is stored with
-        the key -1.
-    """
-    hole_mesh_dict = {}
-    for file_name in hole_files:
-        file_stem = Path(file_name).stem
-        hole_num = int(file_stem.split("Hole")[-1])
-        mesh = trimesh.load(file_name)
-        mesh.vertices = cs.convert_coordinate_system(
-            mesh.vertices, "ASR", "LPS"
-        )
-        hole_mesh_dict[hole_num] = mesh
-
-    # Get the lower face, store with key -1
-    hole_mesh_dict[-1] = trimesh.load(lower_face_file)
-    hole_mesh_dict[-1].vertices = cs.convert_coordinate_system(
-        hole_mesh_dict[-1].vertices, "ASR", "LPS"
-    )  # Preserves shape!
-
-    return hole_mesh_dict
-
-
 def make_hole_seg_dict(implant_annotations):
     """
     Creates a dictionary mapping hole names to their segmented positions.
@@ -167,35 +120,10 @@ def make_hole_seg_dict(implant_annotations):
         A dictionary where the keys are hole names (as integers) and the values
         are lists of positions where the segmented values are found.
     """
+    # TODO: Fix this so it actually works for the brain outline
     implant_annotations_names = get_segmented_labels(implant_annotations)
     hole_seg_dict = {}
     for hole_name, seg_val in implant_annotations_names.items():
         positions = find_points_equal_to(implant_annotations, seg_val)
         hole_seg_dict[int(hole_name)] = positions
     return hole_seg_dict
-
-
-def fit_implant_to_mri_from_files(
-    implant_annotations_file, hole_files, lower_face_file
-):
-    """
-    Fits an implant to MRI data using provided files.
-
-    Parameters
-    ----------
-    implant_annotations_file : str or Path
-        Path to the file containing implant annotations.
-    hole_files : list of str or list of Path
-        List of paths to the files containing hole data.
-    lower_face_file : str or Path
-        Path to the file containing lower face data.
-
-    Returns
-    -------
-    dict
-        A dictionary containing the fitted implant data.
-    """
-    implant_annotations = sitk.ReadImage(str(implant_annotations_file))
-    hole_mesh_dict = make_hole_mesh_dict(hole_files, lower_face_file)
-    hole_seg_dict = make_hole_seg_dict(implant_annotations)
-    return fit_implant_to_mri(hole_seg_dict, hole_mesh_dict)
