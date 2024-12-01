@@ -10,10 +10,7 @@ from aind_mri_utils.meshes import (
     distance_to_all_triangles_in_mesh,
     distance_to_closest_point_for_each_triangle_in_mesh,
 )
-from aind_mri_utils.rotations import (
-    combine_angles,
-    apply_rotate_translate,
-)
+from aind_mri_utils.rotations import apply_rotate_translate, combine_angles
 from aind_mri_utils.sitk_volume import find_points_equal_to
 
 
