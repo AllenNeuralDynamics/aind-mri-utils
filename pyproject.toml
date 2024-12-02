@@ -24,6 +24,7 @@ dependencies = [
   'SimpleITK >= 2, < 3',
   'openpyxl >= 3, < 4',
   'trimesh >= 4, < 5',
+  'Rtree >= 1, < 2',
 ]
 
 [project.optional-dependencies]

@@ -14,7 +14,7 @@ from aind_mri_utils.rotations import apply_rotate_translate, combine_angles
 from aind_mri_utils.sitk_volume import find_points_equal_to
 
 
-def _implant_cost_fun(T, hole_mesh_dict, hole_seg_dict):
+def _implant_cost_fun(T, hole_mesh_dict, hole_seg_dict, run_parallel=True):
     """
     Computes the total distance cost for implant alignment based on the
     provided transformation parameters.
@@ -56,10 +56,15 @@ def _implant_cost_fun(T, hole_mesh_dict, hole_seg_dict):
             func = distance_to_all_triangles_in_mesh
         tasks.append((func, args))
     total_distance = 0.0
-    with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(func, *args) for func, args in tasks]
-        for future in as_completed(futures):
-            distances, _ = future.result()
+    if run_parallel:
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(func, *args) for func, args in tasks]
+            for future in as_completed(futures):
+                distances, _ = future.result()
+                total_distance += np.sum(distances)
+    else:
+        for func, args in tasks:
+            distances, _ = func(*args)
             total_distance += np.sum(distances)
     return total_distance
 
