@@ -20,6 +20,28 @@ from aind_mri_utils.rotations import (
 from aind_mri_utils.sitk_volume import find_points_equal_to
 
 
+def _params_to_rotation_translation(params):
+    """
+    Convert parameters to rotation matrix and translation vector.
+
+    Parameters
+    ----------
+    params : array-like
+        Parameters for optimization including Euler angles and translation
+        vector.
+
+    Returns
+    -------
+    ndarray
+        Rotation matrix.
+    ndarray
+        Translation vector.
+    """
+    rotation_matrix = combine_angles(*params[:3])
+    translation = params[3:]
+    return rotation_matrix, translation
+
+
 def _implant_cost_fun(T, hole_mesh_dict, hole_seg_dict, run_parallel=True):
     """
     Computes the total distance cost for implant alignment based on the
@@ -43,19 +65,18 @@ def _implant_cost_fun(T, hole_mesh_dict, hole_seg_dict, run_parallel=True):
         The total distance cost calculated by summing the distances between
         transformed points and mesh triangles.
     """
-    rotation_matrix = combine_angles(*T[:3])
-    translation = T[3:]
+    rotation_matrix, translation = _params_to_rotation_translation(T)
     tasks = []
     for hole_id in hole_mesh_dict.keys():
         # TODO: Fix this so it actually works for the brain outline
         if hole_id not in hole_seg_dict:
             continue
-        mesh = hole_mesh_dict[hole_id]
+        mesh = hole_mesh_dict[hole_id].copy()
         pts = hole_seg_dict[hole_id]
-        transformed_pts = apply_rotate_translate(
-            pts, rotation_matrix, translation
+        mesh.vertices = apply_rotate_translate(
+            mesh.vertices, rotation_matrix, translation
         )
-        args = (mesh, transformed_pts)
+        args = (mesh, pts)
         if hole_id == -1:
             func = distance_to_closest_point_for_each_triangle_in_mesh
         else:
@@ -102,9 +123,10 @@ def fit_implant_to_mri(
 
     Returns
     -------
-    output : ndarray
-        The optimized transformation parameters that align the implant model to
-        the MRI data.
+    rotation_matrix : ndarray
+        The rotation matrix that aligns the implant model to the MRI data.
+    translation : ndarray
+        The translation vector that aligns the implant model to the MRI data.
     """
     T = np.zeros(6)
     initialize_translation = initialization_hole in hole_seg_dict
@@ -113,8 +135,8 @@ def fit_implant_to_mri(
         model_mean = np.mean(
             hole_mesh_dict[initialization_hole].vertices, axis=0
         )
-        init_offset = model_mean - annotation_mean
-        T[3:] = init_offset
+        init_translation = annotation_mean - model_mean
+        T[3:] = init_translation
     else:
         warnings.warn(
             f"Could not find hole {initialization_hole} in MRI data "
@@ -144,10 +166,9 @@ def fit_implant_to_mri(
             other_model_mean = np.mean(
                 hole_mesh_dict[other_hole].vertices, axis=0
             )
-            anno_diff_rotated = R_init @ (other_anno_mean - annotation_mean)
+            model_diff_rotated = R_init @ (other_model_mean - model_mean)
             R_update = rotation_matrix_from_vectors(
-                anno_diff_rotated,
-                other_model_mean - model_mean,
+                model_diff_rotated, other_anno_mean - annotation_mean
             )
             R_init = R_update @ R_init
         T[:3] = Rotation.from_matrix(R_init).as_euler("xyz")
@@ -161,7 +182,8 @@ def fit_implant_to_mri(
         xtol=1e-6,
         maxiter=2000,
     )
-    return output
+    rotation_matrix, translation = _params_to_rotation_translation(output)
+    return rotation_matrix, translation
 
 
 def make_hole_seg_dict(implant_annotations):
