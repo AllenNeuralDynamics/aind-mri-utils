@@ -1031,6 +1031,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
         maxfun=niter_com,
         retall=1,
     )
+    R_holes_only, transl_holes_only = mropt.unpack_theta(output_holes_only[0])
 
     # Now include the lower plane
     group_err_funs = [mrmsr.dist_point_to_line] * len(moving)
@@ -1044,5 +1045,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
         maxfun=niter_com_plane,
         retall=1,
     )
+    R_all, transl_all = mropt.unpack_theta(output_all[0])
 
+    return R, translation, R_holes_only, transl_holes_only, R_all, transl_all
     return theta0, output_holes_only[0], output_all[0]
