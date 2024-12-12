@@ -291,3 +291,15 @@ def _process_layer_and_descriptions(
         ]
         return points, np.array(descriptions)
     return points, None
+
+
+def get_image_source(filename):
+    """
+    Reads image source url from a Neuroglancer JSON file.
+    
+    If there are multiple image layers, returns a list of image sources.
+    """
+    data = _load_json_file(filename)
+
+    image_layer = [x for x in data['layers'] if x['type'] == 'image']
+    return [x['source']['url'] for x in image_layer] 
