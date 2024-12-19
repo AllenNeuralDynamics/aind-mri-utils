@@ -1,4 +1,4 @@
 """Simple package to demo project structure.
 """
 
-__version__ = "0.0.57"
+__version__ = "0.0.58"
