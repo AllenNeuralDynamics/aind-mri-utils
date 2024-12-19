@@ -225,11 +225,16 @@ def _preprocess_weights(weights, positions, normalize, gamma):
     return weights
 
 
-def unpack_theta_to_homogeneous(T):
-    """Helper function to unpack theta to a homogeneous transform."""
+def unpack_theta(T):
+    """Helper function to unpack theta to a rigid transform."""
     R = rot.combine_angles(*T[0:3])
     translation = T[3:]
-    R_homog = rot.make_homogeneous_transform(R, translation)
+    return R, translation
+
+
+def unpack_theta_to_homogeneous(T):
+    """Helper function to unpack theta to a homogeneous transform."""
+    R_homog = rot.make_homogeneous_transform(unpack_theta(T))
     return R_homog
 
 
