@@ -1047,5 +1047,5 @@ def find_hf_rotation_from_seg_and_lowerplane(
     )
     R_all, transl_all = mropt.unpack_theta(output_all[0])
 
-    return R, translation, R_holes_only, transl_holes_only, R_all, transl_all
+    #return R, translation, R_holes_only, transl_holes_only, R_all, transl_all
     return theta0, output_holes_only[0], output_all[0]
