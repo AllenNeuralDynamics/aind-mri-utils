@@ -9,7 +9,7 @@ Code was tested and modified by Yoni
 import SimpleITK as sitk
 import trimesh
 import numpy as np
-from pathlib import Path
+from pymeshfix import MeshFix
 
 def load_nrrd_mask(file_path):
     """
@@ -88,7 +88,7 @@ def create_trimesh(vertices, faces):
     return mesh
 
 # Ensure normals point outward
-def ensure_normals_outward(mesh):
+def ensure_normals_outward(mesh,verbose =True):
     """
     Ensure normals point outward.
 
@@ -102,7 +102,7 @@ def ensure_normals_outward(mesh):
     trimesh.base.Trimesh
         Mesh with outward-pointing normals.
     """
-    if not mesh.is_watertight:
+    if not mesh.is_watertight and verbose:
         print("Warning: Mesh is not watertight. Normal orientation may not be reliable.")
     else:
         mesh.fix_normals()
@@ -132,7 +132,47 @@ def smooth_mesh(mesh, iterations=10, lambda_param=0.5):
     filter_laplacian(smooth_mesh, lamb=lambda_param, iterations=iterations)
     return smooth_mesh
 
-def mask_to_trimesh(nrrd_file_path,smoothing_iterations  = 10, smoothing_lambda = 1):
+def repair_mesh(mesh,verbose = True):
+    """
+    repair_mesh(mesh)
+
+    Check if a mesh is watertight and repair it if necessary.
+
+    Parameters
+    ----------
+    mesh : trimesh.base.Trimesh
+        Input mesh.
+    verbose : bool, optional
+        If True, print messages. The default is True.
+    
+    Returns
+    -------
+    trimesh.base.Trimesh
+        Repaired mesh.
+    """
+
+    # Check if the mesh is watertight
+    if mesh.is_watertight and verbose:
+        print("The mesh is already watertight.")
+    else:
+        if verbose: 
+            print("The mesh is not watertight. Proceeding with repair...")
+        
+        # Use PyMeshFix to repair the mesh
+        meshfix = MeshFix(mesh.vertices, mesh.faces)
+        meshfix.repair(verbose=True, joincomp=True, remove_smallest_components=True)
+        
+        # Create a new trimesh object from the repaired mesh
+        mesh = trimesh.Trimesh(vertices=meshfix.v, faces=meshfix.f)
+
+        if verbose:
+            if mesh.is_watertight:
+                print("Mesh successfully repaired.")
+            else:
+                print("Mesh repair failed. The mesh may still not be watertight.")
+    return mesh
+
+def mask_to_trimesh(nrrd_file_path,verbose = True,smoothing_iterations  = 10, smoothing_lambda = 1):
     """
     mask_to_trimesh(nrrd_file_path,smoothing_iterations  = 10, smoothing_lambda
     = 1)
@@ -169,8 +209,11 @@ def mask_to_trimesh(nrrd_file_path,smoothing_iterations  = 10, smoothing_lambda 
     # smooth the mesh
     mesh  = smooth_mesh(mesh,iterations=smoothing_iterations,lambda_param=smoothing_lambda)
     
+    # Repair the mesh
+    mesh = repair_mesh(mesh,verbose=verbose)
+
     # Clean up the normals
-    mesh = ensure_normals_outward(mesh)
+    mesh = ensure_normals_outward(mesh,verbose=verbose)
     
     # Export to a file
     return mesh
