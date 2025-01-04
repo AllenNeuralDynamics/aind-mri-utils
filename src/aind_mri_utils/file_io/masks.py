@@ -6,10 +6,11 @@ The docstrings were created using CoPilot
 Code was tested and modified by Yoni
 """
 
+import numpy as np
 import SimpleITK as sitk
 import trimesh
-import numpy as np
 from pymeshfix import MeshFix
+
 
 def load_nrrd_mask(file_path):
     """
@@ -30,7 +31,7 @@ def load_nrrd_mask(file_path):
         Origin.
     numpy.ndarray
         Direction
-    
+
     """
     mask = sitk.ReadImage(file_path)
     mask_array = sitk.GetArrayFromImage(mask)
@@ -38,6 +39,7 @@ def load_nrrd_mask(file_path):
     origin = mask.GetOrigin()
     direction = np.array(mask.GetDirection()).reshape(3, 3)
     return mask_array, spacing, origin, direction
+
 
 # Generate a surface mesh from the mask
 def generate_mesh_from_mask(mask_array, spacing):
@@ -50,7 +52,7 @@ def generate_mesh_from_mask(mask_array, spacing):
         Binary mask.
     spacing : tuple of float
         Voxel spacing.
-    
+
     Returns
     -------
     numpy.ndarray
@@ -59,19 +61,20 @@ def generate_mesh_from_mask(mask_array, spacing):
         Face indices.
     """
 
-
     # Use marching cubes to extract the surface
     from skimage import measure
+
     vertices, faces, _, _ = measure.marching_cubes(
         mask_array, level=0.5, spacing=spacing
     )
     return vertices, faces
 
+
 # Create a trimesh object
 def create_trimesh(vertices, faces):
     """
     Create a trimesh object from vertices and faces.
-    
+
     Parameters
     ----------
     vertices : numpy.ndarray
@@ -87,8 +90,9 @@ def create_trimesh(vertices, faces):
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
     return mesh
 
+
 # Ensure normals point outward
-def ensure_normals_outward(mesh,verbose =True):
+def ensure_normals_outward(mesh, verbose=True):
     """
     Ensure normals point outward.
 
@@ -96,43 +100,49 @@ def ensure_normals_outward(mesh,verbose =True):
     ----------
     mesh : trimesh.base.Trimesh
         Input mesh.
-    
+
     Returns
     -------
     trimesh.base.Trimesh
         Mesh with outward-pointing normals.
     """
     if not mesh.is_watertight and verbose:
-        print("Warning: Mesh is not watertight. Normal orientation may not be reliable.")
+        print(
+            "Warning: Mesh is not watertight. "
+            "Normal orientation may not be reliable."
+        )
     else:
         mesh.fix_normals()
     return mesh
+
 
 # Smooth the mesh using Laplacian smoothing
 def smooth_mesh(mesh, iterations=10, lambda_param=0.5):
     """
     Smooth the mesh using Laplacian smoothing.
-    
+
     Parameters
     ----------
     mesh : trimesh.base.Trimesh
         Input mesh.
     iterations : int, optional
         Number of iterations. The default is 10.
-    lambda_param : float, option        
+    lambda_param : float, option
         Number of iterations. The default is 10.
-    
+
     Returns
     -------
     trimesh.base.Trimesh
         Smoothed mesh.
     """
     from trimesh.smoothing import filter_laplacian
+
     smooth_mesh = mesh.copy()
     filter_laplacian(smooth_mesh, lamb=lambda_param, iterations=iterations)
     return smooth_mesh
 
-def repair_mesh(mesh,verbose = True):
+
+def repair_mesh(mesh, verbose=True):
     """
     repair_mesh(mesh)
 
@@ -144,7 +154,7 @@ def repair_mesh(mesh,verbose = True):
         Input mesh.
     verbose : bool, optional
         If True, print messages. The default is True.
-    
+
     Returns
     -------
     trimesh.base.Trimesh
@@ -155,13 +165,15 @@ def repair_mesh(mesh,verbose = True):
     if mesh.is_watertight and verbose:
         print("The mesh is already watertight.")
     else:
-        if verbose: 
+        if verbose:
             print("The mesh is not watertight. Proceeding with repair...")
-        
+
         # Use PyMeshFix to repair the mesh
         meshfix = MeshFix(mesh.vertices, mesh.faces)
-        meshfix.repair(verbose=True, joincomp=True, remove_smallest_components=True)
-        
+        meshfix.repair(
+            verbose=True, joincomp=True, remove_smallest_components=True
+        )
+
         # Create a new trimesh object from the repaired mesh
         mesh = trimesh.Trimesh(vertices=meshfix.v, faces=meshfix.f)
 
@@ -169,14 +181,19 @@ def repair_mesh(mesh,verbose = True):
             if mesh.is_watertight:
                 print("Mesh successfully repaired.")
             else:
-                print("Mesh repair failed. The mesh may still not be watertight.")
+                print(
+                    "Mesh repair failed. The mesh may still not be watertight."
+                )
     return mesh
 
-def mask_to_trimesh(nrrd_file_path,verbose = True,smoothing_iterations  = 10, smoothing_lambda = 1):
+
+def mask_to_trimesh(
+    nrrd_file_path, verbose=True, smoothing_iterations=10, smoothing_lambda=1
+):
     """
     mask_to_trimesh(nrrd_file_path,smoothing_iterations  = 10, smoothing_lambda
     = 1)
-    
+
     Load a mask from a NRRD file, generate a surface mesh, and export it as a
     trimesh object.
 
@@ -188,7 +205,7 @@ def mask_to_trimesh(nrrd_file_path,verbose = True,smoothing_iterations  = 10, sm
         Number of iterations for Laplacian smoothing. The default is 10.
     smoothing_lambda : float, optional
         Lambda parameter for Laplacian smoothing. The default is 1.
-    
+
     Returns
     -------
     trimesh.base.Trimesh
@@ -196,24 +213,26 @@ def mask_to_trimesh(nrrd_file_path,verbose = True,smoothing_iterations  = 10, sm
     """
     # Load mask
     mask_array, spacing, origin, direction = load_nrrd_mask(nrrd_file_path)
-    
+
     # Generate mesh
     vertices, faces = generate_mesh_from_mask(mask_array, spacing)
-    
+
     # Transform vertices to physical space
     vertices = np.dot(direction, vertices.T).T + origin
-    
+
     # Create a trimesh object
     mesh = create_trimesh(vertices, faces)
 
     # smooth the mesh
-    mesh  = smooth_mesh(mesh,iterations=smoothing_iterations,lambda_param=smoothing_lambda)
-    
+    mesh = smooth_mesh(
+        mesh, iterations=smoothing_iterations, lambda_param=smoothing_lambda
+    )
+
     # Repair the mesh
-    mesh = repair_mesh(mesh,verbose=verbose)
+    mesh = repair_mesh(mesh, verbose=verbose)
 
     # Clean up the normals
-    mesh = ensure_normals_outward(mesh,verbose=verbose)
-    
+    mesh = ensure_normals_outward(mesh, verbose=verbose)
+
     # Export to a file
     return mesh
