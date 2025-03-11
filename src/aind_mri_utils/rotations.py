@@ -474,3 +474,16 @@ def create_homogeneous_from_euler_and_translation(rx, ry, rz, tx, ty, tz):
     R = combine_angles(rx, ry, rz)
     t = np.array([tx, ty, tz])
     return make_homogeneous_transform(R, t)
+
+
+def ras_to_lps_transform(R, translation=None):
+    if R.shape != (3, 3):
+        raise ValueError("R must be a 3x3 matrix")
+    if translation is None:
+        translation = np.zeros(3)
+    T = make_homogeneous_transform(R, translation)
+    ras2lps = np.diag([-1, -1, 1, 1])
+    T_out = ras2lps @ T @ ras2lps
+    R_out = T_out[:3, :3]
+    translation_out = T_out[:3, 3]
+    return R_out, translation_out
