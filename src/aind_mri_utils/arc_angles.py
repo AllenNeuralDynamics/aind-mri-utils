@@ -43,12 +43,32 @@ def transform_matrix_from_angles(
     AP, ML, rotation=0, invert_AP=True, invert_rotation=True
 ):
     """
-    Create a transform from arc angles
+    Create a transform from arc angles.
 
-    Note that our convention for spin about the X axis (AP) is not
-    right-handed, so use `invert_AP=True` to correct for this.
+    Parameters
+    ----------
+    AP : float
+        The angle around the x-axis (anterior-posterior).
+    ML : float
+        The angle around the y-axis (medial-lateral).
+    rotation : float, optional
+        The rotation angle around the z-axis (default is 0).
+    invert_AP : bool, optional
+        If True, invert the AP angle to correct for the non-right-handed
+        convention (default is True).
+    invert_rotation : bool, optional
+        If True, invert the rotation angle (default is True).
 
-    Same with rotation
+    Returns
+    -------
+    numpy.ndarray
+        The transformation matrix.
+
+    Notes
+    -----
+    Our convention for spin about the x-axis (AP) and the z-axis (DV) is not
+    right-handed, so use `invert_AP=True` and `invert_rotation=True`,
+    respectively, to correct for this.
     """
     if invert_AP:
         AP = -AP
