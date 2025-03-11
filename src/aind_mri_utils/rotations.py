@@ -477,6 +477,30 @@ def create_homogeneous_from_euler_and_translation(rx, ry, rz, tx, ty, tz):
 
 
 def ras_to_lps_transform(R, translation=None):
+    """
+    Transforms a rotation matrix and translation vector from RAS to LPS
+    coordinate system, or vice-versa.
+
+    Parameters
+    ----------
+    R : numpy.ndarray
+        A 3x3 rotation matrix.
+    translation : numpy.ndarray, optional
+        A 3-element translation vector. If None, a zero vector is used. Default
+        is None.
+
+    Returns
+    -------
+    R_out : numpy.ndarray
+        The transformed 3x3 rotation matrix in LPS coordinate system.
+    translation_out : numpy.ndarray
+        The transformed 3-element translation vector in LPS coordinate system.
+
+    Raises
+    ------
+    ValueError
+        If R is not a 3x3 matrix.
+    """
     if R.shape != (3, 3):
         raise ValueError("R must be a 3x3 matrix")
     if translation is None:
