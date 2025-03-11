@@ -47,19 +47,17 @@ def chemical_shift_transform(shift, readout="HF"):
 
     Returns
     -------
-    np.ndarray: A homogeneous transformation matrix that incorporates the
-    chemical shift.
+    R, np.ndarray: A 3x3 rotation matrix.
+    translation, np.ndarray: A 3-element translation
 
     Raises:
     ValueError: If the readout direction is not recognized.
     """
     if readout == "HF":
-        return rot.make_homogeneous_transform(
-            np.eye(3), np.array([0, shift, 0])
-        )
+        translation = np.array([0, shift, 0])
     elif readout == "LR":
-        return rot.make_homogeneous_transform(
-            np.eye(3), np.array([shift, 0, 0])
-        )
+        translation = np.array([shift, 0, 0])
     else:
         raise ValueError("Readout direction not recognized")
+    R = np.eye(3)
+    return R, translation
