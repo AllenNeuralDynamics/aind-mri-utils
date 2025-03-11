@@ -3,14 +3,26 @@ Functions to read reticle calibration data, find a transformation between
 coordinate frames, and apply the transformation.
 """
 
+import csv
 import io
+import re
+from pathlib import Path
 
 import numpy as np
 from openpyxl import load_workbook
 from scipy import optimize as opt
 from scipy.spatial.transform import Rotation
 
-from . import rotations as rot
+from aind_mri_utils.arc_angles import calculate_arc_angles
+from aind_mri_utils.rotations import (
+    apply_inverse_rotate_translate_scale,
+    apply_rotate_translate,
+    apply_rotate_translate_scale,
+    combine_angles,
+    inverse_rotate_translate,
+    prepare_data_for_homogeneous_transform,
+    rotation_matrix_from_vectors,
+)
 
 
 def extract_calibration_metadata(ws):
@@ -56,9 +68,42 @@ def extract_calibration_metadata(ws):
     )
 
 
+def reticle_metadata_transform(global_rotation_degrees):
+    """
+    Calculate the transformation matrix that will apply the global offset and
+    rotation to reticle points.
+    """
+    R = (
+        Rotation.from_euler("z", global_rotation_degrees, degrees=True)
+        .as_matrix()
+        .squeeze()
+    )
+    return R
+
+
 def _contains_none(arr):
     """Checks if all arguments are not None."""
     return any(x is None for x in arr)
+
+
+def _combine_pairs(list_of_pairs):
+    """
+    Combine lists of pairs into separate global and manipulator points
+    matrices.
+
+    Parameters
+    ----------
+    list_of_pairs : list of tuple
+        A list of tuples, each containing a reticle point and a probe point as
+        numpy arrays.
+
+    Returns
+    -------
+    tuple
+        Two numpy arrays, one for global points and one for manipulator points.
+    """
+    global_pts, manipulator_pts = [np.vstack(x) for x in zip(*list_of_pairs)]
+    return global_pts, manipulator_pts
 
 
 def extract_calibration_pairs(ws):
@@ -88,27 +133,7 @@ def extract_calibration_pairs(ws):
         if probe_name not in pairs_by_probe:
             pairs_by_probe[probe_name] = []
         pairs_by_probe[probe_name].append((reticle_pt, probe_pt))
-    return pairs_by_probe
-
-
-def _combine_pairs(list_of_pairs):
-    """
-    Combine lists of pairs into separate global and manipulator points
-    matrices.
-
-    Parameters
-    ----------
-    list_of_pairs : list of tuple
-        A list of tuples, each containing a reticle point and a probe point as
-        numpy arrays.
-
-    Returns
-    -------
-    tuple
-        Two numpy arrays, one for global points and one for manipulator points.
-    """
-    global_pts, manipulator_pts = [np.vstack(x) for x in zip(*list_of_pairs)]
-    return global_pts, manipulator_pts
+    return _combine_pairs(pairs_by_probe)
 
 
 def _apply_metadata_to_pair_mats(
@@ -143,11 +168,7 @@ def _apply_metadata_to_pair_mats(
         The adjusted global points and manipulator points matrices.
     """
     if global_rotation_degrees != 0:
-        rot_mat = (
-            Rotation.from_euler("z", global_rotation_degrees, degrees=True)
-            .as_matrix()
-            .squeeze()
-        )
+        rot_mat = reticle_metadata_transform(global_rotation_degrees)
         # Transposed because points are row vectors
         global_pts = global_pts @ rot_mat.T
     global_pts = global_pts * global_factor + global_offset
@@ -155,47 +176,7 @@ def _apply_metadata_to_pair_mats(
     return global_pts, manipulator_pts
 
 
-def _apply_metadata_to_pair_lists(
-    list_of_pairs,
-    global_factor,
-    global_rotation_degrees,
-    global_offset,
-    manipulator_factor,
-):
-    """
-    Apply calibration metadata to lists of pairs.
-
-    Parameters
-    ----------
-    list_of_pairs : list of tuple
-        A list of tuples, each containing a reticle point and a probe point as
-        numpy arrays.
-    global_factor : float
-        The global factor value.
-    global_rotation_degrees : float
-        The global rotation in degrees.
-    global_offset : numpy.ndarray
-        The global offset as a 3-element array.
-    manipulator_factor : float
-        The manipulator factor value.
-
-    Returns
-    -------
-    tuple
-        The adjusted global points and manipulator points matrices.
-    """
-    global_pts, manipulator_pts = _combine_pairs(list_of_pairs)
-    return _apply_metadata_to_pair_mats(
-        global_pts,
-        manipulator_pts,
-        global_factor,
-        global_rotation_degrees,
-        global_offset,
-        manipulator_factor,
-    )
-
-
-def read_reticle_calibration(
+def read_manual_reticle_calibration(
     filename, points_sheet_name="points", metadata_sheet_name="metadata"
 ):
     """
@@ -247,7 +228,7 @@ def read_reticle_calibration(
     ) = extract_calibration_metadata(wb[metadata_sheet_name])
     pairs_by_probe = extract_calibration_pairs(wb["points"])
     adjusted_pairs_by_probe = {
-        k: _apply_metadata_to_pair_lists(
+        k: _apply_metadata_to_pair_mats(
             v,
             global_factor,
             global_rotation_degrees,
@@ -264,39 +245,147 @@ def read_reticle_calibration(
     )
 
 
+def read_parallax_calibration_dir(
+    parallax_points_dir,
+    sn_filename_regexp=re.compile(r"(?i)points_SN\d+(?:_.*)?.csv$"),
+    *args,
+    **kwargs,
+):
+    pairs_by_controller = {}
+    p_path = Path(parallax_points_dir)
+    for filename in p_path.iterdir():
+        if filename.is_file() and re.search(sn_filename_regexp, filename.name):
+            _append_parallax_calibration_file(
+                pairs_by_controller, filename, *args, **kwargs
+            )
+    mats_by_controller = {
+        k: _combine_pairs(v) for k, v in pairs_by_controller.items()
+    }
+    return mats_by_controller
+
+
+def read_parallax_calibration_file(parallax_points_filename, *args, **kwargs):
+    pairs_by_controller = {}
+    _append_parallax_calibration_file(
+        pairs_by_controller, parallax_points_filename, *args, **kwargs
+    )
+    mats_by_controller = {
+        k: _combine_pairs(v) for k, v in pairs_by_controller.items()
+    }
+    return mats_by_controller
+
+
+def read_parallax_calibration_dir_and_correct(
+    parallax_calibration_dir,
+    reticle_offset,
+    reticle_rotation,
+    local_scale_factor=1 / 1000,
+    global_scale_factor=1 / 1000,
+):
+    pairs_by_probe = read_parallax_calibration_dir(parallax_calibration_dir)
+    corrected_pairs_by_probe = {}
+    for controller, pairs in pairs_by_probe.items():
+        reticle_pts, manip_pts = _apply_metadata_to_pair_mats(
+            pairs,
+            global_scale_factor,
+            reticle_rotation,
+            reticle_offset,
+            local_scale_factor,
+        )
+        corrected_pairs_by_probe[controller] = (reticle_pts, manip_pts)
+    return corrected_pairs_by_probe
+
+
+def _append_parallax_calibration_file(
+    pairs_by_controller,
+    parallax_points_filename,
+    sn_colname="sn",
+    sn_regexp=re.compile(r"(\d+)$"),
+):
+    """
+    Reads parallax calibration data from a CSV file and organizes it by
+    controller number.
+
+    Parameters
+    ----------
+    parallax_points_filename : str
+        The path to the CSV file containing parallax points data.
+    sn_colname : str, optional
+        The column name for the serial number (default is "sn").
+    sn_regexp : re.Pattern, optional
+        The regular expression pattern to extract the controller number from
+        the serial number (default is re.compile(r"(\d+)$")).
+
+    Returns
+    -------
+    dict
+        A dictionary where the keys are controller numbers and the values are
+        lists of tuples. Each tuple contains two numpy arrays: the first array
+        represents the reticle points (global coordinates) and the second array
+        represents the manipulator points (local coordinates).
+
+    Notes
+    -----
+    The CSV file is expected to have columns named "global_x", "global_y",
+    "global_z" for reticle points and "local_x", "local_y", "local_z" for
+    manipulator points.
+    """
+    dims = ["x", "y", "z"]
+    reticle_colnames = [f"global_{dim}" for dim in dims]
+    manipulator_colnames = [f"local_{dim}" for dim in dims]
+    with open(parallax_points_filename, "r", newline="") as f:
+        reader = csv.reader(f)
+        header = next(reader)
+        # Map each column name to its first index
+        index_map = {}
+        for i, col in enumerate(header):
+            if col not in index_map:
+                index_map[col] = i
+        # Find indices for the columns we care about
+        sn_col_ndx = index_map[sn_colname]
+        reticle_pt_ndxs = [index_map[col] for col in reticle_colnames]
+        manip_pt_ndxs = [index_map[col] for col in manipulator_colnames]
+        # Read the data
+        for row in reader:
+            controller_no = int(re.search(sn_regexp, row[sn_col_ndx]).group(1))
+            ret_pt = np.array([float(row[ndx]) for ndx in reticle_pt_ndxs])
+            manip_pt = np.array([float(row[ndx]) for ndx in manip_pt_ndxs])
+            # Append to this manipulator's list of pairs, creating a new list
+            # if needed
+            pairs_by_controller.setdefault(controller_no, []).append(
+                (ret_pt, manip_pt)
+            )
+    return pairs_by_controller
+
+
 def _unpack_theta(theta):
     """Helper function to unpack theta into rotation matrix and translation."""
-    R = rot.combine_angles(*theta[0:3])
+    R = combine_angles(*theta[0:3])
     offset = theta[3:6]
     return R, offset
 
 
-def fit_rotation_params(
-    reticle_pts, probe_pts, legacy_outputs=False, find_scaling=True, **kwargs
-):
+def fit_rotation_params(bregma_pts, probe_pts, find_scaling=True, **kwargs):
     """
-    Fit rotation parameters to align reticle points with probe points using
+    Fit rotation parameters to align bregma points with probe points using
     least squares optimization. The rotation matrix and translation vector
     are the solution for the equation
 
-    probe_pts = R @ reticle_pts + translation
+    probe_pts = R @ bregma_pts + translation
 
     where each point is a column vector.
 
     Because numpy is row-major, points are often stored as row vectors. In this
     case, you should use the transpose of this equation:
 
-    probe_pts = reticle_pts @ R.T + translation
+    probe_pts = bregma_pts @ R.T + translation
 
     Parameters
     ----------
-    reticle_pts : numpy.ndarray
-        The reticle points to be transformed.
+    bregma_pts : numpy.ndarray
+        The bregma points to be transformed.
     probe_pts : numpy.ndarray
         The probe points to align with.
-    legacy_outputs : bool, optional
-        If True, return the translation in the global frame and the transpose
-        of the rotation matrix.  The default is False.
     **kwargs : dict
         Additional keyword arguments to pass to the least squares optimization
         function.
@@ -308,27 +397,23 @@ def fit_rotation_params(
         - R (numpy.ndarray): The 3x3 rotation matrix.
         - translation (numpy.ndarray): The 3-element translation vector.
     """
-    if reticle_pts.shape != probe_pts.shape:
-        raise ValueError("reticle_pts and probe_pts must have the same shape")
-    if reticle_pts.shape[1] != 3:
-        raise ValueError("reticle_pts and probe_pts must have 3 columns")
+    if bregma_pts.shape != probe_pts.shape:
+        raise ValueError("bregma_pts and probe_pts must have the same shape")
+    if bregma_pts.shape[1] != 3:
+        raise ValueError("bregma_pts and probe_pts must have 3 columns")
 
     if find_scaling:
-        if legacy_outputs:
-            raise NotImplementedError(
-                "find_scaling=True not valid when legacy_outputs=True"
-            )
-        return _fit_params_with_scaling(reticle_pts, probe_pts, **kwargs)
+        return _fit_params_with_scaling(bregma_pts, probe_pts, **kwargs)
 
     R_homog = np.eye(4)
-    reticle_pts_homog = rot.prepare_data_for_homogeneous_transform(reticle_pts)
-    transformed_pts_homog = np.empty_like(reticle_pts_homog)
+    bregma_pts_homog = prepare_data_for_homogeneous_transform(bregma_pts)
+    transformed_pts_homog = np.empty_like(bregma_pts_homog)
 
     def fun(theta):
         """cost function for least squares optimization"""
-        R_homog[0:3, 0:3] = rot.combine_angles(*theta[0:3])
+        R_homog[0:3, 0:3] = combine_angles(*theta[0:3])
         R_homog[0:3, 3] = theta[3:6]  # translation
-        np.matmul(reticle_pts_homog, R_homog.T, out=transformed_pts_homog)
+        np.matmul(bregma_pts_homog, R_homog.T, out=transformed_pts_homog)
         residuals = (transformed_pts_homog[:, 0:3] - probe_pts).flatten()
         return residuals
 
@@ -339,49 +424,130 @@ def fit_rotation_params(
         # Initial guess of rotation: align the vectors between the first
         # two points
         probe_diff = np.diff(probe_pts[:2, :], axis=0)
-        reticle_diff = np.diff(reticle_pts[:2, :], axis=0)
-        R_init = rot.rotation_matrix_from_vectors(
-            reticle_diff.squeeze(), probe_diff.squeeze()
+        bregma_diff = np.diff(bregma_pts[:2, :], axis=0)
+        R_init = rotation_matrix_from_vectors(
+            bregma_diff.squeeze(), probe_diff.squeeze()
         )
         theta0[0:3] = Rotation.from_matrix(R_init).as_euler("xyz")
 
-    # Initial guess of translation: find the point on the reticle closest to
+    # Initial guess of translation: find the point on the bregma closest to
     # zero
-    smallest_pt = np.argmin(np.linalg.norm(reticle_pts, axis=1))
+    smallest_pt = np.argmin(np.linalg.norm(bregma_pts, axis=1))
     theta0[3:6] = probe_pts[smallest_pt, :]
 
     res = opt.least_squares(fun, theta0, **kwargs)
     R, translation = _unpack_theta(res.x)
-    if legacy_outputs:
-        # last version had translation in global frame
-        #
-        # Also the last version for some reason calculated the transpose of the
-        # rotation matrix. Application of the rotation matrix was consistently
-        # wrong in a way that accounted for this transpose, so the results were
-        # correct.
-        #
-        # All of the transposes are confusing here: this is the inverse of the
-        # rotation matrix, accounting for numpy being row-major, and
-        # data points being row vectors
-
-        translation = translation @ R  # Not R.T!
-        return translation, R.T  # Not R!
     scaling = None
     return R, translation, scaling
 
 
-def fit_rotation_params_from_excel(filename, *args, **kwargs):
-    adjusted_pairs_by_probe = read_reticle_calibration(filename)[0]
+def _fit_by_probe(pairs_by_probe, *args, **kwargs):
     cal_by_probe = {
         k: fit_rotation_params(*v, *args, **kwargs)
-        for k, v in adjusted_pairs_by_probe.items()
+        for k, v in pairs_by_probe.items()
     }
     return cal_by_probe
 
 
+def fit_rotation_params_from_manual_calibration(filename, *args, **kwargs):
+    """
+    Fits rotation parameters from manual calibration data.
+
+    Parameters
+    ----------
+    filename : str
+        File containing the calibration data, stored as a `.xslx` file.
+    *args : tuple
+        Additional arguments to pass to the fitting function. See
+        `fit_rotation_params`.
+    **kwargs : dict
+        Additional keyword arguments to pass to the fitting function.
+        See `fit_rotation_params`.
+
+    Returns
+    -------
+    cal_by_probe : dict
+        Calibration parameters by probe. Each value is a tuple containing the
+        rotation matrix, translation vector, and scaling factor. These
+        parameters transform bregma points to probe points, both in
+        millimeters.
+    R_reticle_to_bregma : numpy.ndarray
+        Rotation matrix from reticle to bregma coordinates, in millimeters.
+    t_reticle_to_bregma : float
+        Translation vector from reticle to bregma coordinates, in millimeters.
+    """
+    adjusted_pairs_by_probe, global_offset, global_rotation_degrees, _ = (
+        read_manual_reticle_calibration(filename)
+    )
+    R_reticle_to_bregma = reticle_metadata_transform(global_rotation_degrees)
+    cal_by_probe = _fit_by_probe(adjusted_pairs_by_probe, *args, **kwargs)
+    return cal_by_probe, R_reticle_to_bregma, global_offset
+
+
+def fit_rotation_params_from_parallax(
+    parallax_calibration_dir,
+    reticle_offset,
+    reticle_rotation,
+    local_scale_factor=1 / 1000,
+    global_scale_factor=1 / 1000,
+    *args,
+    **kwargs,
+):
+    """
+    Fits rotation parameters from parallax calibration data.
+
+    Parameters
+    ----------
+    parallax_calibration_dir : str
+        Directory containing parallax calibration data.
+    reticle_offset : float
+        Offset of the reticle, i.e. the location of the center of the reticle
+        pattern in bregma-relative coordinates.
+    reticle_rotation : float
+        Rotation of the reticle. i.e. the angle about the z-axis of the reticle
+        coordinate system and the bregma coordinate system in degrees. The sign
+        of the angle should be positive if the reticle is rotated clockwise
+        w.r.t bregma coordinate system when viewed from above.
+    local_scale_factor : float, optional
+        Local scale factor for calibration, by default 1/1000. Parallax stores
+        points in microns, so this factor is used to convert to millimeters.
+    global_scale_factor : float, optional
+        Global scale factor for calibration, by default 1/1000. Parallax stores
+        points in microns, so this factor is used to convert to millimeters.
+    *args : tuple
+        Additional arguments to pass to the fitting function. See
+        `fit_rotation_params`.
+    **kwargs : dict
+        Additional keyword arguments to pass to the fitting function.
+        See `fit_rotation_params`.
+
+    Returns
+    -------
+    cal_by_probe : dict
+        Calibration parameters by probe. Each value is a tuple containing the
+        rotation matrix, translation vector, and scaling factor. These
+        parameters transform bregma points to probe points, both in
+        millimeters.
+    R_reticle_to_bregma : numpy.ndarray
+        Rotation matrix from reticle to bregma coordinates, in millimeters.
+    t_reticle_to_bregma : float
+        Translation vector from reticle to bregma coordinates, in millimeters.
+    """
+    adjusted_pairs_by_probe = read_parallax_calibration_dir_and_correct(
+        parallax_calibration_dir,
+        reticle_offset,
+        reticle_rotation,
+        local_scale_factor,
+        global_scale_factor,
+    )
+    cal_by_probe = _fit_by_probe(adjusted_pairs_by_probe, *args, **kwargs)
+    R_reticle_to_bregma = reticle_metadata_transform(reticle_rotation)
+    return cal_by_probe, R_reticle_to_bregma, reticle_offset
+
+
 def _unpack_theta_scale(theta):
     """Helper function to unpack theta into rotation matrix and translation."""
-    R = rot.combine_angles(*theta[0:3])
+    R = combine_angles(*theta[0:3])
     scale = theta[3:6]
     translation = theta[6:]
     return R, scale, translation
@@ -445,7 +611,7 @@ def _fit_params_with_scaling(reticle_pts, probe_pts, **kwargs):
             if reticle_norm > 0:
                 break
         if reticle_norm > 0:
-            R_init = rot.rotation_matrix_from_vectors(
+            R_init = rotation_matrix_from_vectors(
                 reticle_diff.squeeze(), probe_diff.squeeze()
             )
             theta0[0:3] = Rotation.from_matrix(R_init).as_euler("xyz")
@@ -460,28 +626,26 @@ def _fit_params_with_scaling(reticle_pts, probe_pts, **kwargs):
     return R, translation, scale
 
 
-def _apply_scale_to_rotation(R, scale):
-    """
-    Apply a scaling factor to a rotation matrix.
-
-    Parameters
-    ----------
-    R : numpy.ndarray
-        The 3x3 rotation matrix.
-    scale : float
-        The scaling factor.
-
-    Returns
-    -------
-    numpy.ndarray
-        The scaled rotation matrix.
-    """
-    scale_mat = np.zeros((3, 3))
-    np.fill_diagonal(scale_mat, scale)
-    return scale_mat @ R
+def apply_forward(pts, R, translation, scale=None):
+    if scale is None:
+        transformed = apply_rotate_translate(pts, R, translation)
+    else:
+        transformed = apply_rotate_translate_scale(pts, R, translation, scale)
+    return transformed
 
 
-def transform_reticle_to_probe(reticle_pts, R, translation, scale=None):
+def apply_inverse(pts, R, translation, scale=None):
+    if scale is None:
+        R_inv, t_inv = inverse_rotate_translate(R, translation)
+        transformed = apply_rotate_translate(pts, R_inv, t_inv)
+    else:
+        transformed = apply_inverse_rotate_translate_scale(
+            pts, R, translation, scale
+        )
+    return transformed
+
+
+def transform_bregma_to_probe(reticle_pts, R, translation, scale=None):
     """
     Transform reticle points to probe points using rotation and translation.
 
@@ -499,16 +663,10 @@ def transform_reticle_to_probe(reticle_pts, R, translation, scale=None):
     np.array(N,3)
         Transformed points.
     """
-    if scale is None:
-        transformed = rot.apply_rotate_translate(reticle_pts, R, translation)
-    else:
-        transformed = rot.apply_rotate_translate_scale(
-            reticle_pts, R, translation, scale
-        )
-    return transformed
+    return apply_forward(reticle_pts, R, translation, scale)
 
 
-def transform_probe_to_reticle(probe_pts, R, translation, scale=None):
+def transform_probe_to_bregma(probe_pts, R, translation, scale=None):
     """
     Transform probe points to reticle points using rotation and translation.
 
@@ -526,11 +684,158 @@ def transform_probe_to_reticle(probe_pts, R, translation, scale=None):
     np.array(N,3)
         Transformed points.
     """
-    if scale is None:
-        R_inv, t_inv = rot.inverse_rotate_translate(R, translation)
-        transformed = rot.apply_rotate_translate(probe_pts, R_inv, t_inv)
-    if scale is not None:
-        transformed = rot.apply_inverse_rotate_translate_scale(
-            probe_pts, R, translation, scale
+    return apply_inverse(probe_pts, R, translation, scale)
+
+
+def transform_bregma_to_reticle(bregma_pts, R, translation, scale=None):
+    return apply_inverse(bregma_pts, R, translation, scale)
+
+
+def transform_reticle_to_bregma(reticle_pts, R, translation, scale=None):
+    return apply_forward(reticle_pts, R, translation, scale)
+
+
+def find_probe_insertion_vector(R, newscale_z_down=np.array([0, 0, 1])):
+    """
+    Find the probe insertion vector from the rotation matrix and translation vector.
+
+    Parameters
+    ----------
+    R : numpy.ndarray
+        The 3x3 rotation matrix.
+    translation : numpy.ndarray
+        The 3-element translation vector.
+
+    Returns
+    -------
+    numpy.ndarray
+        The probe insertion vector.
+    """
+    # Probe coordinate system has z-axis pointing down
+    z_axis = transform_probe_to_bregma(newscale_z_down, R, np.zeros(3))
+    return z_axis
+
+
+def find_probe_angle(R, *args):
+    """
+    Find the probe angle from the calibration rotation matrix.
+
+    Parameters
+    ----------
+    R : numpy.ndarray
+        The 3x3 rotation matrix.
+    translation : numpy.ndarray
+        The 3-element translation vector.
+
+    Returns
+    -------
+    float
+        The probe angle in degrees.
+    """
+    # Probe coordinate system has z-axis pointing down
+    z_axis = find_probe_insertion_vector(R, *args)
+    return calculate_arc_angles(z_axis)
+
+
+def _debug_print_pt_err(reticle, probe, predicted_probe, err):
+    rounded_pred = np.round(predicted_probe, decimals=2)
+    print(
+        f"\tReticle {reticle} -> "
+        f"Probe {probe}: predicted {rounded_pred} "
+        f"error {err:.2f} µm"
+    )
+
+
+def _debug_print_err_stats(errs):
+    print(
+        f"Mean error {errs.mean():.2f} µm, " f"max error {errs.max():.2f} µm"
+    )
+
+
+def _debug_fits(
+    cal_by_probe,
+    R_reticle_to_bregma,
+    t_reticle_to_bregma,
+    adjusted_pairs_by_probe,
+    verbose=False,
+):
+    errs_by_probe = {}
+    for probe, (bregma_pts, probe_pts) in adjusted_pairs_by_probe.items():
+        predicted_probe_pts = transform_bregma_to_probe(
+            bregma_pts, *cal_by_probe[probe]
         )
-    return transformed
+        # in µm
+        errs = 1000 * np.linalg.norm(predicted_probe_pts - probe_pts, axis=1)
+        errs_by_probe[probe] = errs
+        if verbose:
+            _debug_print_err_stats(errs)
+            reticle_pts = apply_inverse(
+                bregma_pts, R_reticle_to_bregma, t_reticle_to_bregma
+            )
+            for i in range(len(errs)):
+                _debug_print_pt_err(
+                    reticle_pts[i],
+                    probe_pts[i],
+                    predicted_probe_pts[i],
+                    errs[i],
+                )
+    return errs_by_probe
+
+
+def debug_manual_calibration(filename, verbose=False, *args, **kwargs):
+    cal_by_probe, R_reticle_to_bregma, t_reticle_to_bregma = (
+        fit_rotation_params_from_manual_calibration(filename, *args, **kwargs)
+    )
+    (
+        adjusted_pairs_by_probe,
+        global_offset,
+        global_rotation_degrees,
+        _,
+    ) = read_manual_reticle_calibration(filename)
+    errs_by_probe = _debug_fits(
+        cal_by_probe,
+        R_reticle_to_bregma,
+        t_reticle_to_bregma,
+        adjusted_pairs_by_probe,
+        verbose,
+    )
+    return (
+        cal_by_probe,
+        adjusted_pairs_by_probe,
+        global_offset,
+        global_rotation_degrees,
+        errs_by_probe,
+    )
+
+
+def debug_parallax_calibration(
+    parallax_calibration_dir,
+    reticle_offset,
+    reticle_rotation,
+    verbose=False,
+    local_scale_factor=1 / 1000,
+    global_scale_factor=1 / 1000,
+    *args,
+    **kwargs,
+):
+    adjusted_pairs_by_probe = read_parallax_calibration_dir_and_correct(
+        parallax_calibration_dir,
+        reticle_offset,
+        reticle_rotation,
+        local_scale_factor,
+        global_scale_factor,
+    )
+    cal_by_probe = _fit_by_probe(adjusted_pairs_by_probe, *args, **kwargs)
+    R_reticle_to_bregma = reticle_metadata_transform(reticle_rotation)
+    cal_by_probe, errs_by_probe = _debug_fits(
+        cal_by_probe,
+        R_reticle_to_bregma,
+        reticle_offset,
+        adjusted_pairs_by_probe,
+        verbose,
+    )
+    return (
+        cal_by_probe,
+        adjusted_pairs_by_probe,
+        errs_by_probe,
+    )
