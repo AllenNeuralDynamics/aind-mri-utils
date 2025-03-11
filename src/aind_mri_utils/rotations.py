@@ -319,12 +319,35 @@ def make_homogeneous_transform(R, translation, scaling=None):
     if scaling is None:
         R_adj = R
     else:
-        R_scaling = np.diag(scaling)
-        R_adj = R_scaling @ R
+        R_adj = np.diag(scaling) @ R
     R_homog = np.eye(N + 1)
     R_homog[0:N, 0:N] = R_adj
     R_homog[0:N, N] = translation
     return R_homog
+
+
+def rotation_and_translation_from_homogeneous(R_homog):
+    """
+    Extract rotation and translation from a homogeneous transform.
+
+    Parameters
+    ----------
+    R_homog : np.array(N+1,N+1)
+        homogeneous transformation matrix
+
+    Returns
+    -------
+    R : np.array(N,N)
+        Rotation matrix.
+    translation : np.array(N,)
+        Translation vector.
+    """
+    N, M = R_homog.shape
+    if N != M:
+        raise ValueError("R_homog must be square")
+    R = R_homog[0:N, 0:N]
+    translation = R_homog[0:N, N]
+    return R, translation
 
 
 def prepare_data_for_homogeneous_transform(pts):
@@ -387,7 +410,7 @@ def _apply_homogeneous_transform_to_transposed_pts(pts, R_homog):
     return extract_data_for_homogeneous_transform(transformed_pts_homog)
 
 
-def apply_rotate_translate(pts, R, translation):
+def apply_rotate_translate(pts, R, translation, scaling=None):
     """
     Apply rotation and translation to a set of points.
 
@@ -405,7 +428,7 @@ def apply_rotate_translate(pts, R, translation):
     numpy.ndarray
         The transformed points.
     """
-    R_homog = make_homogeneous_transform(R, translation)
+    R_homog = make_homogeneous_transform(R, translation, scaling)
     return _apply_homogeneous_transform_to_transposed_pts(pts, R_homog)
 
 
@@ -474,3 +497,57 @@ def create_homogeneous_from_euler_and_translation(rx, ry, rz, tx, ty, tz):
     R = combine_angles(rx, ry, rz)
     t = np.array([tx, ty, tz])
     return make_homogeneous_transform(R, t)
+
+
+def compose_transforms(R_1, translation_1, *args):
+    """
+    Compose a series of rotation matrices and translation vectors.
+
+    Parameters
+    ----------
+    R_1 : numpy.ndarray
+        The initial rotation matrix.
+    translation_1 : numpy.ndarray
+        The initial translation vector.
+    *args : tuple
+        Additional rotation matrices and translation vectors. Must be provided
+        in pairs (R_2, translation_2, ...).
+
+    Returns
+    -------
+    R : numpy.ndarray
+        The composed rotation matrix.
+    translation : numpy.ndarray
+        The composed translation vector.
+
+    Raises
+    ------
+    ValueError
+        If the number of additional arguments is not even.
+    """
+    nargs = len(args)
+    if nargs == 0:
+        return R_1, translation_1
+    elif nargs >= 2:
+        if nargs % 2 != 0:
+            raise ValueError("Invalid number of arguments")
+        R_2 = args[0]
+        translation_2 = args[1]
+        R = R_2 @ R_1
+        translation = translation_2 + R_2 @ translation_1
+        return compose_transforms(R, translation, *args[2:])
+    else:
+        raise ValueError("Invalid number of arguments")
+
+
+def itk_to_slicer_transform(itk_transform):
+    # Taken from
+    # https://slicer.readthedocs.io/en/latest/developer_guide/script_repository.html#convert-between-itk-and-slicer-linear-transforms
+    # ITK transform: from parent, using LPS coordinate system
+    # Transform displayed in Slicer: to parent, using RAS coordinate system
+    R, translation = ras_to_lps_transform(
+        itk_transform[:3, :3], itk_transform[:3, 3]
+    )
+    T = make_homogeneous_transform(R, translation)
+    transform_to_parent_RAS = np.linalg.inv(T)
+    return transform_to_parent_RAS[:3, :3], transform_to_parent_RAS[:3, 3]
