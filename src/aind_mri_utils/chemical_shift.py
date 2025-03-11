@@ -4,8 +4,6 @@ Functions for correcting for chemical shift in MRI images
 
 import numpy as np
 
-from . import rotations as rot
-
 
 def compute_chemical_shift(
     image, ppm=(3.7 + 4.1) / 2, mag_freq=599, pixel_bandwidth=500
