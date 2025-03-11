@@ -234,7 +234,7 @@ def unpack_theta(T):
 
 def unpack_theta_to_homogeneous(T):
     """Helper function to unpack theta to a homogeneous transform."""
-    R_homog = rot.make_homogeneous_transform(unpack_theta(T))
+    R_homog = rot.make_homogeneous_transform(*unpack_theta(T))
     return R_homog
 
 
