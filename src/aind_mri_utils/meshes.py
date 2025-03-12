@@ -6,6 +6,8 @@ Functions for Loading and manipulating meshes during insertion planning.
 import numpy as np
 import trimesh
 
+from aind_mri_utils.rotations import make_homogeneous_transform
+
 
 def as_mesh(scene_or_mesh):
     """
@@ -52,10 +54,13 @@ def load_newscale_trimesh(
     return mesh
 
 
-def apply_transform_to_trimesh(mesh, T):
+def apply_transform_to_trimesh(mesh, R, translation=None):
     """
     Apply a transform to a trimesh Mesh object
     """
+    if translation is None:
+        translation = np.zeros(3)
+    T = make_homogeneous_transform(R, translation)
     mesh.vertices = trimesh.transform_points(mesh.vertices, T)
     return mesh
 
