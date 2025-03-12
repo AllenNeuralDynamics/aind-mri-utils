@@ -24,6 +24,7 @@ dependencies = [
   'SimpleITK >= 2, < 3',
   'openpyxl >= 3, < 4',
   'trimesh >= 4, < 5',
+  'pymeshfix >= 0.17, < 1',
   'Rtree >= 1, < 2',
 ]
 
