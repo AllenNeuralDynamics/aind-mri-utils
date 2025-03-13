@@ -22,6 +22,8 @@ from aind_mri_utils.reticle_calibrations import (
     read_parallax_calibration_file,
     transform_bregma_to_probe,
     transform_probe_to_bregma,
+    transform_reticle_to_bregma,
+    transform_bregma_to_reticle,
 )
 
 
@@ -450,6 +452,24 @@ class CalibrationTest(unittest.TestCase):
         ap_angle, ml_angle = find_probe_angle(R)
         self.assertAlmostEqual(ap_angle, -16.32, places=2)
         self.assertAlmostEqual(ml_angle, -12.61, places=2)
+
+    def test_transform_reticle_to_bregma(self) -> None:
+        """Tests for transform_reticle_to_bregma"""
+        reticle_pts = np.array([[1.0, 1.0, 1.0], [-1.0, -1.0, -1.0]])
+        R = np.eye(3)
+        t = np.array([1.0, 2.0, 3.0])
+        transformed_pts = transform_reticle_to_bregma(reticle_pts, R, t)
+        expected_pts = reticle_pts + t
+        self.assertTrue(np.allclose(transformed_pts, expected_pts))
+
+    def test_transform_bregma_to_reticle(self) -> None:
+        """Tests for transform_bregma_to_reticle"""
+        bregma_pts = np.array([[2.0, 3.0, 4.0], [0.0, 1.0, 2.0]])
+        R = np.eye(3)
+        t = np.array([1.0, 2.0, 3.0])
+        transformed_pts = transform_bregma_to_reticle(bregma_pts, R, t)
+        expected_pts = bregma_pts - t
+        self.assertTrue(np.allclose(transformed_pts, expected_pts))
 
 
 if __name__ == "__main__":
