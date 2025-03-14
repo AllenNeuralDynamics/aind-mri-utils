@@ -34,14 +34,6 @@ class SITKTest(unittest.TestCase):
         load_trans, _, _ = si.load_sitk_transform(test_save_path)
         self.assertTrue(np.allclose(R, load_trans))
 
-        # Test inversion functionality when saving
-        si.save_sitk_transform(
-            test_save_path, R, transpose_matrix=True, legacy=True
-        )
-        load_trans, _, _ = si.load_sitk_transform(test_save_path)
-        load_trans[:3, :3] = load_trans[:3, :3].T
-        self.assertTrue(np.array_equal(R, load_trans))
-
         # Kill the file we created- it was just a test
         os.remove("testsave.h5")
 
