@@ -20,16 +20,15 @@ def resample(
     output_size=None,
     interpolator=sitk.sitkLinear,
 ):
-    """
+    """Resample a SimpleITK image with an optional transform.
+
     Wrapper to generically handle SimpleITK resampling on different image
-    matrices. Includes optional application of a transform.
-    Only 3d is currently implemented.
+    matrices. Includes optional application of a transform.  Only 3d is
+    currently implemented.
 
     Code is modified from the 2d example in.
-    https://simpleitk.org/SPIE2018_COURSE/images_and_resampling.pdf
-    and
-    https://github.com/SimpleITK/TUTORIAL/blob/main/...
-        02_images_and_resampling.ipynb
+    https://simpleitk.org/SPIE2018_COURSE/images_and_resampling.pdf and
+    https://github.com/SimpleITK/TUTORIAL/blob/main/02_images_and_resampling.ipynb
 
     Parameters
     ----------

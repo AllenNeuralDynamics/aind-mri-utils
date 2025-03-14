@@ -4,10 +4,7 @@ import numpy as np
 import pandas as pd
 import trimesh
 
-from .arc_angles import (
-    calculate_arc_angles,
-    transform_matrix_from_angles_and_target,
-)
+from .arc_angles import calculate_arc_angles, transform_matrix_from_angles
 from .file_io.slicer_files import get_segmented_labels
 from .meshes import apply_transform_to_trimesh, create_uv_spheres
 from .sitk_volume import find_points_equal_to
@@ -259,7 +256,7 @@ def apply_transform_and_add_mesh(
         )
         apply_transform_to_trimesh(mesh, rotation_matrix)
 
-    transform_matrix = transform_matrix_from_angles_and_target(
+    transform_matrix = transform_matrix_from_angles(
         ap_angle, -ml_angle, target_loc
     )
     apply_transform_to_trimesh(mesh, transform_matrix)
@@ -427,7 +424,7 @@ def _apply_rotation_and_transform(mesh, angle, ap, ml, target_loc):
         The transformed mesh.
     """
     TA = trimesh.transformations.euler_matrix(0, 0, np.deg2rad(angle))
-    TB = transform_matrix_from_angles_and_target(ap, -ml, target_loc)
+    TB = transform_matrix_from_angles(ap, -ml)
 
     apply_transform_to_trimesh(mesh, TA)
     apply_transform_to_trimesh(mesh, TB)

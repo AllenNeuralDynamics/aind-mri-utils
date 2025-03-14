@@ -1,5 +1,4 @@
-"""
-Measurement code.
+"""Measurement code.
 
 
 This applies to find_circle_center, which is borrowed from scipy-cookbooks:
@@ -40,8 +39,10 @@ import numpy as np
 
 
 def find_circle(x, y):
-    """
-    Fit a circle to a set of points using a linearized least-squares algorithm
+    """Fit a circle to a set of points
+
+    Fit a circle to a set of points using a linearized least-squares
+    algorithm
 
     Borrowed, with modification, from:
     https://scipy-cookbook.readthedocs.io/items/Least_Squares_Circle.html
@@ -124,8 +125,7 @@ def find_line_eig(points):
 
 
 def closet_points_on_two_lines(P1, V1, P2, V2):
-    """
-    Calculate the closest points on two lines in 3D space.
+    """Calculate the closest points on two lines in 3D space.
 
     Parameters
     ----------
@@ -190,8 +190,8 @@ def angle(v1, v2):
 
 
 def dist_point_to_line(pt_1, pt_2, query_pt):
-    """
-    Distance between line defined by two points and a query point
+    """Distance between line defined by two points and a query point
+
     inspiration from:
         https://stackoverflow.com/questions/39840030/...
         distance-between-point-and-a-line-from-two-points
