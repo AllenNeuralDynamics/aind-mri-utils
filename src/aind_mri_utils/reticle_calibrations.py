@@ -5,6 +5,7 @@ coordinate frames, and apply the transformation.
 
 import csv
 import io
+import logging
 import re
 from pathlib import Path
 
@@ -795,7 +796,7 @@ def _debug_print_pt_err(reticle, probe, predicted_probe, err, decimals=3):
     rounded_reticle = np.round(reticle, decimals=decimals)
     rounded_probe = np.round(probe, decimals=decimals)
     rounded_pred = np.round(predicted_probe, decimals=decimals)
-    print(
+    logger.debug(
         f"\tReticle {rounded_reticle} -> "
         f"Probe {rounded_probe}: predicted {rounded_pred} "
         f"error {err:.2f} µm"
@@ -813,7 +814,7 @@ def _debug_print_err_stats(name, errs):
     errs : numpy.ndarray
         The array of error values.
     """
-    print(
+    logger.debug(
         f"Probe {name}: mean error {errs.mean():.2f} µm, "
         f"max error {errs.max():.2f} µm"
     )
@@ -824,7 +825,6 @@ def _debug_fits(
     R_reticle_to_bregma,
     t_reticle_to_bregma,
     adjusted_pairs_by_probe,
-    verbose=False,
 ):
     """
     Debug the fits for each probe.
@@ -853,7 +853,7 @@ def _debug_fits(
         # in mm
         errs = np.linalg.norm(predicted_probe_pts - probe_pts, axis=1)
         errs_by_probe[probe] = errs
-        if verbose:
+        if logger.isEnabledFor(logging.DEBUG):
             _debug_print_err_stats(probe, 1000 * errs)
             reticle_pts = transform_probe_to_bregma(
                 bregma_pts, R_reticle_to_bregma, t_reticle_to_bregma
@@ -868,7 +868,7 @@ def _debug_fits(
     return errs_by_probe
 
 
-def debug_manual_calibration(filename, verbose=False, *args, **kwargs):
+def debug_manual_calibration(filename, *args, **kwargs):
     """
     Debugs the manual calibration process by fitting rotation parameters and
     reading manual reticle calibration data.
@@ -910,7 +910,6 @@ def debug_manual_calibration(filename, verbose=False, *args, **kwargs):
         R_reticle_to_bregma,
         t_reticle_to_bregma,
         adjusted_pairs_by_probe,
-        verbose,
     )
     return (
         cal_by_probe,
@@ -925,7 +924,6 @@ def debug_parallax_calibration(
     parallax_calibration_dir,
     reticle_offset,
     reticle_rotation,
-    verbose=False,
     local_scale_factor=1 / 1000,
     global_scale_factor=1 / 1000,
     *args,
@@ -977,7 +975,6 @@ def debug_parallax_calibration(
         R_reticle_to_bregma,
         reticle_offset,
         adjusted_pairs_by_probe,
-        verbose,
     )
     return (
         cal_by_probe,

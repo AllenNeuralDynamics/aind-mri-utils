@@ -3,6 +3,7 @@
 Test suite for reticle_calibrations.py
 """
 
+import logging
 import unittest
 from pathlib import Path
 
@@ -25,6 +26,9 @@ from aind_mri_utils.reticle_calibrations import (
     transform_probe_to_bregma,
     transform_reticle_to_bregma,
 )
+
+logger = logging.getLogger("aind_mri_utils.reticle_calibrations")
+logger.addHandler(logging.NullHandler())
 
 
 class CalibrationTest(unittest.TestCase):
@@ -230,6 +234,29 @@ class CalibrationTest(unittest.TestCase):
             np.array([[11.65, 2.49, 7.17], [9.35, 4.97, 8.06]]),
         ),
     }
+
+    def setUp(self):
+        # Store original logging configuration to restore later
+        self.root_logger = logging.getLogger()
+        self.old_level = self.root_logger.level
+        self.old_handlers = self.root_logger.handlers.copy()
+
+        # Configure logging to capture but not display output
+        # 1. Set level to DEBUG so statements execute
+        # 2. Remove any existing handlers
+        # 3. Add a NullHandler to prevent output
+        self.root_logger.setLevel(logging.DEBUG)
+        for handler in self.root_logger.handlers[:]:
+            self.root_logger.removeHandler(handler)
+        self.root_logger.addHandler(logging.NullHandler())
+
+    def tearDown(self):
+        # Restore original logging configuration
+        self.root_logger.setLevel(self.old_level)
+        for handler in self.root_logger.handlers[:]:
+            self.root_logger.removeHandler(handler)
+        for handler in self.old_handlers:
+            self.root_logger.addHandler(handler)
 
     def helper_test_transforms(
         self, R, t, bregma_pt, probe_pt, atol=1e-05, rtol=1e-08
