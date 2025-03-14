@@ -10,7 +10,9 @@ from pathlib import Path
 import numpy as np
 
 from aind_mri_utils.reticle_calibrations import (
+    combine_parallax_and_manual_calibrations,
     debug_manual_calibration,
+    debug_parallax_and_manual_calibrations,
     debug_parallax_calibration,
     find_probe_angle,
     find_probe_insertion_vector,
@@ -25,8 +27,6 @@ from aind_mri_utils.reticle_calibrations import (
     transform_bregma_to_reticle,
     transform_probe_to_bregma,
     transform_reticle_to_bregma,
-    combine_parallax_and_manual_calibrations,
-    debug_parallax_and_manual_calibrations,
 )
 
 logger = logging.getLogger("aind_mri_utils.reticle_calibrations")

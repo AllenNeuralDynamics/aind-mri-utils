@@ -1269,7 +1269,8 @@ def combine_parallax_and_manual_calibrations(
     parallax_directories : list of str
         List of directories containing parallax calibration data.
     probes_to_ignore_manual : list of str, optional
-        List of probe names to ignore from the manual calibrations, by default [].
+        List of probe names to ignore from the manual calibrations, by default
+        [].
     *args : tuple
         Additional positional arguments to pass to the fitting functions.
     **kwargs : dict
