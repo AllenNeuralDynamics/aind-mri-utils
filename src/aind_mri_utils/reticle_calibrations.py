@@ -1254,8 +1254,8 @@ def _validate_combined_calibration_inputs(
 
 
 def combine_parallax_and_manual_calibrations(
-    parallax_directories,
     manual_calibration_files,
+    parallax_directories,
     probes_to_ignore_manual=[],
     *args,
     **kwargs,
@@ -1264,10 +1264,10 @@ def combine_parallax_and_manual_calibrations(
 
     Parameters
     ----------
-    parallax_directories : list of str
-        List of directories containing parallax calibration data.
     manual_calibration_files : list of str
         List of files containing manual calibration data.
+    parallax_directories : list of str
+        List of directories containing parallax calibration data.
     probes_to_ignore_manual : list of str, optional
         List of probe names to ignore from the manual calibrations, by default [].
     *args : tuple
