@@ -5,6 +5,7 @@ coordinate frames, and apply the transformation.
 
 import csv
 import io
+import logging
 import re
 from pathlib import Path
 
@@ -15,14 +16,15 @@ from scipy.spatial.transform import Rotation
 
 from aind_mri_utils.arc_angles import calculate_arc_angles
 from aind_mri_utils.rotations import (
-    apply_inverse_rotate_translate_scale,
-    apply_rotate_translate,
-    apply_rotate_translate_scale,
+    apply_affine,
+    apply_inverse_affine,
     combine_angles,
-    inverse_rotate_translate,
+    compose_transforms,
     prepare_data_for_homogeneous_transform,
     rotation_matrix_from_vectors,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _extract_calibration_metadata(ws):
@@ -346,6 +348,28 @@ def read_parallax_calibration_dir_and_correct(
     local_scale_factor=1 / 1000,
     global_scale_factor=1 / 1000,
 ):
+    """
+    Read and correct parallax calibration data from a directory of CSV files.
+
+    Parameters
+    ----------
+    parallax_calibration_dir : str
+        Directory containing parallax calibration data.
+    reticle_offset : numpy.ndarray
+        Offset of the reticle.
+    reticle_rotation : float
+        Rotation of the reticle in degrees.
+    local_scale_factor : float, optional
+        Local scale factor for calibration, by default 1/1000.
+    global_scale_factor : float, optional
+        Global scale factor for calibration, by default 1/1000.
+
+    Returns
+    -------
+    dict
+        A dictionary where keys are controller numbers and values are tuples
+        of numpy arrays for global and manipulator points.
+    """
     pairs_by_probe = read_parallax_calibration_dir(parallax_calibration_dir)
     corrected_pairs_by_probe = {}
     for controller, pairs in pairs_by_probe.items():
@@ -528,6 +552,7 @@ def _fit_params_with_scaling(reticle_pts, probe_pts, lamb=0.1, **kwargs):
     scale_positive = np.abs(scale)
     scale_sign = np.sign(scale)
     R = np.diag(scale_sign) @ R
+    R = np.diag(scale_positive) @ R
     return R, translation, scale_positive
 
 
@@ -624,7 +649,7 @@ def fit_rotation_params(bregma_pts, probe_pts, find_scaling=True, **kwargs):
 
     res = opt.least_squares(fun, theta0, **kwargs)
     R, translation = _unpack_theta(res.x)
-    scaling = None
+    scaling = np.ones(3)
     return R, translation, scaling
 
 
@@ -771,7 +796,7 @@ def _debug_print_pt_err(reticle, probe, predicted_probe, err, decimals=3):
     rounded_reticle = np.round(reticle, decimals=decimals)
     rounded_probe = np.round(probe, decimals=decimals)
     rounded_pred = np.round(predicted_probe, decimals=decimals)
-    print(
+    logger.debug(
         f"\tReticle {rounded_reticle} -> "
         f"Probe {rounded_probe}: predicted {rounded_pred} "
         f"error {err:.2f} µm"
@@ -789,7 +814,7 @@ def _debug_print_err_stats(name, errs):
     errs : numpy.ndarray
         The array of error values.
     """
-    print(
+    logger.debug(
         f"Probe {name}: mean error {errs.mean():.2f} µm, "
         f"max error {errs.max():.2f} µm"
     )
@@ -800,19 +825,37 @@ def _debug_fits(
     R_reticle_to_bregma,
     t_reticle_to_bregma,
     adjusted_pairs_by_probe,
-    verbose=False,
 ):
+    """
+    Debug the fits for each probe.
+
+    Parameters
+    ----------
+    cal_by_probe : dict
+        Calibration parameters by probe.
+    R_reticle_to_bregma : numpy.ndarray
+        Rotation matrix from reticle to bregma coordinates.
+    t_reticle_to_bregma : numpy.ndarray
+        Translation vector from reticle to bregma coordinates.
+    adjusted_pairs_by_probe : dict
+        Adjusted calibration pairs by probe.
+
+    Returns
+    -------
+    dict
+        A dictionary where keys are probe names and values are arrays of error
+        values.
+    """
     errs_by_probe = {}
     for probe, (bregma_pts, probe_pts) in adjusted_pairs_by_probe.items():
-        predicted_probe_pts = transform_bregma_to_probe(
-            bregma_pts, *cal_by_probe[probe]
-        )
+        R, t = cal_by_probe[probe][0:2]
+        predicted_probe_pts = transform_bregma_to_probe(bregma_pts, R, t)
         # in mm
         errs = np.linalg.norm(predicted_probe_pts - probe_pts, axis=1)
         errs_by_probe[probe] = errs
-        if verbose:
+        if logger.isEnabledFor(logging.DEBUG):
             _debug_print_err_stats(probe, 1000 * errs)
-            reticle_pts = _apply_inverse(
+            reticle_pts = transform_probe_to_bregma(
                 bregma_pts, R_reticle_to_bregma, t_reticle_to_bregma
             )
             for i in range(len(errs)):
@@ -825,7 +868,34 @@ def _debug_fits(
     return errs_by_probe
 
 
-def debug_manual_calibration(filename, verbose=False, *args, **kwargs):
+def debug_manual_calibration(filename, *args, **kwargs):
+    """
+    Debugs the manual calibration process by fitting rotation parameters and
+    reading manual reticle calibration data.
+
+    Parameters
+    ----------
+    filename : str
+        The path to the file containing manual calibration data.
+    *args : tuple
+        Additional positional arguments to be passed to the calibration
+        functions.
+    **kwargs : dict
+        Additional keyword arguments to be passed to the calibration functions.
+
+    Returns
+    -------
+    cal_by_probe : dict
+        Calibration data for each probe.
+    R_reticle_to_bregma : numpy.ndarray
+        Rotation matrix from reticle to bregma.
+    t_reticle_to_bregma : numpy.ndarray
+        Translation vector from reticle to bregma.
+    adjusted_pairs_by_probe : dict
+        Adjusted pairs of calibration data by probe.
+    errs_by_probe : dict
+        Errors in the fits for each probe.
+    """
     cal_by_probe, R_reticle_to_bregma, t_reticle_to_bregma = (
         fit_rotation_params_from_manual_calibration(filename, *args, **kwargs)
     )
@@ -840,7 +910,6 @@ def debug_manual_calibration(filename, verbose=False, *args, **kwargs):
         R_reticle_to_bregma,
         t_reticle_to_bregma,
         adjusted_pairs_by_probe,
-        verbose,
     )
     return (
         cal_by_probe,
@@ -855,12 +924,43 @@ def debug_parallax_calibration(
     parallax_calibration_dir,
     reticle_offset,
     reticle_rotation,
-    verbose=False,
     local_scale_factor=1 / 1000,
     global_scale_factor=1 / 1000,
     *args,
     **kwargs,
 ):
+    """
+    Debugs the parallax calibration process by reading calibration data,
+    applying corrections, fitting the data, and calculating errors.
+
+    Parameters
+    ----------
+    parallax_calibration_dir : str
+        Directory containing the parallax calibration data.
+    reticle_offset : array-like
+        Offset of the reticle in the calibration setup.
+    reticle_rotation : array-like
+        Rotation of the reticle in the calibration setup.
+    local_scale_factor : float, optional
+        Scale factor for local adjustments, by default 1/1000.
+    global_scale_factor : float, optional
+        Scale factor for global adjustments, by default 1/1000.
+    *args : tuple
+        Additional arguments to pass to the fitting function.
+    **kwargs : dict
+        Additional keyword arguments to pass to the fitting function.
+
+    Returns
+    -------
+    cal_by_probe : dict
+        Calibration data organized by probe.
+    R_reticle_to_bregma : array-like
+        Transformation matrix from reticle coordinates to bregma coordinates.
+    adjusted_pairs_by_probe : dict
+        Adjusted calibration pairs organized by probe.
+    errs_by_probe : dict
+        Errors in the calibration fits organized by probe.
+    """
     adjusted_pairs_by_probe = read_parallax_calibration_dir_and_correct(
         parallax_calibration_dir,
         reticle_offset,
@@ -875,7 +975,6 @@ def debug_parallax_calibration(
         R_reticle_to_bregma,
         reticle_offset,
         adjusted_pairs_by_probe,
-        verbose,
     )
     return (
         cal_by_probe,
@@ -885,85 +984,32 @@ def debug_parallax_calibration(
     )
 
 
-def _apply_forward(pts, R, translation, scale=None):
-    """
-    Apply forward transformation to points.
-
-    Parameters
-    ----------
-    pts : numpy.ndarray
-        The points to transform.
-    R : numpy.ndarray
-        The rotation matrix.
-    translation : numpy.ndarray
-        The translation vector.
-    scale : numpy.ndarray, optional
-        The scale factors (default is None).
-
-    Returns
-    -------
-    numpy.ndarray
-        The transformed points.
-    """
-    if scale is None:
-        transformed = apply_rotate_translate(pts, R, translation)
-    else:
-        transformed = apply_rotate_translate_scale(pts, R, translation, scale)
-    return transformed
-
-
-def _apply_inverse(pts, R, translation, scale=None):
-    """
-    Apply inverse transformation to points.
-
-    Parameters
-    ----------
-    pts : numpy.ndarray
-        The points to transform.
-    R : numpy.ndarray
-        The rotation matrix.
-    translation : numpy.ndarray
-        The translation vector.
-    scale : numpy.ndarray, optional
-        The scale factors (default is None).
-
-    Returns
-    -------
-    numpy.ndarray
-        The transformed points.
-    """
-    if scale is None:
-        R_inv, t_inv = inverse_rotate_translate(R, translation)
-        transformed = apply_rotate_translate(pts, R_inv, t_inv)
-    else:
-        transformed = apply_inverse_rotate_translate_scale(
-            pts, R, translation, scale
-        )
-    return transformed
-
-
-def transform_bregma_to_probe(reticle_pts, R, translation, scale=None):
+def transform_bregma_to_probe(bregma_pts, R, translation):
     """
     Transform reticle points to probe points using rotation and translation.
 
     Parameters
     ----------
-    probe_pts : np.array(N,3)
-        Probe points to transform.
+    bregma_pts : np.array(N,3)
+        Bregma points to transform.
     R : np.array(3,3)
-        Rotation matrix.
+        Affine matrix as provided from fit functions in this module.
     translation : np.array(3,)
-        Translation vector.
+        Translation vector as provided from fit functions in this module.
 
     Returns
     -------
     np.array(N,3)
-        Transformed points.
+        Transformed probe points.
+
+    Notes
+    -----
+    Expects the affine and transform to take bregma points to probe points.
     """
-    return _apply_forward(reticle_pts, R, translation, scale)
+    return apply_affine(bregma_pts, R, translation)
 
 
-def transform_probe_to_bregma(probe_pts, R, translation, scale=None):
+def transform_probe_to_bregma(probe_pts, R, translation):
     """
     Transform probe points to reticle points using rotation and translation.
 
@@ -972,19 +1018,23 @@ def transform_probe_to_bregma(probe_pts, R, translation, scale=None):
     probe_pts : np.array(N,3)
         Probe points to transform.
     R : np.array(3,3)
-        Rotation matrix.
+        Affine matrix as provided from fit functions in this module.
     translation : np.array(3,)
-        Translation vector.
+        Translation vector as provided from fit functions in this module.
 
     Returns
     -------
     np.array(N,3)
-        Transformed points.
+        Transformed bregma points.
+
+    Notes
+    -----
+    Expects the affine and transform to take bregma points to probe points.
     """
-    return _apply_inverse(probe_pts, R, translation, scale)
+    return apply_inverse_affine(probe_pts, R, translation)
 
 
-def transform_bregma_to_reticle(bregma_pts, R, translation, scale=None):
+def transform_bregma_to_reticle(bregma_pts, R, translation):
     """
     Transform bregma points to reticle points using rotation and translation.
 
@@ -992,22 +1042,20 @@ def transform_bregma_to_reticle(bregma_pts, R, translation, scale=None):
     ----------
     bregma_pts : numpy.ndarray
         The bregma points to transform.
-    R : numpy.ndarray
-        The rotation matrix.
-    translation : numpy.ndarray
-        The translation vector.
-    scale : numpy.ndarray, optional
-        The scale factors (default is None).
+    R : np.array(3,3)
+        Affine matrix as provided from fit functions in this module.
+    translation : np.array(3,)
+        Translation vector as provided from fit functions in this module.
 
     Returns
     -------
     numpy.ndarray
-        The transformed points.
+        The transformed reticle points.
     """
-    return _apply_inverse(bregma_pts, R, translation, scale)
+    return apply_inverse_affine(bregma_pts, R, translation)
 
 
-def transform_reticle_to_bregma(reticle_pts, R, translation, scale=None):
+def transform_reticle_to_bregma(reticle_pts, R, translation):
     """
     Transform reticle points to bregma points using rotation and translation.
 
@@ -1015,19 +1063,131 @@ def transform_reticle_to_bregma(reticle_pts, R, translation, scale=None):
     ----------
     reticle_pts : numpy.ndarray
         The reticle points to transform.
-    R : numpy.ndarray
-        The rotation matrix.
-    translation : numpy.ndarray
-        The translation vector.
-    scale : numpy.ndarray, optional
-        The scale factors (default is None).
+    R : np.array(3,3)
+        Affine matrix as provided from fit functions in this module.
+    translation : np.array(3,)
+        Translation vector as provided from fit functions in this module.
 
     Returns
     -------
     numpy.ndarray
-        The transformed points.
+        The transformed bregma points.
     """
-    return _apply_forward(reticle_pts, R, translation, scale)
+    return apply_affine(reticle_pts, R, translation)
+
+
+def combine_reticle_to_probe_transforms(
+    R_bregma_to_probe,
+    t_bregma_to_probe,
+    R_reticle_to_bregma,
+    t_reticle_to_bregma,
+):
+    """
+    Combines the transformation matrices and translation vectors from reticle
+    to bregma and bregma to probe.
+
+    Parameters
+    ----------
+    R_bregma_to_probe : numpy.ndarray
+        Rotation matrix from bregma to probe.
+    t_bregma_to_probe : numpy.ndarray
+        Translation vector from bregma to probe.
+    R_reticle_to_bregma : numpy.ndarray
+        Rotation matrix from reticle to bregma.
+    t_reticle_to_bregma : numpy.ndarray
+        Translation vector from reticle to bregma.
+
+    Returns
+    -------
+    numpy.ndarray
+        Combined rotation matrix and translation vector from reticle to probe.
+    """
+    return compose_transforms(
+        R_reticle_to_bregma,
+        t_reticle_to_bregma,
+        R_bregma_to_probe,
+        t_bregma_to_probe,
+    )
+
+
+def transform_reticle_to_probe(
+    reticle_pts,
+    R_bregma_to_probe,
+    t_bregma_to_probe,
+    R_reticle_to_bregma,
+    t_reticle_to_bregma,
+):
+    """
+    Transform reticle points to probe points using rotation and translation.
+
+    Parameters
+    ----------
+    reticle_pts : numpy.ndarray
+        The reticle points to transform.
+    R_bregma_to_probe : numpy.ndarray
+        Rotation matrix from bregma to probe coordinates.
+    t_bregma_to_probe : numpy.ndarray
+        Translation vector from bregma to probe coordinates.
+    R_reticle_to_bregma : numpy.ndarray
+        Rotation matrix from reticle to bregma coordinates.
+    t_reticle_to_bregma : numpy.ndarray
+        Translation vector from reticle to bregma coordinates.
+
+    Returns
+    -------
+    numpy.ndarray
+        The transformed probe points.
+    """
+    R_reticle_to_probe, t_reticle_to_probe = (
+        combine_reticle_to_probe_transforms(
+            R_reticle_to_bregma,
+            t_reticle_to_bregma,
+            R_bregma_to_probe,
+            t_bregma_to_probe,
+        )
+    )
+    return apply_affine(reticle_pts, R_reticle_to_probe, t_reticle_to_probe)
+
+
+def transform_probe_to_reticle(
+    probe_pts,
+    R_bregma_to_probe,
+    t_bregma_to_probe,
+    R_reticle_to_bregma,
+    t_reticle_to_bregma,
+):
+    """
+    Transforms probe points to reticle coordinates.
+
+    Parameters
+    ----------
+    probe_pts : ndarray
+        Array of points in probe coordinates.
+    R_bregma_to_probe : ndarray
+        Rotation matrix from bregma to probe coordinates.
+    t_bregma_to_probe : ndarray
+        Translation vector from bregma to probe coordinates.
+    R_reticle_to_bregma : ndarray
+        Rotation matrix from reticle to bregma coordinates.
+    t_reticle_to_bregma : ndarray
+        Translation vector from reticle to bregma coordinates.
+
+    Returns
+    -------
+    ndarray
+        Transformed points in reticle coordinates.
+    """
+    R_reticle_to_probe, t_reticle_to_probe = (
+        combine_reticle_to_probe_transforms(
+            R_reticle_to_bregma,
+            t_reticle_to_bregma,
+            R_bregma_to_probe,
+            t_bregma_to_probe,
+        )
+    )
+    return apply_inverse_affine(
+        probe_pts, R_reticle_to_probe, t_reticle_to_probe
+    )
 
 
 def find_probe_insertion_vector(R, newscale_z_down=np.array([0, 0, 1])):

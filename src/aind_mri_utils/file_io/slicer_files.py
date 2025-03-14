@@ -1,6 +1,7 @@
 """Functions for working with slicer files"""
 
 import json
+import logging
 import re
 from typing import Tuple
 
@@ -14,6 +15,8 @@ from ..sitk_volume import (
     transform_sitk_indices_to_physical_points,
 )
 from ..utils import find_indices_equal_to
+
+logger = logging.getLogger(__name__)
 
 
 def extract_control_points(json_data: dict) -> Tuple[np.ndarray, list]:
@@ -261,7 +264,7 @@ def _parse_slicer_fcsv_header(file):
     return last_line, source_coordinate_system, label_ndx, coord_ndxs
 
 
-def read_slicer_fcsv(filename, direction="LPS", verbose=False):
+def read_slicer_fcsv(filename, direction="LPS"):
     """
     Read fscv into dictionary.
     While reading, points will be converted to the specified direction.
@@ -274,9 +277,6 @@ def read_slicer_fcsv(filename, direction="LPS", verbose=False):
         direction of the coordinate system of the points in the file.
         Must be one of 'LPS','RAS','LAS','LAI','RAI','RPI','LPI','LAI'
         Default is 'LPS'
-    verbose : bool (optional)
-        If True, print filename and direction to stdout.
-        Default is False
 
     Returns
     -------
@@ -288,8 +288,7 @@ def read_slicer_fcsv(filename, direction="LPS", verbose=False):
     valid_directions = {"LPS", "RAS", "LAS", "LAI", "RAI", "RPI", "LPI", "LAI"}
     if direction not in valid_directions:
         raise ValueError(f"Direction must be one of {valid_directions}")
-    if verbose:
-        print(f"Reading {filename} with direction {direction}")
+    logger.debug(f"Reading {filename} with direction {direction}")
 
     point_dictionary = {}
 

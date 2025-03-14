@@ -3,6 +3,7 @@
 Test suite for reticle_calibrations.py
 """
 
+import logging
 import unittest
 from pathlib import Path
 
@@ -21,10 +22,13 @@ from aind_mri_utils.reticle_calibrations import (
     read_parallax_calibration_dir_and_correct,
     read_parallax_calibration_file,
     transform_bregma_to_probe,
+    transform_bregma_to_reticle,
     transform_probe_to_bregma,
     transform_reticle_to_bregma,
-    transform_bregma_to_reticle,
 )
+
+logger = logging.getLogger("aind_mri_utils.reticle_calibrations")
+logger.addHandler(logging.NullHandler())
 
 
 class CalibrationTest(unittest.TestCase):
@@ -231,14 +235,37 @@ class CalibrationTest(unittest.TestCase):
         ),
     }
 
+    def setUp(self):
+        # Store original logging configuration to restore later
+        self.root_logger = logging.getLogger()
+        self.old_level = self.root_logger.level
+        self.old_handlers = self.root_logger.handlers.copy()
+
+        # Configure logging to capture but not display output
+        # 1. Set level to DEBUG so statements execute
+        # 2. Remove any existing handlers
+        # 3. Add a NullHandler to prevent output
+        self.root_logger.setLevel(logging.DEBUG)
+        for handler in self.root_logger.handlers[:]:
+            self.root_logger.removeHandler(handler)
+        self.root_logger.addHandler(logging.NullHandler())
+
+    def tearDown(self):
+        # Restore original logging configuration
+        self.root_logger.setLevel(self.old_level)
+        for handler in self.root_logger.handlers[:]:
+            self.root_logger.removeHandler(handler)
+        for handler in self.old_handlers:
+            self.root_logger.addHandler(handler)
+
     def helper_test_transforms(
-        self, R, t, s, bregma_pt, probe_pt, atol=1e-05, rtol=1e-08
+        self, R, t, bregma_pt, probe_pt, atol=1e-05, rtol=1e-08
     ):
-        received_probe_pt = transform_bregma_to_probe(bregma_pt, R, t, s)
+        received_probe_pt = transform_bregma_to_probe(bregma_pt, R, t)
         self.assertTrue(
             np.allclose(received_probe_pt, probe_pt, atol=atol, rtol=rtol)
         )
-        received_bregma_pt = transform_probe_to_bregma(probe_pt, R, t, s)
+        received_bregma_pt = transform_probe_to_bregma(probe_pt, R, t)
         self.assertTrue(
             np.allclose(received_bregma_pt, bregma_pt, atol=atol, rtol=rtol)
         )
@@ -247,9 +274,9 @@ class CalibrationTest(unittest.TestCase):
         self, cal_by_probe, test_pair_by_probe, *args, **kwargs
     ):
         for probe, (bregma_pt, probe_pt) in test_pair_by_probe.items():
-            R, t, s = cal_by_probe[probe]
+            R, t, _ = cal_by_probe[probe]
             self.helper_test_transforms(
-                R, t, s, bregma_pt, probe_pt, *args, **kwargs
+                R, t, bregma_pt, probe_pt, *args, **kwargs
             )
 
     def test_fit_rotation_params(self) -> None:
@@ -271,7 +298,7 @@ class CalibrationTest(unittest.TestCase):
                 find_scaling=find_scaling,
             )
             self.helper_test_transforms(
-                R, t, s, *self.parallax_test_pairs[46105], atol=atol, rtol=rtol
+                R, t, *self.parallax_test_pairs[46105], atol=atol, rtol=rtol
             )
 
     def test_read_manual_reticle_calibration(self) -> None:
