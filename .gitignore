@@ -9,6 +9,10 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+doc_template/build/
+doc_template/source/aind_mri_utils.rst
+doc_template/source/aind_mri_utils.file_io.rst
+doc_template/source/modules.rst
 develop-eggs/
 dist/
 downloads/
