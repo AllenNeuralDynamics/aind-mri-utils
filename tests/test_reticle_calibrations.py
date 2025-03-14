@@ -10,7 +10,9 @@ from pathlib import Path
 import numpy as np
 
 from aind_mri_utils.reticle_calibrations import (
+    combine_parallax_and_manual_calibrations,
     debug_manual_calibration,
+    debug_parallax_and_manual_calibrations,
     debug_parallax_calibration,
     find_probe_angle,
     find_probe_insertion_vector,
@@ -497,6 +499,59 @@ class CalibrationTest(unittest.TestCase):
         transformed_pts = transform_bregma_to_reticle(bregma_pts, R, t)
         expected_pts = bregma_pts - t
         self.assertTrue(np.allclose(transformed_pts, expected_pts))
+
+    def test_combine_parallax_and_manual_calibrations(self) -> None:
+        """Tests for combine_parallax_and_manual_calibrations"""
+        cal_by_probe_combined, R_reticle_to_bregma, global_offset = (
+            combine_parallax_and_manual_calibrations(
+                self.manual_calibration_file,
+                self.parallax_calibration_path,
+            )
+        )
+        self.helper_test_calibration(
+            cal_by_probe_combined, self.manual_test_pairs, atol=1e-2
+        )
+        self.helper_test_calibration(
+            cal_by_probe_combined, self.parallax_test_pairs, atol=1e-2
+        )
+        self.assertTrue(np.array_equal(R_reticle_to_bregma, np.eye(3)))
+        self.assertTrue(np.array_equal(global_offset, self.global_offset))
+
+    def test_debug_parallax_and_manual_calibrations(self) -> None:
+        """Tests for debug_parallax_and_manual_calibrations"""
+        (
+            combined_cal_by_probe,
+            R_reticle_to_bregma,
+            t_reticle_to_bregma,
+            combined_pairs_by_probe,
+            errs_by_probe,
+        ) = debug_parallax_and_manual_calibrations(
+            self.manual_calibration_file,
+            self.parallax_calibration_path,
+        )
+        self.helper_test_calibration(
+            combined_cal_by_probe, self.manual_test_pairs, atol=1e-2
+        )
+        self.helper_test_calibration(
+            combined_cal_by_probe, self.parallax_test_pairs, atol=1e-2
+        )
+        self.assertTrue(np.array_equal(R_reticle_to_bregma, np.eye(3)))
+        self.assertTrue(
+            np.array_equal(t_reticle_to_bregma, self.global_offset)
+        )
+        for k, v in self.parallax_corrected_calibration_pts.items():
+            reticle_pts, probe_pts = v
+            received_reticle_pts, received_probe_pts = combined_pairs_by_probe[
+                k
+            ]
+            self.assertTrue(
+                np.allclose(reticle_pts, received_reticle_pts, atol=1e-2)
+                and np.allclose(probe_pts, received_probe_pts, atol=1e-2)
+            )
+        for probe_id, errs in self.par_cal_errs.items():
+            self.assertTrue(
+                np.allclose(errs, errs_by_probe[probe_id], atol=1e-2)
+            )
 
 
 if __name__ == "__main__":
