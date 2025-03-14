@@ -1235,3 +1235,204 @@ def find_probe_angle(R, newscale_z_down=np.array([0, 0, 1]), **kwargs):
     # Probe coordinate system has z-axis pointing down
     z_axis = find_probe_insertion_vector(R, newscale_z_down=newscale_z_down)
     return calculate_arc_angles(z_axis, **kwargs)
+
+
+def _validate_combined_calibration_inputs(
+    manual_calibration_files, parallax_directories
+):
+    if isinstance(manual_calibration_files, list):
+        if len(manual_calibration_files) == 0:
+            raise ValueError("No manual calibration files provided")
+    else:
+        manual_calibration_files = [manual_calibration_files]
+    if isinstance(parallax_directories, list):
+        if len(parallax_directories) == 0:
+            raise ValueError("No parallax directories provided")
+    else:
+        parallax_directories = [parallax_directories]
+    return manual_calibration_files, parallax_directories
+
+
+def combine_parallax_and_manual_calibrations(
+    parallax_directories,
+    manual_calibration_files,
+    probes_to_ignore_manual=[],
+    *args,
+    **kwargs,
+):
+    """Combines parallax and manual calibration data
+
+    Parameters
+    ----------
+    parallax_directories : list of str
+        List of directories containing parallax calibration data.
+    manual_calibration_files : list of str
+        List of files containing manual calibration data.
+    probes_to_ignore_manual : list of str, optional
+        List of probe names to ignore from the manual calibrations, by default [].
+    *args : tuple
+        Additional positional arguments to pass to the fitting functions.
+    **kwargs : dict
+        Additional keyword arguments to pass to the fitting functions.
+
+    Returns
+    -------
+    cal_by_probe_combined : dict
+        Combined calibration data by probe.
+    R_reticle_to_bregma : numpy.ndarray
+        Rotation matrix from reticle to bregma.
+    global_offset : numpy.ndarray
+        Global offset applied to the calibration data.
+
+    Raises
+    ------
+    ValueError
+        If no manual calibration files are provided.
+    ValueError
+        If no parallax directories are provided.
+
+    """
+    manual_calibration_files, parallax_directories = (
+        _validate_combined_calibration_inputs(
+            manual_calibration_files, parallax_directories
+        )
+    )
+    # Read the first manual calibration to get the reticle metadata
+    first_manual = manual_calibration_files[0]
+    adjusted_pairs_by_probe, global_offset, global_rotation_degrees, _ = (
+        read_manual_reticle_calibration(first_manual)
+    )
+    R_reticle_to_bregma = reticle_metadata_transform(global_rotation_degrees)
+
+    # Fit the manual calibrations
+    cal_by_probe_manual = _fit_by_probe(
+        adjusted_pairs_by_probe, *args, **kwargs
+    )
+    for manual_calibration_file in manual_calibration_files[1:]:
+        cal_by_probe, _, _ = fit_rotation_params_from_manual_calibration(
+            manual_calibration_file, *args, **kwargs
+        )
+        cal_by_probe_manual.update(cal_by_probe)
+
+    # Fit the parallax calibrations
+    cal_by_probe_combined = {}
+    for parallax_dir in parallax_directories:
+        cal_by_probe, _ = fit_rotation_params_from_parallax(
+            parallax_dir,
+            global_offset,
+            global_rotation_degrees,
+            *args,
+            **kwargs,
+        )
+        cal_by_probe_combined.update(cal_by_probe)
+
+    # Drop any probes from exclusion list from the manual calibrations
+    for probe_name in probes_to_ignore_manual:
+        cal_by_probe_manual.pop(probe_name, None)
+    # Add the first manual calibration to the combined calibrations
+    # Because they are added last, these manual calibrations take priority
+    cal_by_probe_combined.update(cal_by_probe_manual)
+
+    return cal_by_probe_combined, R_reticle_to_bregma, global_offset
+
+
+def debug_parallax_and_manual_calibrations(
+    manual_calibration_files,
+    parallax_directories,
+    probes_to_ignore_manual=[],
+    local_scale_factor=1 / 1000,
+    global_scale_factor=1 / 1000,
+    *args,
+    **kwargs,
+):
+    """Debugs combined parallax and manual calibrations
+
+    Parameters
+    ----------
+    manual_calibration_files : list of str
+        List of file paths to the manual calibration files.
+    parallax_directories : list of str
+        List of directories containing parallax calibration data.
+    probes_to_ignore_manual : list of str, optional
+        List of probe names to ignore from the manual calibration data, by
+        default [].
+    local_scale_factor : float, optional
+        Local scale factor to apply to the calibration data, by default
+        1 / 1000.
+    global_scale_factor : float, optional
+        Global scale factor to apply to the calibration data, by default
+        1 / 1000.
+    *args : tuple
+        Additional positional arguments to pass to the calibration functions.
+    **kwargs : dict
+        Additional keyword arguments to pass to the calibration functions.
+
+    Returns
+    -------
+    combined_cal_by_probe : dict
+        Combined calibration data by probe.
+    R_reticle_to_bregma : numpy.ndarray
+        Rotation matrix from reticle to bregma.
+    t_reticle_to_bregma : numpy.ndarray
+        Translation vector from reticle to bregma.
+    combined_pairs_by_probe : dict
+        Combined pairs of calibration data by probe.
+    errs_by_probe : dict
+        Errors by probe from the debug fits.
+    """
+    manual_calibration_files, parallax_directories = (
+        _validate_combined_calibration_inputs(
+            manual_calibration_files, parallax_directories
+        )
+    )
+    # Read the first manual calibration to get the reticle metadata
+
+    # Fit the manual calibrations
+    manual_cal_by_probe = {}
+    manual_pairs_by_probe = {}
+    for filename in manual_calibration_files:
+        cal_by_probe, R_reticle_to_bregma, t_reticle_to_bregma = (
+            fit_rotation_params_from_manual_calibration(
+                filename, *args, **kwargs
+            )
+        )
+        manual_cal_by_probe.update(cal_by_probe)
+        (
+            adjusted_pairs_by_probe,
+            global_offset,
+            global_rotation_degrees,
+            _,
+        ) = read_manual_reticle_calibration(filename)
+        manual_pairs_by_probe.update(adjusted_pairs_by_probe)
+    combined_cal_by_probe = {}
+    combined_pairs_by_probe = {}
+    for parallax_dir in parallax_directories:
+        adjusted_pairs_by_probe = read_parallax_calibration_dir_and_correct(
+            parallax_dir,
+            global_offset,
+            global_rotation_degrees,
+            local_scale_factor,
+            global_scale_factor,
+        )
+        combined_cal_by_probe.update(
+            _fit_by_probe(adjusted_pairs_by_probe, *args, **kwargs)
+        )
+        combined_pairs_by_probe.update(adjusted_pairs_by_probe)
+    for probe_name in probes_to_ignore_manual:
+        manual_cal_by_probe.pop(probe_name, None)
+        manual_pairs_by_probe.pop(probe_name, None)
+    combined_cal_by_probe.update(manual_cal_by_probe)
+    combined_pairs_by_probe.update(manual_pairs_by_probe)
+    errs_by_probe = _debug_fits(
+        combined_cal_by_probe,
+        R_reticle_to_bregma,
+        t_reticle_to_bregma,
+        combined_pairs_by_probe,
+    )
+    return (
+        combined_cal_by_probe,
+        R_reticle_to_bregma,
+        t_reticle_to_bregma,
+        combined_pairs_by_probe,
+        errs_by_probe,
+    )
