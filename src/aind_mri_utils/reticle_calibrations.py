@@ -28,8 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def _extract_calibration_metadata(ws):
-    """
-    Extract calibration metadata from an Excel worksheet.
+    """Extract calibration metadata from an Excel worksheet.
 
     Parameters
     ----------
@@ -206,8 +205,7 @@ def _apply_metadata_to_pair_mats(
 def read_manual_reticle_calibration(
     filename, points_sheet_name="points", metadata_sheet_name="metadata"
 ):
-    """
-    Read reticle calibration data from an Excel file.
+    """Read reticle calibration data from an Excel file.
 
     Parameters
     ----------
@@ -222,19 +220,19 @@ def read_manual_reticle_calibration(
 
     Returns
     -------
-    tuple
-        A tuple containing:
-        - adjusted_pairs_by_probe (dict): Adjusted calibration pairs by probe
-          name.
-        - global_offset (numpy.ndarray): The global offset as a 3-element
-          array.
-        - global_rotation_degrees (float): The global rotation in degrees.
-        - reticle_name (str): The name of the reticle.
+    adjusted_pairs_by_probe : dict
+        Adjusted calibration pairs by probe name.
+    global_offset : numpy.ndarray The global offset as a 3-element array.
+    global_rotation_degrees : float
+        The global rotation in degrees.
+    reticle_name : str
+        The name of the reticle.
 
     Raises
     ------
     ValueError
         If the specified sheets are not found in the Excel file.
+
     """
     in_mem_file = None
     with open(filename, "rb") as f:

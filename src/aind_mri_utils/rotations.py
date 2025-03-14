@@ -60,19 +60,19 @@ def rotate_about_and_translate(points, rotation, pivot, translation):
 
 def rotate_about(points, rotation, pivot):
     """
-        Rotates points about a pivot point.
+    Rotates points about a pivot point.
 
-        Parameters
-        ----------
-        points : (Nx3) numpy array
-            Points to rotate. Each point gets its own row.
-        rotation : scipy.spatial.transform.Rotation
-            Rotation object.
-        pivot : numpy.ndarray
-            Point to rotate around.
+    Parameters
+    ----------
+    points : (Nx3) numpy array
+        Points to rotate. Each point gets its own row.
+    rotation : scipy.spatial.transform.Rotation
+        Rotation object.
+    pivot : numpy.ndarray
+        Point to rotate around.
 
-        Returns
-        -------
+    Returns
+    -------
     (Nx3) numpy array
             Rotated points
 
