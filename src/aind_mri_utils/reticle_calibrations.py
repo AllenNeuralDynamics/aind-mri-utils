@@ -1262,8 +1262,9 @@ def combine_parallax_and_manual_calibrations(
 ):
     """Combines parallax and manual calibration data
 
-    Manual calibrations will take priority over parallax calibrations, unless
-    specified by `probe_to_ignore_manual`.
+    In each list of calibrations, calibrations later in the list will take
+    priority over the earlier ones. Manual calibrations will take priority over
+    parallax calibrations, unless specified by `probe_to_ignore_manual`.
 
     Parameters
     ----------
@@ -1351,8 +1352,9 @@ def debug_parallax_and_manual_calibrations(
 ):
     """Debugs combined parallax and manual calibrations
 
-    Manual calibrations will take priority over parallax calibrations, unless
-    specified by `probe_to_ignore_manual`.
+    In each list of calibrations, calibrations later in the list will take
+    priority over the earlier ones. Manual calibrations will take priority over
+    parallax calibrations, unless specified by `probe_to_ignore_manual`.
 
     Parameters
     ----------
