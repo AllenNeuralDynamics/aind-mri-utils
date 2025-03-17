@@ -192,8 +192,8 @@ def make_hole_seg_dict(implant_annotations, fun: callable = lambda x: x):
 
     Parameters
     ----------
-    implant_annotations : numpy.ndarray
-        An array containing the implant annotations.
+    implant_annotations : SimpleITK.Image
+        A SimpleITK image containing the segmented implant annotations.
     fun : callable, optional
         A function to apply to the positions of the segmented values, by
         default the identity function.
