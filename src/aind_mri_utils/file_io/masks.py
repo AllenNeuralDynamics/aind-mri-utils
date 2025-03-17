@@ -9,7 +9,8 @@ Code was tested and modified by Yoni
 import SimpleITK as sitk
 import trimesh
 import numpy as np
-from pathlib import Path
+import skimage.measure
+
 
 def load_nrrd_mask(file_path):
     """
@@ -30,7 +31,7 @@ def load_nrrd_mask(file_path):
         Origin.
     numpy.ndarray
         Direction
-    
+
     """
     mask = sitk.ReadImage(file_path)
     mask_array = sitk.GetArrayFromImage(mask)
@@ -38,6 +39,7 @@ def load_nrrd_mask(file_path):
     origin = mask.GetOrigin()
     direction = np.array(mask.GetDirection()).reshape(3, 3)
     return mask_array, spacing, origin, direction
+
 
 # Generate a surface mesh from the mask
 def generate_mesh_from_mask(mask_array, spacing):
@@ -50,7 +52,7 @@ def generate_mesh_from_mask(mask_array, spacing):
         Binary mask.
     spacing : tuple of float
         Voxel spacing.
-    
+
     Returns
     -------
     numpy.ndarray
@@ -59,19 +61,20 @@ def generate_mesh_from_mask(mask_array, spacing):
         Face indices.
     """
 
-
     # Use marching cubes to extract the surface
     from skimage import measure
+
     vertices, faces, _, _ = measure.marching_cubes(
         mask_array, level=0.5, spacing=spacing
     )
     return vertices, faces
 
+
 # Create a trimesh object
 def create_trimesh(vertices, faces):
     """
     Create a trimesh object from vertices and faces.
-    
+
     Parameters
     ----------
     vertices : numpy.ndarray
@@ -87,6 +90,7 @@ def create_trimesh(vertices, faces):
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
     return mesh
 
+
 # Ensure normals point outward
 def ensure_normals_outward(mesh):
     """
@@ -96,81 +100,62 @@ def ensure_normals_outward(mesh):
     ----------
     mesh : trimesh.base.Trimesh
         Input mesh.
-    
+
     Returns
     -------
     trimesh.base.Trimesh
         Mesh with outward-pointing normals.
     """
     if not mesh.is_watertight:
-        print("Warning: Mesh is not watertight. Normal orientation may not be reliable.")
+        print(
+            "Warning: Mesh is not watertight. ",
+            "Normal orientation may not be reliable.",
+        )
     else:
         mesh.fix_normals()
     return mesh
 
-# Smooth the mesh using Laplacian smoothing
-def smooth_mesh(mesh, iterations=10, lambda_param=0.5):
-    """
-    Smooth the mesh using Laplacian smoothing.
-    
-    Parameters
-    ----------
-    mesh : trimesh.base.Trimesh
-        Input mesh.
-    iterations : int, optional
-        Number of iterations. The default is 10.
-    lambda_param : float, option        
-        Number of iterations. The default is 10.
-    
-    Returns
-    -------
-    trimesh.base.Trimesh
-        Smoothed mesh.
-    """
-    from trimesh.smoothing import filter_laplacian
-    smooth_mesh = mesh.copy()
-    filter_laplacian(smooth_mesh, lamb=lambda_param, iterations=iterations)
-    return smooth_mesh
 
-def mask_to_trimesh(nrrd_file_path,smoothing_iterations  = 10, smoothing_lambda = 1):
+def mask_to_trimesh(sitk_mask, level=0.5, smooth_iters=0):
     """
-    mask_to_trimesh(nrrd_file_path,smoothing_iterations  = 10, smoothing_lambda
-    = 1)
-    
-    Load a mask from a NRRD file, generate a surface mesh, and export it as a
-    trimesh object.
+    Converts a SimpleITK binary mask into a 3D mesh in the same physical space.
 
-    Parameters
-    ----------
-    nrrd_file_path : str
-        Path to the NRRD file.
-    smoothing_iterations : int, optional
-        Number of iterations for Laplacian smoothing. The default is 10.
-    smoothing_lambda : float, optional
-        Lambda parameter for Laplacian smoothing. The default is 1.
-    
-    Returns
-    -------
-    trimesh.base.Trimesh
-        A trimesh object representing the surface mesh.
+    Parameters:
+        sitk_mask (sitk.Image): A 3D SimpleITK binary mask image.
+        level (float): The threshold value for the marching cubes algorithm.
+        smooth_iters (int): Number of iterations for mesh smoothing. If zero,
+            no smoothing is applied.
+
+    Returns:
+        trimesh.Trimesh:
+            A 3D mesh in the same physical space as the input image.
     """
-    # Load mask
-    mask_array, spacing, origin, direction = load_nrrd_mask(nrrd_file_path)
-    
-    # Generate mesh
-    vertices, faces = generate_mesh_from_mask(mask_array, spacing)
-    
-    # Transform vertices to physical space
-    vertices = np.dot(direction, vertices.T).T + origin
-    
+    # Get voxel data as a NumPy array
+    mask_array = sitk.GetArrayFromImage(sitk_mask)  # Shape: (Z, Y, X)
+
+    # Extract surface mesh using Marching Cubes
+    verts, faces, normals, _ = skimage.measure.marching_cubes(
+        mask_array, level=level
+    )
+
+    # Convert voxel indices to physical coordinates
+    spacing = np.array(sitk_mask.GetSpacing())  # (X, Y, Z)
+    origin = np.array(sitk_mask.GetOrigin())  # (X, Y, Z)
+    direction = np.array(sitk_mask.GetDirection()).reshape(3, 3)  # 3x3 matrix
+
+    # Convert voxel indices to physical space
+    verts = verts[:, [2, 1, 0]]  # Convert (Z, Y, X) -> (X, Y, Z)
+    verts = verts * spacing  # Scale by spacing
+    verts = (
+        np.dot(direction, verts.T).T + origin
+    )  # Apply direction and shift by origin
+
     # Create a trimesh object
-    mesh = create_trimesh(vertices, faces)
+    mesh = trimesh.Trimesh(vertices=verts, faces=faces, vertex_normals=normals)
 
-    # smooth the mesh
-    mesh  = smooth_mesh(mesh,iterations=smoothing_iterations,lambda_param=smoothing_lambda)
-    
-    # Clean up the normals
-    mesh = ensure_normals_outward(mesh)
-    
-    # Export to a file
+    if smooth_iters > 0:
+        mesh = trimesh.smoothing.filter_mut_dif_laplacian(
+            mesh, iterations=smooth_iters
+        )
+
     return mesh
