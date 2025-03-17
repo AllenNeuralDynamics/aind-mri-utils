@@ -38,61 +38,11 @@ def load_nrrd_mask(file_path):
 
     """
     mask = sitk.ReadImage(file_path)
-    mask_array = sitk.GetArrayFromImage(mask)
+    mask_array = sitk.GetArrayViewFromImage(mask)
     spacing = mask.GetSpacing()
     origin = mask.GetOrigin()
     direction = np.array(mask.GetDirection()).reshape(3, 3)
     return mask_array, spacing, origin, direction
-
-
-# Generate a surface mesh from the mask
-def generate_mesh_from_mask(mask_array, spacing):
-    """
-    Generate a surface mesh from the mask.
-
-    Parameters
-    ----------
-    mask_array : numpy.ndarray
-        Binary mask.
-    spacing : tuple of float
-        Voxel spacing.
-
-    Returns
-    -------
-    numpy.ndarray
-        Vertex coordinates.
-    numpy.ndarray
-        Face indices.
-    """
-
-    # Use marching cubes to extract the surface
-    from skimage import measure
-
-    vertices, faces, _, _ = measure.marching_cubes(
-        mask_array, level=0.5, spacing=spacing
-    )
-    return vertices, faces
-
-
-# Create a trimesh object
-def create_trimesh(vertices, faces):
-    """
-    Create a trimesh object from vertices and faces.
-
-    Parameters
-    ----------
-    vertices : numpy.ndarray
-        Vertex coordinates.
-    faces : numpy.ndarray
-        Face indices.
-
-    Returns
-    -------
-    trimesh.base.Trimesh
-        A trimesh object representing the surface mesh.
-    """
-    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
-    return mesh
 
 
 # Ensure normals point outward
@@ -115,8 +65,7 @@ def ensure_normals_outward(mesh, verbose=True):
             "Warning: Mesh is not watertight. "
             "Normal orientation may not be reliable."
         )
-    else:
-        mesh.fix_normals()
+    mesh.fix_normals()
     return mesh
 
 
