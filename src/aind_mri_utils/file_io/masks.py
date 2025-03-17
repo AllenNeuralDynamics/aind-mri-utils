@@ -10,6 +10,7 @@ import numpy as np
 import SimpleITK as sitk
 import trimesh
 from pymeshfix import MeshFix
+import skimage.measure
 
 
 def load_nrrd_mask(file_path):
@@ -187,52 +188,46 @@ def repair_mesh(mesh, verbose=True):
     return mesh
 
 
-def mask_to_trimesh(
-    nrrd_file_path, verbose=True, smoothing_iterations=10, smoothing_lambda=1
-):
+def mask_to_trimesh(sitk_mask, level=0.5, smooth_iters=0):
     """
-    mask_to_trimesh(nrrd_file_path,smoothing_iterations  = 10, smoothing_lambda
-    = 1)
+    Converts a SimpleITK binary mask into a 3D mesh in the same physical space.
 
-    Load a mask from a NRRD file, generate a surface mesh, and export it as a
-    trimesh object.
+    Parameters:
+        sitk_mask (sitk.Image): A 3D SimpleITK binary mask image.
+        level (float): The threshold value for the marching cubes algorithm.
+        smooth_iters (int): Number of iterations for mesh smoothing. If zero,
+            no smoothing is applied.
 
-    Parameters
-    ----------
-    nrrd_file_path : str
-        Path to the NRRD file.
-    smoothing_iterations : int, optional
-        Number of iterations for Laplacian smoothing. The default is 10.
-    smoothing_lambda : float, optional
-        Lambda parameter for Laplacian smoothing. The default is 1.
-
-    Returns
-    -------
-    trimesh.base.Trimesh
-        A trimesh object representing the surface mesh.
+    Returns:
+        trimesh.Trimesh:
+            A 3D mesh in the same physical space as the input image.
     """
-    # Load mask
-    mask_array, spacing, origin, direction = load_nrrd_mask(nrrd_file_path)
+    # Get voxel data as a NumPy array
+    mask_array = sitk.GetArrayFromImage(sitk_mask)  # Shape: (Z, Y, X)
 
-    # Generate mesh
-    vertices, faces = generate_mesh_from_mask(mask_array, spacing)
-
-    # Transform vertices to physical space
-    vertices = np.dot(direction, vertices.T).T + origin
-
-    # Create a trimesh object
-    mesh = create_trimesh(vertices, faces)
-
-    # smooth the mesh
-    mesh = smooth_mesh(
-        mesh, iterations=smoothing_iterations, lambda_param=smoothing_lambda
+    # Extract surface mesh using Marching Cubes
+    verts, faces, normals, _ = skimage.measure.marching_cubes(
+        mask_array, level=level
     )
 
-    # Repair the mesh
-    mesh = repair_mesh(mesh, verbose=verbose)
+    # Convert voxel indices to physical coordinates
+    spacing = np.array(sitk_mask.GetSpacing())  # (X, Y, Z)
+    origin = np.array(sitk_mask.GetOrigin())  # (X, Y, Z)
+    direction = np.array(sitk_mask.GetDirection()).reshape(3, 3)  # 3x3 matrix
 
-    # Clean up the normals
-    mesh = ensure_normals_outward(mesh, verbose=verbose)
+    # Convert voxel indices to physical space
+    verts = verts[:, [2, 1, 0]]  # Convert (Z, Y, X) -> (X, Y, Z)
+    verts = verts * spacing  # Scale by spacing
+    verts = (
+        np.dot(direction, verts.T).T + origin
+    )  # Apply direction and shift by origin
 
-    # Export to a file
+    # Create a trimesh object
+    mesh = trimesh.Trimesh(vertices=verts, faces=faces, vertex_normals=normals)
+
+    if smooth_iters > 0:
+        mesh = trimesh.smoothing.filter_mut_dif_laplacian(
+            mesh, iterations=smooth_iters
+        )
+
     return mesh
