@@ -144,3 +144,30 @@ def plot_vector(a, pt, *args, **kwargs):
     """Plots a 3D point as a vector from the origin"""
     plt_pts = np.vstack([np.array([0, 0, 0]), pt])
     return a.plot(plt_pts[:, 0], plt_pts[:, 1], plt_pts[:, 2], *args, **kwargs)
+
+
+def rgb_2_hex(r, g, b):
+    """
+    rgb_2_hex(r, g, b) -> str
+
+    Converts an RGB color to a hex string
+    """
+    return "0x{:02x}{:02x}{:02x}".format(r, g, b)
+
+
+def rgb_2_int(r, g, b):
+    """
+    rgb_2_int(r, g, b) -> int
+    Converts an RGB color to an integer
+    """
+    hex_color = rgb_2_hex(r, g, b)
+    return int(hex_color.lstrip("#"), 16)
+
+
+def hex_2_int(hx):
+    """
+    hex_2_int(hx) -> int
+
+    Converts a hex color to an integer
+    """
+    return int(hx.lstrip("#"), 16)
