@@ -3,11 +3,16 @@
 Functions for optimizing volume fits.
 
 """
+
+import logging
+
 import numpy as np
 from scipy import optimize as opt
 
 from . import rotations as rot
 from .measurement import dist_point_to_line, dist_point_to_plane
+
+logger = logging.getLogger(__name__)
 
 headframe_hole_locations = {
     "0.1": {
@@ -234,7 +239,7 @@ def unpack_theta(T):
 
 def unpack_theta_to_homogeneous(T):
     """Helper function to unpack theta to a homogeneous transform."""
-    R_homog = rot.make_homogeneous_transform(unpack_theta(T))
+    R_homog = rot.make_homogeneous_transform(*unpack_theta(T))
     return R_homog
 
 
@@ -249,6 +254,7 @@ def optimize_transform_labeled_lines(
     maxfun=10000,
     normalize=False,
     gamma=None,
+    disp=0,
 ):
     """
     Function for optimizing a rigid transform on
@@ -284,6 +290,8 @@ def optimize_transform_labeled_lines(
     gamma : float, optional
         If value is passed, weight gamma corrected for that value.
         The default is None.
+    disp : int, optional
+        If 0, no output. If 1, output. The default is 0.
 
     Returns
     -------
@@ -306,9 +314,10 @@ def optimize_transform_labeled_lines(
         args=(pts1, pts2, positions, labels, weights),
         xtol=xtol,
         maxfun=maxfun,
+        disp=disp,
     )
 
-    print(T_frame)
+    logger.debug(T_frame)
     R_homog = unpack_theta_to_homogeneous(T_frame)
     return R_homog, T_frame
 
@@ -325,6 +334,7 @@ def optimize_transform_labeled_lines_with_plane(
     maxfun=10000,
     normalize=False,
     gamma=None,
+    disp=0,
 ):
     """
     Function for optimizing a rigid transform on
@@ -362,6 +372,8 @@ def optimize_transform_labeled_lines_with_plane(
     gamma : float, optional
         If value is passed, weight gamma corrected for that value.
         The default is None.
+    disp : int, optional
+        If 0, no output. If 1, output. The default is 0.
 
     Returns
     -------
@@ -379,6 +391,7 @@ def optimize_transform_labeled_lines_with_plane(
         args=(pts1, pts2, positions, labels, weights),
         xtol=xtol,
         maxfun=maxfun,
+        disp=disp,
     )
 
     output_b = opt.fmin(
@@ -387,6 +400,7 @@ def optimize_transform_labeled_lines_with_plane(
         args=(pts1, pts2, pts_for_line, positions, labels, weights),
         xtol=xtol,
         maxfun=maxfun,
+        disp=disp,
     )
 
     T_frame = output_b

@@ -57,10 +57,10 @@ def read_image(filename):
 
 
 def read_dicom(filename):
-    """
-    Reader to import Dicom file and convert to sitk image
-    See https://simpleitk.readthedocs.io/en/master/...
-        link_DicomSeriesReader_docs.html#lbl-dicom-series-reader
+    """Reader to import Dicom file and convert to sitk image
+
+    See
+    https://simpleitk.readthedocs.io/en/master/link_DicomSeriesReader_docs.html#lbl-dicom-series-reader
 
     Parameters
     ----------
