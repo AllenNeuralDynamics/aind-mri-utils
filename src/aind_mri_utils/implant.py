@@ -186,7 +186,7 @@ def fit_implant_to_mri(
     return rotation_matrix, translation
 
 
-def make_hole_seg_dict(implant_annotations):
+def make_hole_seg_dict(implant_annotations, fun: callable = lambda x: x):
     """
     Creates a dictionary mapping hole names to their segmented positions.
 
@@ -194,6 +194,9 @@ def make_hole_seg_dict(implant_annotations):
     ----------
     implant_annotations : numpy.ndarray
         An array containing the implant annotations.
+    fun : callable, optional
+        A function to apply to the positions of the segmented values, by
+        default the identity function.
 
     Returns
     -------
@@ -206,5 +209,5 @@ def make_hole_seg_dict(implant_annotations):
     hole_seg_dict = {}
     for hole_name, seg_val in implant_annotations_names.items():
         positions = find_points_equal_to(implant_annotations, seg_val)
-        hole_seg_dict[int(hole_name)] = positions
+        hole_seg_dict[int(hole_name)] = fun(positions)
     return hole_seg_dict
