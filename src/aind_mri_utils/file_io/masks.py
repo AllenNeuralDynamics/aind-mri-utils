@@ -8,9 +8,12 @@ Code was tested and modified by Yoni
 
 import numpy as np
 import SimpleITK as sitk
-import trimesh
-from pymeshfix import MeshFix
 import skimage.measure
+import trimesh
+
+from aind_mri_utils.sitk_volume import (
+    transform_sitk_indices_to_physical_points,
+)
 
 
 def load_nrrd_mask(file_path):
@@ -117,77 +120,6 @@ def ensure_normals_outward(mesh, verbose=True):
     return mesh
 
 
-# Smooth the mesh using Laplacian smoothing
-def smooth_mesh(mesh, iterations=10, lambda_param=0.5):
-    """
-    Smooth the mesh using Laplacian smoothing.
-
-    Parameters
-    ----------
-    mesh : trimesh.base.Trimesh
-        Input mesh.
-    iterations : int, optional
-        Number of iterations. The default is 10.
-    lambda_param : float, option
-        Number of iterations. The default is 10.
-
-    Returns
-    -------
-    trimesh.base.Trimesh
-        Smoothed mesh.
-    """
-    from trimesh.smoothing import filter_laplacian
-
-    smooth_mesh = mesh.copy()
-    filter_laplacian(smooth_mesh, lamb=lambda_param, iterations=iterations)
-    return smooth_mesh
-
-
-def repair_mesh(mesh, verbose=True):
-    """
-    repair_mesh(mesh)
-
-    Check if a mesh is watertight and repair it if necessary.
-
-    Parameters
-    ----------
-    mesh : trimesh.base.Trimesh
-        Input mesh.
-    verbose : bool, optional
-        If True, print messages. The default is True.
-
-    Returns
-    -------
-    trimesh.base.Trimesh
-        Repaired mesh.
-    """
-
-    # Check if the mesh is watertight
-    if mesh.is_watertight and verbose:
-        print("The mesh is already watertight.")
-    else:
-        if verbose:
-            print("The mesh is not watertight. Proceeding with repair...")
-
-        # Use PyMeshFix to repair the mesh
-        meshfix = MeshFix(mesh.vertices, mesh.faces)
-        meshfix.repair(
-            verbose=True, joincomp=True, remove_smallest_components=True
-        )
-
-        # Create a new trimesh object from the repaired mesh
-        mesh = trimesh.Trimesh(vertices=meshfix.v, faces=meshfix.f)
-
-        if verbose:
-            if mesh.is_watertight:
-                print("Mesh successfully repaired.")
-            else:
-                print(
-                    "Mesh repair failed. The mesh may still not be watertight."
-                )
-    return mesh
-
-
 def mask_to_trimesh(sitk_mask, level=0.5, smooth_iters=0):
     """
     Converts a SimpleITK binary mask into a 3D mesh in the same physical space.
@@ -206,24 +138,18 @@ def mask_to_trimesh(sitk_mask, level=0.5, smooth_iters=0):
     mask_array = sitk.GetArrayFromImage(sitk_mask)  # Shape: (Z, Y, X)
 
     # Extract surface mesh using Marching Cubes
-    verts, faces, normals, _ = skimage.measure.marching_cubes(
+    ndxs, faces, normals, _ = skimage.measure.marching_cubes(
         mask_array, level=level
     )
-
-    # Convert voxel indices to physical coordinates
-    spacing = np.array(sitk_mask.GetSpacing())  # (X, Y, Z)
-    origin = np.array(sitk_mask.GetOrigin())  # (X, Y, Z)
-    direction = np.array(sitk_mask.GetDirection()).reshape(3, 3)  # 3x3 matrix
+    ndxs_sitk = ndxs[:, ::-1]
 
     # Convert voxel indices to physical space
-    verts = verts[:, [2, 1, 0]]  # Convert (Z, Y, X) -> (X, Y, Z)
-    verts = verts * spacing  # Scale by spacing
-    verts = (
-        np.dot(direction, verts.T).T + origin
-    )  # Apply direction and shift by origin
+    vertices = transform_sitk_indices_to_physical_points(sitk_mask, ndxs_sitk)
 
     # Create a trimesh object
-    mesh = trimesh.Trimesh(vertices=verts, faces=faces, vertex_normals=normals)
+    mesh = trimesh.Trimesh(
+        vertices=vertices, faces=faces, vertex_normals=normals
+    )
 
     if smooth_iters > 0:
         mesh = trimesh.smoothing.filter_mut_dif_laplacian(
