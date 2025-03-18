@@ -146,28 +146,91 @@ def plot_vector(a, pt, *args, **kwargs):
     return a.plot(plt_pts[:, 0], plt_pts[:, 1], plt_pts[:, 2], *args, **kwargs)
 
 
-def rgb_2_hex(r, g, b):
-    """
-    rgb_2_hex(r, g, b) -> str
-
-    Converts an RGB color to a hex string
-    """
-    return "0x{:02x}{:02x}{:02x}".format(r, g, b)
-
-
 def rgb_2_int(r, g, b):
+    """Converts an RGB color to an integer.
+
+    Parameters
+    ----------
+    r : int
+        Red component of the color, must be in the range [0, 255].
+    g : int
+        Green component of the color, must be in the range [0, 255].
+    b : int
+        Blue component of the color, must be in the range [0, 255].
+
+    Returns
+    -------
+    int
+        The integer representation of the RGB color.
+
+    Raises
+    ------
+    ValueError
+        If any of the RGB values are not in the range [0, 255].
+
+    Examples
+    --------
+    >>> rgb_2_int(255, 0, 0)
+    16711680
+    >>> rgb_2_int(0, 255, 0)
+    65280
+    >>> rgb_2_int(0, 0, 255)
+    255
+
     """
-    rgb_2_int(r, g, b) -> int
-    Converts an RGB color to an integer
-    """
-    hex_color = rgb_2_hex(r, g, b)
-    return int(hex_color.lstrip("#"), 16)
+    out = 0
+    for i, v in enumerate((b, g, r)):
+        if v < 0 or v > 255:
+            raise ValueError(
+                f"RGB values must be in the range [0, 255], got {v}"
+            )
+        out |= v << (8 * i)
+    return out
 
 
-def hex_2_int(hx):
-    """
-    hex_2_int(hx) -> int
+def rgb_to_hex_string(r, g, b):
+    """Converts an RGB color to a hex string.
 
-    Converts a hex color to an integer
+    Parameters
+    ----------
+    r : int
+        Red component of the color (0-255).
+    g : int
+        Green component of the color (0-255).
+    b : int
+        Blue component of the color (0-255).
+
+    Returns
+    -------
+    str
+        Hexadecimal string representation of the color.
+
+    """
+    color_int = rgb_2_int(r, g, b)
+    return "0x{0:06X}".format(color_int)
+
+
+def hex_string_2_int(hx):
+    """Converts a hex color string to an integer.
+
+    Parameters
+    ----------
+    hx : str
+        Hexadecimal string representation of the color.
+
+    Returns
+    -------
+    int
+        The integer representation of the hex color.
+
+    Examples
+    --------
+    >>> hex_string_2_int("#FF0000")
+    16711680
+    >>> hex_string_2_int("0x00FF00")
+    65280
+    >>> hex_string_2_int("0000FF")
+    255
+
     """
     return int(hx.lstrip("#"), 16)
