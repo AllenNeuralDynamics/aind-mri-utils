@@ -621,6 +621,9 @@ def compose_transforms(R_1, translation_1, *args):
     """
     Compose a series of rotation matrices and translation vectors.
 
+    The first transformation is applied first, followed by the second
+    transform, and so on.
+
     Parameters
     ----------
     R_1 : numpy.ndarray
@@ -629,10 +632,9 @@ def compose_transforms(R_1, translation_1, *args):
         The initial translation vector.
     *args : tuple
         Additional rotation matrices and translation vectors. Must be provided
-        in pairs (R_2, translation_2, ...). The rotation matrix R_1 is applied
-        first, followed by the rotation matrix R_2, and so on. The translation
-        vector translation_1 is applied first, followed by the translation
-        vector translation_2, and so on.
+        in pairs (R_2, translation_2, ...). The first transform defined by R_1
+        and translation_1 is applied first, followed by the R_2 and
+        translation_2, R_2,and so on.
 
     Returns
     -------
