@@ -4,9 +4,14 @@ Functions for Loading and manipulating meshes during insertion planning.
 """
 
 import numpy as np
+import SimpleITK as sitk
 import trimesh
+from skimage.measure import marching_cubes
 
 from aind_mri_utils.rotations import make_homogeneous_transform
+from aind_mri_utils.sitk_volume import (
+    transform_sitk_indices_to_physical_points,
+)
 
 
 def as_mesh(scene_or_mesh):
@@ -209,3 +214,63 @@ def distance_to_closest_point_for_each_triangle_in_mesh(
     if normalize:
         distances = distances / len(triangles)
     return distances, nearest_points
+
+
+def ensure_normals_outward(mesh, verbose=True):
+    """
+    Ensure normals point outward.
+
+    Parameters
+    ----------
+    mesh : trimesh.base.Trimesh
+        Input mesh.
+
+    Returns
+    -------
+    trimesh.base.Trimesh
+        Mesh with outward-pointing normals.
+    """
+    if not mesh.is_watertight and verbose:
+        print(
+            "Warning: Mesh is not watertight. "
+            "Normal orientation may not be reliable."
+        )
+    mesh.fix_normals()
+    return mesh
+
+
+def mask_to_trimesh(sitk_mask, level=0.5, smooth_iters=0):
+    """
+    Converts a SimpleITK binary mask into a 3D mesh in the same physical space.
+
+    Parameters:
+        sitk_mask (sitk.Image): A 3D SimpleITK binary mask image.
+        level (float): The threshold value for the marching cubes algorithm.
+        smooth_iters (int): Number of iterations for mesh smoothing. If zero,
+            no smoothing is applied.
+
+    Returns:
+        trimesh.Trimesh:
+            A 3D mesh in the same physical space as the input image.
+    """
+    # Get voxel data as a NumPy array
+    mask_array = sitk.GetArrayViewFromImage(sitk_mask)  # Shape: (Z, Y, X)
+
+    # Extract surface mesh using Marching Cubes
+    ndxs, faces, normals, _ = marching_cubes(mask_array, level=level)
+    ndxs_sitk = ndxs[:, ::-1]
+
+    # Convert voxel indices to physical space
+    vertices = transform_sitk_indices_to_physical_points(sitk_mask, ndxs_sitk)
+
+    # Create a trimesh object
+    mesh = trimesh.Trimesh(
+        vertices=vertices, faces=faces, vertex_normals=normals
+    )
+
+    if smooth_iters > 0:
+        mesh = trimesh.smoothing.filter_mut_dif_laplacian(
+            mesh, iterations=smooth_iters
+        )
+
+    return mesh
