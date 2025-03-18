@@ -146,7 +146,7 @@ def plot_vector(a, pt, *args, **kwargs):
     return a.plot(plt_pts[:, 0], plt_pts[:, 1], plt_pts[:, 2], *args, **kwargs)
 
 
-def rgb_2_int(r, g, b):
+def rgb_to_int(r, g, b):
     """Converts an RGB color to an integer.
 
     Parameters
@@ -206,11 +206,11 @@ def rgb_to_hex_string(r, g, b):
         Hexadecimal string representation of the color.
 
     """
-    color_int = rgb_2_int(r, g, b)
+    color_int = rgb_to_int(r, g, b)
     return "0x{0:06X}".format(color_int)
 
 
-def hex_string_2_int(hx):
+def hex_string_to_int(hx):
     """Converts a hex color string to an integer.
 
     Parameters
