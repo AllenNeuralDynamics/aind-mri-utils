@@ -795,13 +795,13 @@ def _debug_print_pt_err(reticle, probe, predicted_probe, err, decimals=3):
     rounded_probe = np.round(probe, decimals=decimals)
     rounded_pred = np.round(predicted_probe, decimals=decimals)
     logger.debug(
-        f"\tReticle {rounded_reticle} -> "
+        f"Reticle {rounded_reticle} -> "
         f"Probe {rounded_probe}: predicted {rounded_pred} "
         f"error {err:.2f} µm"
     )
 
 
-def _debug_print_err_stats(name, errs):
+def _debug_print_err_stats(errs):
     """
     Print error statistics for a probe.
 
@@ -813,8 +813,7 @@ def _debug_print_err_stats(name, errs):
         The array of error values.
     """
     logger.debug(
-        f"Probe {name}: mean error {errs.mean():.2f} µm, "
-        f"max error {errs.max():.2f} µm"
+        f"mean error {errs.mean():.2f} µm, max error {errs.max():.2f} µm"
     )
 
 
@@ -846,13 +845,18 @@ def _debug_fits(
     """
     errs_by_probe = {}
     for probe, (bregma_pts, probe_pts) in adjusted_pairs_by_probe.items():
-        R, t = cal_by_probe[probe][0:2]
+        R, t, scaling = cal_by_probe[probe]
         predicted_probe_pts = transform_bregma_to_probe(bregma_pts, R, t)
         # in mm
         errs = np.linalg.norm(predicted_probe_pts - probe_pts, axis=1)
         errs_by_probe[probe] = errs
         if logger.isEnabledFor(logging.DEBUG):
-            _debug_print_err_stats(probe, 1000 * errs)
+            logger.debug(f"Probe {probe}:")
+            logger.debug("rotation:")
+            logger.debug(R)
+            logger.debug(f"translation: {t}")
+            logger.debug(f"scaling: {scaling}")
+            _debug_print_err_stats(1000 * errs)
             reticle_pts = transform_probe_to_bregma(
                 bregma_pts, R_reticle_to_bregma, t_reticle_to_bregma
             )
