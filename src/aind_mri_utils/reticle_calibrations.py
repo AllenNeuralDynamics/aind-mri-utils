@@ -759,8 +759,6 @@ def fit_rotation_params_from_parallax(
         millimeters.
     R_reticle_to_bregma : numpy.ndarray
         Rotation matrix from reticle to bregma coordinates, in millimeters.
-    t_reticle_to_bregma : float
-        Translation vector from reticle to bregma coordinates, in millimeters.
     """
     adjusted_pairs_by_probe = read_parallax_calibration_dir_and_correct(
         parallax_calibration_dir,
