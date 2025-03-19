@@ -1254,6 +1254,9 @@ def combine_parallax_and_manual_calibrations(
     manual_calibration_files,
     parallax_directories,
     probes_to_ignore_manual=[],
+    find_scaling=None,
+    find_scaling_parallax=None,
+    find_scaling_manual=None,
     *args,
     **kwargs,
 ):
@@ -1272,6 +1275,18 @@ def combine_parallax_and_manual_calibrations(
     probes_to_ignore_manual : list of str, optional
         List of probe names to ignore from the manual calibrations, by default
         [].
+    find_scaling : bool, optional
+        If True, find a scaling factor to apply to the calibration data, by
+        default None, which means the default behavior in the fit function is
+        used.
+    find_scaling_parallax : bool, optional
+        If True, find a scaling factor to apply to the parallax calibration
+        data, by default None, which means the default behavior in the fit
+        function is used. Overrides `find_scaling` if not None.
+    find_scaling_manual : bool, optional
+        If True, find a scaling factor to apply to the manual calibration data,
+        by default None, which means the default behavior in the fit function
+        is used. Overrides `find_scaling` if not None.
     *args : tuple
         Additional positional arguments to pass to the fitting functions.
     **kwargs : dict
@@ -1307,16 +1322,28 @@ def combine_parallax_and_manual_calibrations(
     R_reticle_to_bregma = reticle_metadata_transform(global_rotation_degrees)
 
     # Fit the manual calibrations
+    manual_scaling_kwargs = {
+        "find_scaling": v
+        for v in [find_scaling, find_scaling_manual]
+        if v is not None
+    }
     cal_by_probe_manual = _fit_by_probe(
         adjusted_pairs_by_probe, *args, **kwargs
     )
+    comb_kwargs = {**manual_scaling_kwargs, **kwargs}
     for manual_calibration_file in manual_calibration_files[1:]:
         cal_by_probe, _, _ = fit_rotation_params_from_manual_calibration(
-            manual_calibration_file, *args, **kwargs
+            manual_calibration_file, *args, **comb_kwargs
         )
         cal_by_probe_manual.update(cal_by_probe)
 
     # Fit the parallax calibrations
+    parallax_scaling_kwargs = {
+        "find_scaling": v
+        for v in [find_scaling, find_scaling_parallax]
+        if v is not None
+    }
+    comb_kwargs = {**parallax_scaling_kwargs, **kwargs}
     cal_by_probe_combined = {}
     for parallax_dir in parallax_directories:
         cal_by_probe, _ = fit_rotation_params_from_parallax(
@@ -1324,7 +1351,7 @@ def combine_parallax_and_manual_calibrations(
             global_offset,
             global_rotation_degrees,
             *args,
-            **kwargs,
+            **comb_kwargs,
         )
         cal_by_probe_combined.update(cal_by_probe)
 
@@ -1342,6 +1369,9 @@ def debug_parallax_and_manual_calibrations(
     manual_calibration_files,
     parallax_directories,
     probes_to_ignore_manual=[],
+    find_scaling=None,
+    find_scaling_parallax=None,
+    find_scaling_manual=None,
     local_scale_factor=1 / 1000,
     global_scale_factor=1 / 1000,
     *args,
@@ -1362,6 +1392,18 @@ def debug_parallax_and_manual_calibrations(
     probes_to_ignore_manual : list of str, optional
         List of probe names to ignore from the manual calibration data, by
         default [].
+    find_scaling : bool, optional
+        If True, find a scaling factor to apply to the calibration data, by
+        default None, which means the default behavior in the fit function is
+        used.
+    find_scaling_parallax : bool, optional
+        If True, find a scaling factor to apply to the parallax calibration
+        data, by default None, which means the default behavior in the fit
+        function is used. Overrides `find_scaling` if not None.
+    find_scaling_manual : bool, optional
+        If True, find a scaling factor to apply to the manual calibration data,
+        by default None, which means the default behavior in the fit function
+        is used. Overrides `find_scaling` if not None.
     local_scale_factor : float, optional
         Local scale factor to apply to the calibration data, by default
         1 / 1000.
@@ -1396,10 +1438,17 @@ def debug_parallax_and_manual_calibrations(
     # Fit the manual calibrations
     manual_cal_by_probe = {}
     manual_pairs_by_probe = {}
+
+    manual_scaling_kwargs = {
+        "find_scaling": v
+        for v in [find_scaling, find_scaling_manual]
+        if v is not None
+    }
+    comb_kwargs = {**manual_scaling_kwargs, **kwargs}
     for filename in manual_calibration_files:
         cal_by_probe, R_reticle_to_bregma, t_reticle_to_bregma = (
             fit_rotation_params_from_manual_calibration(
-                filename, *args, **kwargs
+                filename, *args, **comb_kwargs
             )
         )
         manual_cal_by_probe.update(cal_by_probe)
@@ -1410,6 +1459,13 @@ def debug_parallax_and_manual_calibrations(
             _,
         ) = read_manual_reticle_calibration(filename)
         manual_pairs_by_probe.update(adjusted_pairs_by_probe)
+
+    parallax_scaling_kwargs = {
+        "find_scaling": v
+        for v in [find_scaling, find_scaling_parallax]
+        if v is not None
+    }
+    comb_kwargs = {**parallax_scaling_kwargs, **kwargs}
     combined_cal_by_probe = {}
     combined_pairs_by_probe = {}
     for parallax_dir in parallax_directories:
@@ -1421,7 +1477,7 @@ def debug_parallax_and_manual_calibrations(
             global_scale_factor,
         )
         combined_cal_by_probe.update(
-            _fit_by_probe(adjusted_pairs_by_probe, *args, **kwargs)
+            _fit_by_probe(adjusted_pairs_by_probe, *args, **comb_kwargs)
         )
         combined_pairs_by_probe.update(adjusted_pairs_by_probe)
     for probe_name in probes_to_ignore_manual:
