@@ -1245,10 +1245,7 @@ def _validate_combined_calibration_inputs(
             raise ValueError("No manual calibration files provided")
     else:
         manual_calibration_files = [manual_calibration_files]
-    if isinstance(parallax_directories, list):
-        if len(parallax_directories) == 0:
-            raise ValueError("No parallax directories provided")
-    else:
+    if not isinstance(parallax_directories, list):
         parallax_directories = [parallax_directories]
     return manual_calibration_files, parallax_directories
 
