@@ -3,11 +3,14 @@
 Functions for Loading and manipulating meshes during insertion planning.
 """
 
+import warnings
+
 import numpy as np
 import SimpleITK as sitk
 import trimesh
 from skimage.measure import marching_cubes
 
+from aind_mri_utils.coordinate_systems import convert_coordinate_system
 from aind_mri_utils.rotations import make_homogeneous_transform
 from aind_mri_utils.sitk_volume import (
     transform_sitk_indices_to_physical_points,
@@ -42,15 +45,40 @@ def as_mesh(scene_or_mesh):
 def load_newscale_trimesh(
     filename,
     move_down=0,
+    src_coordinate_system="LSA",
+    dst_coordinate_system="LPS",
 ):
-    """
-    Load a newscale model mesh
+    """Load a newscale model mesh.
 
+    Parameters
+    ----------
+    filename : str
+        Path to the mesh file.
+    move_down : float, optional
+        Amount to move the mesh down along the z-axis, by default 0.
+        DEPRECATED: use apply_transform_to_trimesh instead.
+    src_coordinate_system : str, optional
+        Source coordinate system, by default "LSA".
+    dst_coordinate_system : str, optional
+        Destination coordinate system, by default "LPS".
+
+    Returns
+    -------
+    trimesh.Trimesh
+        The loaded and transformed mesh.
     """
     mesh = trimesh.load_mesh(filename)
     mesh = as_mesh(mesh)
-    mesh.vertices = mesh.vertices[:, [0, 2, 1]]  # Should be made into params.
-    mesh.vertices[:, 2] = mesh.vertices[:, 2] - move_down
+    new_vertices = convert_coordinate_system(
+        mesh.vertices, src_coordinate_system, dst_coordinate_system
+    )
+    if move_down != 0:
+        warnings.warn(
+            "move_down is deprecated, use apply_transform_to_trimesh instead",
+            category=DeprecationWarning,
+        )
+        new_vertices[:, 2] = new_vertices[:, 2] - move_down
+    mesh.vertices = new_vertices
     # Repair broken stuff from bad blender-ing
     trimesh.repair.broken_faces(mesh)
     trimesh.repair.fix_normals(mesh)
@@ -254,7 +282,7 @@ def mask_to_trimesh(sitk_mask, level=0.5, smooth_iters=0):
             A 3D mesh in the same physical space as the input image.
     """
     # Get voxel data as a NumPy array
-    mask_array = sitk.GetArrayViewFromImage(sitk_mask)  # Shape: (Z, Y, X)
+    mask_array = sitk.GetArrayFromImage(sitk_mask)  # Shape: (Z, Y, X)
 
     # Extract surface mesh using Marching Cubes
     ndxs, faces, normals, _ = marching_cubes(mask_array, level=level)
