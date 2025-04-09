@@ -6,12 +6,12 @@ import numpy as np
 from numpy import linalg
 
 
-def skew_symmetric_cross_product_matrix(v):
+def skew_symmetric_cross_product_matrix(v: np.ndarray) -> np.ndarray:
     """Find the cross product matrix for a vector v"""
     return np.cross(v, np.identity(v.shape[0]) * -1)
 
 
-def norm_vec(vec):
+def norm_vec(vec: np.ndarray) -> np.ndarray:
     """Normalize input vector"""
     n = np.linalg.norm(vec)
     if n == 0:
@@ -19,7 +19,7 @@ def norm_vec(vec):
     return vec / n
 
 
-def vector_rejection(v, n):
+def vector_rejection(v: np.ndarray, n: np.ndarray) -> np.ndarray:
     """Find the component of v orthogonal to n"""
     ndim = n.size
     nn = norm_vec(n)
@@ -27,7 +27,12 @@ def vector_rejection(v, n):
     return v - vn
 
 
-def mask_arr_by_annotations(arr, anno_arr, seg_vals, default_val=0):
+def mask_arr_by_annotations(
+    arr: np.ndarray,
+    anno_arr: np.ndarray,
+    seg_vals: np.ndarray,
+    default_val: float = 0,
+) -> np.ndarray:
     """Sets entries of arr to default_val if anno_arr not in target set
 
     This function will return a copy of `arr` where the output is either
@@ -40,7 +45,7 @@ def mask_arr_by_annotations(arr, anno_arr, seg_vals, default_val=0):
         Array that will be masked
     anno_arr : numpy.ndarray
         Array same size as `arr` that assigns each element to a segment
-    seg_vals : set like
+    seg_vals : numpy.ndarray
         Set of values that anno_arr will be compared to
     default_val : number
         value of output array if anno_arr is not in seg_vals, default = 0.
@@ -58,19 +63,19 @@ def mask_arr_by_annotations(arr, anno_arr, seg_vals, default_val=0):
     return masked_arr
 
 
-def find_indices_equal_to(arr, v):
+def find_indices_equal_to(arr: np.ndarray, v: float) -> np.ndarray:
     """Find array indices equal to v"""
     return np.column_stack(np.nonzero(arr == v))
 
 
-def get_first_pca_axis(pts):
+def get_first_pca_axis(pts: np.ndarray) -> np.ndarray:
     """Find first PC of points"""
     centered = pts - np.mean(pts, axis=0)[np.newaxis, :]
     _, _, vh = linalg.svd(centered, full_matrices=False)
     return vh[0, :]
 
 
-def signed_angle_rh(a, b, n):
+def signed_angle_rh(a: np.ndarray, b: np.ndarray, n: np.ndarray) -> float:
     """find right-handed angle between two vectors
     Find the right-handled angle between a and b in the plane normal to n,
     by rotating a to b
@@ -101,7 +106,7 @@ def signed_angle_rh(a, b, n):
     return math.atan2(np.dot(np.cross(a, b), vn), np.dot(a, b))
 
 
-def signed_angle_lh(a, b, n):
+def signed_angle_lh(a: np.ndarray, b: np.ndarray, n: np.ndarray) -> float:
     """find left-handed angle between two vectors
 
     See `signed_angle_rh`
@@ -109,7 +114,7 @@ def signed_angle_lh(a, b, n):
     return signed_angle_rh(b, a, n)
 
 
-def unsigned_angle(a, b):
+def unsigned_angle(a: np.ndarray, b: np.ndarray) -> float:
     """
     Calculate the unsigned angle between two vectors.
 

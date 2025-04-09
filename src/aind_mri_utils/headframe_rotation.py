@@ -3,6 +3,8 @@ Code to find the rotation matrix to align a headframe to a set of holes.
 """
 
 import itertools as itr
+from collections.abc import Iterable
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import SimpleITK as sitk
@@ -45,7 +47,9 @@ def_hole_order = dict(
 )
 
 
-def get_segmentation_pca(seg_img, seg_vals):
+def get_segmentation_pca(
+    seg_img: sitk.Image, seg_vals: Iterable[int]
+) -> np.ndarray:
     """Finds first pca axis of segmentation for segments in set seg_vals
 
     For each value in seg_vals, this will find the indices of seg_arr equal to
@@ -54,14 +58,16 @@ def get_segmentation_pca(seg_img, seg_vals):
 
     Parameters
     ---------
-    seg_arr : SimpleITK.Image
+    seg_img : SimpleITK.Image
         Array with annotation values in each index
-    seg_vals : iterable
+    seg_vals : list
         Set of values that each element of seg_arr will be compared to.
 
     Returns
     -------
-    pc_axis : first pc axis of the indices separately centered for each
+    pc_axis : np.ndarray
+        First principal component axis of the indices separately centered for
+        each
     """
     # Centers each segmentation value separately
     centered = []
@@ -74,8 +80,12 @@ def get_segmentation_pca(seg_img, seg_vals):
 
 
 def slices_centers_of_mass(
-    img, seg_img, axis_dim, seg_val, slice_seg_thresh=1
-):
+    img: sitk.Image,
+    seg_img: sitk.Image,
+    axis_dim: int,
+    seg_val: int,
+    slice_seg_thresh: int = 1,
+) -> np.ndarray:
     """Finds the center of mass of image slices along array dimension
 
     Iterates through `img` along dimension `axis_dim`, finds how many elements
@@ -132,7 +142,9 @@ def slices_centers_of_mass(
     return com
 
 
-def find_hole(img, seg_img, seg_val, sel_ndxs):
+def find_hole(
+    img: sitk.Image, seg_img: sitk.Image, seg_val: int, sel_ndxs: Iterable[int]
+) -> Optional[np.ndarray]:
     """Find the center of a hole based on its segmentation value
 
     sel_ndxs is in sitk axis order!
@@ -162,22 +174,22 @@ def find_hole(img, seg_img, seg_val, sel_ndxs):
 
 
 def find_holes_by_orientation(
-    img,
-    seg_img,
-    seg_vals_dict,
-    orient_indices=def_orient_indices,
-    orient_names=def_orient_names,
-    ap_names=def_ap_names,
-):
+    img: sitk.Image,
+    seg_img: sitk.Image,
+    seg_vals_dict: Dict[str, Dict[str, int]],
+    orient_indices: Dict[str, List[int]] = def_orient_indices,
+    orient_names: Iterable[str] = def_orient_names,
+    ap_names: Iterable[str] = def_ap_names,
+) -> Dict[str, Dict[str, np.ndarray]]:
     """
     Find holes in an image by different orientations and anterior-posterior
     names.
 
     Parameters
     ----------
-    img : ndarray
+    img : SimpleITK.Image
         The original image in which holes need to be found.
-    seg_img : ndarray
+    seg_img : SimpleITK.Image
         The segmented image that identifies different regions.
     seg_vals_dict : dict
         A dictionary where keys are orientation names and values are
@@ -205,7 +217,9 @@ def find_holes_by_orientation(
     names to find the holes in the image using the `find_hole` function. The
     centers of the found holes are returned in a nested dictionary structure.
     """
-    found_centers = {orient: dict() for orient in orient_names}
+    found_centers: Dict[str, Dict[str, np.ndarray]] = {
+        orient: dict() for orient in orient_names
+    }
     for orient in orient_names:
         for ap in ap_names:
             if ap in seg_vals_dict[orient]:
@@ -221,12 +235,12 @@ def find_holes_by_orientation(
 
 
 def find_hole_angles(
-    centers_dict,
-    hole_order=def_hole_order,
-    orient_comparison_axis=def_orient_comparison_axes,
-    orient_axis_dict=def_orient_axes_dict,
-    orient_names=def_orient_names,
-):
+    centers_dict: Dict[str, Dict[str, np.ndarray]],
+    hole_order: Dict[str, List[str]] = def_hole_order,
+    orient_comparison_axis: Dict[str, np.ndarray] = def_orient_comparison_axes,
+    orient_axis_dict: Dict[str, np.ndarray] = def_orient_axes_dict,
+    orient_names: Iterable[str] = def_orient_names,
+) -> Dict[str, float]:
     """
     Calculate angles between holes for each orientation.
 
@@ -268,7 +282,9 @@ def find_hole_angles(
     return centers_ang
 
 
-def estimate_hole_axis_from_segmentation(seg_img, seg_vals, reference_axis):
+def estimate_hole_axis_from_segmentation(
+    seg_img: sitk.Image, seg_vals: Iterable[int], reference_axis: np.ndarray
+) -> np.ndarray:
     """
     Estimate the axis of a hole from segmentation values.
 
@@ -295,12 +311,12 @@ def estimate_hole_axis_from_segmentation(seg_img, seg_vals, reference_axis):
 
 
 def estimate_hole_axes_from_segmentation_by_orientation(
-    seg_img,
-    seg_val_dict,
-    orient_axes_dict=def_orient_axes_dict,
-    orient_names=def_orient_names,
-    ap_names=def_ap_names,
-):
+    seg_img: sitk.Image,
+    seg_val_dict: dict,
+    orient_axes_dict: dict = def_orient_axes_dict,
+    orient_names: Iterable[str] = def_orient_names,
+    ap_names: Iterable[str] = def_ap_names,
+) -> dict:
     """
     Estimate hole axes from segmentation by orientation.
 
@@ -336,15 +352,15 @@ def estimate_hole_axes_from_segmentation_by_orientation(
 
 
 def calculate_centers_of_mass_for_image_and_segmentation(
-    img,
-    seg_img,
-    initial_axes,
-    seg_vals_dict,
-    orient_axes_dict=def_orient_axes_dict,
-    orient_names=def_orient_names,
-    ap_names=def_ap_names,
-    slice_seg_thresh=1,
-):
+    img: sitk.Image,
+    seg_img: sitk.Image,
+    initial_axes: Dict[str, np.ndarray],
+    seg_vals_dict: Dict[str, Dict[str, int]],
+    orient_axes_dict: Dict[str, np.ndarray] = def_orient_axes_dict,
+    orient_names: Iterable[str] = def_orient_names,
+    ap_names: Iterable[str] = def_ap_names,
+    slice_seg_thresh: int = 1,
+) -> Dict[str, Dict[str, np.ndarray]]:
     """
     Calculate centers of mass for image and segmentation.
 
@@ -375,7 +391,7 @@ def calculate_centers_of_mass_for_image_and_segmentation(
         Nested dictionary of Nx3 NDArray centers of mass for each orientation
         and anterior-posterior name.
     """
-    coms = dict()
+    coms: Dict[str, Dict[str, np.ndarray]] = dict()
     for orient in orient_names:
         coms[orient] = dict()
         axis_dim = np.nonzero(orient_axes_dict[orient])[0][0]
@@ -405,11 +421,11 @@ def calculate_centers_of_mass_for_image_and_segmentation(
 
 
 def estimate_axis_rotations_from_centers_of_mass(
-    coms,
-    orient_axes_dict=def_orient_axes_dict,
-    orient_names=def_orient_names,
-    ap_names=def_ap_names,
-):
+    coms: Dict[str, Dict[str, np.ndarray]],
+    orient_axes_dict: Dict[str, np.ndarray] = def_orient_axes_dict,
+    orient_names: Iterable[str] = def_orient_names,
+    ap_names: Iterable[str] = def_ap_names,
+) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
     """
     Estimate axis rotations from centers of mass.
 
@@ -432,8 +448,8 @@ def estimate_axis_rotations_from_centers_of_mass(
     axes : dict
         Dictionary of 3 element vector axes for each orientation.
     """
-    orient_rotation_matrices = {orient: dict() for orient in orient_names}
-    axes = dict()
+    orient_rotation_matrices: Dict[str, np.ndarray] = dict()
+    axes: Dict[str, np.ndarray] = dict()
     for orient in orient_names:
         # center the coms for each segment separately
         # and find the axis for this orientation
@@ -464,20 +480,20 @@ def estimate_axis_rotations_from_centers_of_mass(
 
 
 def find_rotation_to_match_hole_angles(
-    img,
-    seg_img,
-    initial_orient_rotation_matrices,
-    axes,
-    seg_vals_dict,
-    design_centers=def_design_centers,
-    orient_axes_dict=def_orient_axes_dict,
-    orient_names=def_orient_names,
-    ap_names=def_ap_names,
-    orient_indices=def_orient_indices,
-    hole_order=def_hole_order,
-    orient_comparison_axis=def_orient_comparison_axes,
-    n_iter=10,
-):
+    img: sitk.Image,
+    seg_img: sitk.Image,
+    initial_orient_rotation_matrices: Dict[str, np.ndarray],
+    axes: Dict[str, np.ndarray],
+    seg_vals_dict: Dict[str, Dict[str, int]],
+    design_centers: Dict[str, Dict[str, np.ndarray]] = def_design_centers,
+    orient_axes_dict: Dict[str, np.ndarray] = def_orient_axes_dict,
+    orient_names: Iterable[str] = def_orient_names,
+    ap_names: Iterable[str] = def_ap_names,
+    orient_indices: Dict[str, List[int]] = def_orient_indices,
+    hole_order: Dict[str, List[str]] = def_hole_order,
+    orient_comparison_axis: Dict[str, np.ndarray] = def_orient_comparison_axes,
+    n_iter: int = 10,
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Find rotation matrix to match hole angles.
 
@@ -520,7 +536,7 @@ def find_rotation_to_match_hole_angles(
     translation : ndarray
         Offsets to align img with design centers.
     """
-    nhole = np.prod([len(x) for x in (orient_names, ap_names)])
+    nhole = np.prod([len(x) for x in (orient_names, ap_names)])  # type: ignore
     # Start measuring hole location and orientation using the estimated set of
     # axes
     bases = np.zeros((3, 3))
@@ -639,13 +655,13 @@ def find_rotation_to_match_hole_angles(
 
 
 def estimate_coms_from_image_and_segmentation(
-    img,
-    seg_img,
-    seg_vals_dict,
-    orient_names=def_orient_names,
-    ap_names=def_ap_names,
-    orient_axes_dict=def_orient_axes_dict,
-):
+    img: sitk.Image,
+    seg_img: sitk.Image,
+    seg_vals_dict: Dict[str, Dict[str, int]],
+    orient_names: Iterable[str] = def_orient_names,
+    ap_names: Iterable[str] = def_ap_names,
+    orient_axes_dict: Dict[str, np.ndarray] = def_orient_axes_dict,
+) -> Dict[str, Dict[str, np.ndarray]]:
     """
     Estimate centers of mass (COMs) from image and segmentation.
 
@@ -662,12 +678,9 @@ def estimate_coms_from_image_and_segmentation(
     ap_names : tuple of str, optional
         Tuple of anterior-posterior names, by default
         ("anterior", "posterior").
-    lps_axes : dict, optional
+    orient_axes_dict : dict, optional
         Dictionary of LPS axes, by default dict(ap=np.array([0, 1, 0]),
         dv=np.array([0, 0, 1]), ml=np.array([1, 0, 0])).
-    hole_orient_axis : dict, optional
-        Dictionary of hole orientation axes, by default dict(horizontal="ap",
-        vertical="dv").
 
     Returns
     -------
@@ -693,18 +706,20 @@ def estimate_coms_from_image_and_segmentation(
 
 
 def estimate_rotation_and_coms_from_image_and_segmentation(
-    img,
-    seg_img,
-    seg_vals_dict,
-    orient_names=def_orient_names,
-    ap_names=def_ap_names,
-    orient_comparison_axis=def_orient_comparison_axes,
-    design_centers=def_design_centers,  # Bregma-relative mms (LPS)
-    orient_indices=def_orient_indices,
-    hole_order=def_hole_order,
-    orient_axes_dict=def_orient_axes_dict,
-    n_iter=10,
-):
+    img: sitk.Image,
+    seg_img: sitk.Image,
+    seg_vals_dict: Dict[str, Dict[str, int]],
+    orient_names: Iterable[str] = def_orient_names,
+    ap_names: Iterable[str] = def_ap_names,
+    orient_comparison_axis: Dict[str, np.ndarray] = def_orient_comparison_axes,
+    design_centers: Dict[
+        str, Dict[str, np.ndarray]
+    ] = def_design_centers,  # Bregma-relative mms (LPS)
+    orient_indices: Dict[str, List[int]] = def_orient_indices,
+    hole_order: Dict[str, List[str]] = def_hole_order,
+    orient_axes_dict: Dict[str, np.ndarray] = def_orient_axes_dict,
+    n_iter: int = 10,
+) -> Tuple[Dict[str, Dict[str, np.ndarray]], np.ndarray, np.ndarray]:
     """
     Estimate rotation and centers of mass (COMs) from image and segmentation.
 
@@ -789,12 +804,12 @@ def estimate_rotation_and_coms_from_image_and_segmentation(
 
 
 def make_segment_dict(
-    segment_info,
-    segment_format=None,
-    ap_names=def_ap_names,
-    orient_names=def_orient_names,
-    ignore_list=[],
-):
+    segment_info: Dict[str, Any],
+    segment_format: Optional[str] = None,
+    ap_names: Iterable[str] = def_ap_names,
+    orient_names: Iterable[str] = def_orient_names,
+    ignore_list: Iterable[str] = [],
+) -> Dict[str, Dict[str, int]]:
     """
     Create a dictionary of segment values based on the provided segment
     information.
@@ -823,7 +838,7 @@ def make_segment_dict(
     """
     if segment_format is None:
         segment_format = "{}_{}"
-    seg_vals = dict()
+    seg_vals: Dict[str, Dict[str, int]] = dict()
     ignore_set = set(ignore_list)
     for orient in orient_names:
         seg_vals[orient] = dict()
@@ -835,18 +850,18 @@ def make_segment_dict(
 
 
 def segment_dict_from_seg_odict(
-    seg_odict,
-    segment_format=None,
-    ap_names=def_ap_names,
-    orient_names=def_orient_names,
-    ignore_list=[],
-):
+    seg_odict: Dict[str, Any],
+    segment_format: Optional[str] = None,
+    ap_names: Iterable[str] = def_ap_names,
+    orient_names: Iterable[str] = def_orient_names,
+    ignore_list: Iterable[str] = [],
+) -> Dict[str, Dict[str, int]]:
     """
     Create a dictionary of segments from a segmentation ordered dictionary.
 
     Parameters
     ----------
-    seg_odict : OrderedDict
+    seg_odict : dict
         The segmentation ordered dictionary.
     segment_format : str, optional
         The format of the segment names. Defaults to None.
@@ -854,6 +869,8 @@ def segment_dict_from_seg_odict(
         The list of anatomical plane names. Defaults to def_ap_names.
     orient_names : list, optional
         The list of orientation names. Defaults to def_orient_names.
+    ignore_list : list, optional
+        The list of segment names to ignore. Defaults to an empty list.
 
     Returns
     -------
@@ -877,7 +894,7 @@ def segment_dict_from_seg_odict(
     return segment_dict
 
 
-def _compress_each(mask, *args):
+def _compress_each(mask: Iterable[bool], *args: Iterable) -> List[Tuple]:
     """
     Compresses each iterable in `*args` using `mask`.
 
@@ -905,19 +922,19 @@ def _compress_each(mask, *args):
 
 
 def find_hf_rotation_from_seg_and_lowerplane(
-    img,
-    seg_img,
-    seg_odict,
-    plane_pts,
-    segment_format=None,
-    ap_names=def_ap_names,
-    orient_names=def_orient_names,
-    niter_rot=10,
-    niter_com=50000,
-    niter_com_plane=10000,
-    xtol=1e-12,
-    ignore_list=[],
-):
+    img: sitk.Image,
+    seg_img: sitk.Image,
+    seg_odict: Dict[str, Any],
+    plane_pts: np.ndarray,
+    segment_format: Optional[str] = None,
+    ap_names: Iterable[str] = def_ap_names,
+    orient_names: Iterable[str] = def_orient_names,
+    niter_rot: int = 10,
+    niter_com: int = 50000,
+    niter_com_plane: int = 10000,
+    xtol: float = 1e-12,
+    ignore_list: Iterable[str] = [],
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Calculate the headframe rotation and translation from segmentation data and
     a lower plane.
@@ -1039,7 +1056,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
 
     output_all = opt.fmin(
         mropt.revised_error_rotate_compare_weighted_lines,
-        output_holes_only[0],
+        output_holes_only[0],  # type: ignore
         args=(pts1l, pts2l, moving, weights, group_err_funs),
         xtol=xtol,
         maxfun=niter_com_plane,
