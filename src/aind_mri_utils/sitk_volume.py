@@ -175,7 +175,7 @@ def transform_sitk_indices_to_physical_points(image, index_arr):
     return position_arr
 
 
-def find_points_equal_to(image, label_value):
+def find_points_equal_to(image, label_value=None):
     """
     Get the physical positions of all voxels in the implant volume that match
     the given label value.
@@ -184,8 +184,9 @@ def find_points_equal_to(image, label_value):
     ----------
     image: SimpleITK.Image
         The implant volume to query.
-    label_value : int
-        The label value to search for in the volume.
+    label_value : int or None
+        The label value to search for in the volume. If None, the function
+        returns non-zero positions.
 
     Returns
     -------
@@ -193,7 +194,10 @@ def find_points_equal_to(image, label_value):
         A NumPy array of physical positions corresponding to the label value.
     """
     implant_vol_arr = sitk.GetArrayViewFromImage(image)
-    indices = np.nonzero(implant_vol_arr == label_value)
+    if label_value is None:
+        indices = np.nonzero(implant_vol_arr)
+    else:
+        indices = np.nonzero(implant_vol_arr == label_value)
 
     if len(indices[0]) == 0:
         return np.empty((0, implant_vol_arr.ndim))
