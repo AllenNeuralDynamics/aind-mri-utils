@@ -1,5 +1,4 @@
-""" Module to deal with coordinate systems
-"""
+"""Module to deal with coordinate systems"""
 
 import numpy as np
 

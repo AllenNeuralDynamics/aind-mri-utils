@@ -2,6 +2,7 @@
 Code to find the rotation matrix to align a headframe to a set of holes.
 """
 
+import logging
 import itertools as itr
 
 import numpy as np
@@ -15,6 +16,8 @@ from . import rotations as rot
 from . import sitk_volume as sv
 from . import utils as ut
 from .file_io import slicer_files as sf
+
+logger = logging.getLogger(__name__)
 
 lps_axes = dict(
     ap=np.array([0, 1, 0]), dv=np.array([0, 0, 1]), ml=np.array([1, 0, 0])
@@ -146,7 +149,8 @@ def find_hole(img, seg_img, seg_val, sel_ndxs):
     if np.size(ndxs) == 0:
         return None
     ndx_points = sv.transform_sitk_indices_to_physical_points(
-        seg_img, ndxs[:, [2, 1, 0]]  # convert to sitk axis order
+        seg_img,
+        ndxs[:, [2, 1, 0]],  # convert to sitk axis order
     )
     np_ndx = tuple(ndxs.T)
     sel_v = arr[np_ndx]
@@ -226,6 +230,7 @@ def find_hole_angles(
     orient_comparison_axis=def_orient_comparison_axes,
     orient_axis_dict=def_orient_axes_dict,
     orient_names=def_orient_names,
+    ap_names=def_ap_names,
 ):
     """
     Calculate angles between holes for each orientation.
@@ -246,6 +251,8 @@ def find_hole_angles(
         `def_orient_axes_dict`.
     orient_names : list of str, optional
         List of orientation names, by default `def_orient_names`.
+    ap_names : list of str, optional
+        List of anterior-posterior names, by default `def_ap_names`.
 
     Returns
     -------
@@ -254,17 +261,18 @@ def find_hole_angles(
     """
     centers_ang = dict()
     for orient in orient_names:
-        centers_diff = (
-            centers_dict[orient][hole_order[orient][0]]
-            - centers_dict[orient][hole_order[orient][1]]
-        )
-        cd_nnan = centers_diff.copy()
-        cd_nnan[np.isnan(cd_nnan)] = 0
-        centers_ang[orient] = ut.signed_angle_rh(
-            orient_comparison_axis[orient],
-            cd_nnan,
-            orient_axis_dict[orient],
-        )
+        if set(centers_dict[orient].keys()) == set(ap_names):
+            centers_diff = (
+                centers_dict[orient][hole_order[orient][0]]
+                - centers_dict[orient][hole_order[orient][1]]
+            )
+            cd_nnan = centers_diff.copy()
+            cd_nnan[np.isnan(cd_nnan)] = 0
+            centers_ang[orient] = ut.signed_angle_rh(
+                orient_comparison_axis[orient],
+                cd_nnan,
+                orient_axis_dict[orient],
+            )
     return centers_ang
 
 
@@ -391,16 +399,17 @@ def calculate_centers_of_mass_for_image_and_segmentation(
             img, sinv, interpolator=sitk.sitkNearestNeighbor
         )
         for ap in ap_names:
-            com = slices_centers_of_mass(
-                img_rs,
-                seg_img_rs,
-                axis_dim,
-                seg_vals_dict[orient][ap],
-                slice_seg_thresh=slice_seg_thresh,
-            )
-            coms[orient][ap] = (
-                r.T @ com.T
-            ).T  # rotate com to original location
+            if ap in seg_vals_dict[orient]:
+                com = slices_centers_of_mass(
+                    img_rs,
+                    seg_img_rs,
+                    axis_dim,
+                    seg_vals_dict[orient][ap],
+                    slice_seg_thresh=slice_seg_thresh,
+                )
+                coms[orient][ap] = (
+                    r.T @ com.T
+                ).T  # rotate com to original location
     return coms
 
 
@@ -439,22 +448,25 @@ def estimate_axis_rotations_from_centers_of_mass(
         # and find the axis for this orientation
         ccoms = []
         for ap in ap_names:
-            com = coms[orient][ap]
-            m = np.mean(com, axis=0)
-            ccoms.append(com - m[np.newaxis, :])
-            joined_ccoms = np.concatenate(ccoms, axis=0)
-            tmp_axis = ut.get_first_pca_axis(joined_ccoms)
+            if ap in coms[orient]:
+                com = coms[orient][ap]
+                m = np.mean(com, axis=0)
+                ccoms.append(com - m[np.newaxis, :])
+        joined_ccoms = np.concatenate(ccoms, axis=0)
+        tmp_axis = ut.get_first_pca_axis(joined_ccoms)
         if np.dot(tmp_axis, orient_axes_dict[orient]) < 0:
             tmp_axis *= -1
 
         # remove off-axis mean for each segment separately
         coms_deproj_centered = []
         for ap in ap_names:
-            com = coms[orient][ap]
-            com_proj = ut.vector_rejection(com, tmp_axis)
-            proj_m = np.mean(com_proj, axis=0)
-            coms_deproj_centered.append(com - proj_m[np.newaxis, :])
-        axis = ut.get_first_pca_axis(joined_ccoms)
+            if ap in coms[orient]:
+                com = coms[orient][ap]
+                com_proj = ut.vector_rejection(com, tmp_axis)
+                proj_m = np.mean(com_proj, axis=0)
+                coms_deproj_centered.append(com - proj_m[np.newaxis, :])
+        joined_deproj_ccoms = np.concatenate(coms_deproj_centered, axis=0)
+        axis = ut.get_first_pca_axis(joined_deproj_ccoms)
         if np.dot(axis, orient_axes_dict[orient]) < 0:
             axis *= -1
         R = rot.rotation_matrix_from_vectors(axis, orient_axes_dict[orient])
@@ -520,7 +532,11 @@ def find_rotation_to_match_hole_angles(
     translation : ndarray
         Offsets to align img with design centers.
     """
-    nhole = np.prod([len(x) for x in (orient_names, ap_names)])
+    nhole = 0
+    for orient in orient_names:
+        for ap in ap_names:
+            if ap in seg_vals_dict[orient]:
+                nhole += 1
     # Start measuring hole location and orientation using the estimated set of
     # axes
     bases = np.zeros((3, 3))
@@ -532,7 +548,7 @@ def find_rotation_to_match_hole_angles(
 
     s_rot = (
         initial_orient_rotation_matrices["horizontal"] @ bases[:, 2]
-    )  # rotated S axis
+    )  # rotated Superior axis
     rad = ut.signed_angle_rh(
         s_rot,
         lps_axes["dv"],
@@ -570,27 +586,20 @@ def find_rotation_to_match_hole_angles(
         )
         for centers in (found_centers, design_centers)
     ]
-    hole_diffs = np.zeros((nhole, 3))
+    # TODO: verify this works when not all segments are present
+    hole_diffs = np.full((4, 3), np.nan)
     for i, (orient, ap) in enumerate(itr.product(orient_names, ap_names)):
-        hole_diffs[i, :] = (
-            design_centers[orient][ap] - found_centers[orient][ap]
-        )
+        if ap in found_centers[orient]:
+            hole_diffs[i, :] = (
+                design_centers[orient][ap] - found_centers[orient][ap]
+            )
     translation = np.nanmean(hole_diffs, axis=0)
 
-    iter_angle_err = np.zeros((n_iter + 1, 2))
-    iter_hole_diff_err = np.zeros((n_iter + 1, nhole, 3))
+    usable_orients = list(found_centers_ang.keys())
     found_centers_curr = found_centers
     found_centers_ang_curr = found_centers_ang
-
     for iter_no in range(n_iter):
-        iter_angle_err[iter_no, :] = [
-            found_centers_ang_curr[orient] - design_centers_ang[orient]
-            for orient in orient_names
-        ]
-        iter_hole_diff_err[iter_no, :, :] = (
-            translation[np.newaxis, :] - hole_diffs
-        )
-        for orient in orient_names:
+        for orient in usable_orients:
             ang_err = (
                 design_centers_ang[orient] - found_centers_ang_curr[orient]
             )
@@ -622,19 +631,16 @@ def find_rotation_to_match_hole_angles(
                 orient_axes_dict,
                 orient_names,
             )
-            hole_diffs = np.zeros((nhole, 3))
+            hole_diffs = np.full((4, 3), np.nan)
             for i, (orient, ap) in enumerate(
                 itr.product(orient_names, ap_names)
             ):
-                hole_diffs[i, :] = (
-                    design_centers[orient][ap] - found_centers_curr[orient][ap]
-                )
+                if ap in found_centers_curr[orient]:
+                    hole_diffs[i, :] = (
+                        design_centers[orient][ap]
+                        - found_centers_curr[orient][ap]
+                    )
             translation = np.nanmean(hole_diffs, axis=0)
-    iter_angle_err[n_iter, :] = [
-        found_centers_ang_curr[orient] - design_centers_ang[orient]
-        for orient in orient_names
-    ]
-    iter_hole_diff_err[n_iter, :, :] = translation[np.newaxis, :] - hole_diffs
     return R, translation
 
 
@@ -824,13 +830,23 @@ def make_segment_dict(
     if segment_format is None:
         segment_format = "{}_{}"
     seg_vals = dict()
-    ignore_set = set(ignore_list)
+    used_ignores = {x: False for x in ignore_list}
     for orient in orient_names:
         seg_vals[orient] = dict()
         for ap in ap_names:
             key_name = segment_format.format(ap, orient)
-            if key_name in segment_info and key_name not in ignore_set:
+            if key_name in segment_info:
+                if key_name in used_ignores:
+                    used_ignores[key_name] = True
+                    continue
                 seg_vals[orient][ap] = segment_info[key_name]
+    if not all(used_ignores.values()):
+        unused_ignores = [k for k, v in used_ignores.items() if not v]
+        logger.warning(
+            "Not all ignore segments were used. "
+            f"Unused ignores: {unused_ignores}"
+        )
+    logger.debug(f"Found segments: {seg_vals}")
     return seg_vals
 
 
@@ -995,29 +1011,30 @@ def find_hf_rotation_from_seg_and_lowerplane(
     pts1l = []
     pts2l = []
     weights = []
-    plane_ndx = -1
+    hole_mask = []
+    group_err_funs = []
     for i, name in enumerate(names):
         if name == "plane":
-            plane_ndx = i
             moving.append(plane_pts)
             pts1l.append(pts1[i, :])
             pts2l.append(pts2[i, :])
             npt_plane = plane_pts.shape[0]
             weights.append(np.full(npt_plane, 1 / npt_plane))
+            hole_mask.append(False)
+            group_err_funs.append(mrmsr.dist_point_to_plane)
         else:
-            pos, orient = name.split("_")
+            ap, orient = name.split("_")
             if orient in coms:
-                d = coms[orient]
-                if pos in d:
-                    these_coms = d[pos]
+                ap_coms = coms[orient]
+                if ap in ap_coms:
+                    these_coms = ap_coms[ap]
                     npt = these_coms.shape[0]
                     moving.append(these_coms)
                     pts1l.append(pts1[i, :])
                     pts2l.append(pts2[i, :])
                     weights.append(np.full(npt, 1 / npt))
-
-    hole_mask = np.full(len(moving), True)
-    hole_mask[plane_ndx] = False
+                    hole_mask.append(True)
+                    group_err_funs.append(mrmsr.dist_point_to_line)
     hole_only_list_of_lists = _compress_each(
         hole_mask, pts1l, pts2l, moving, weights
     )
@@ -1034,9 +1051,6 @@ def find_hf_rotation_from_seg_and_lowerplane(
     R_holes_only, transl_holes_only = mropt.unpack_theta(output_holes_only[0])
 
     # Now include the lower plane
-    group_err_funs = [mrmsr.dist_point_to_line] * len(moving)
-    group_err_funs[plane_ndx] = mrmsr.dist_point_to_plane
-
     output_all = opt.fmin(
         mropt.revised_error_rotate_compare_weighted_lines,
         output_holes_only[0],
