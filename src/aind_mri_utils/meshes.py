@@ -260,8 +260,7 @@ def ensure_normals_outward(mesh, verbose=True):
     """
     if not mesh.is_watertight and verbose:
         print(
-            "Warning: Mesh is not watertight. "
-            "Normal orientation may not be reliable."
+            "Warning: Mesh is not watertight. Normal orientation may not be reliable."
         )
     mesh.fix_normals()
     return mesh

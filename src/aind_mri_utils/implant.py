@@ -139,8 +139,7 @@ def fit_implant_to_mri(
         T[3:] = init_translation
     else:
         warnings.warn(
-            f"Could not find hole {initialization_hole} in MRI data "
-            "for initialization"
+            f"Could not find hole {initialization_hole} in MRI data for initialization"
         )
 
     # Initial guess of rotation
