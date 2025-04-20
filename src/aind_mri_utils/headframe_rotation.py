@@ -843,7 +843,8 @@ def make_segment_dict(
     if not all(used_ignores.values()):
         unused_ignores = [k for k, v in used_ignores.items() if not v]
         logger.warning(
-            f"Not all ignore segments were used. Unused ignores: {unused_ignores}"
+            "Not all ignore segments were used. "
+            f"Unused ignores: {unused_ignores}"
         )
     logger.debug(f"Found segments: {seg_vals}")
     return seg_vals

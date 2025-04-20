@@ -3,6 +3,7 @@
 Functions for Loading and manipulating meshes during insertion planning.
 """
 
+import logging
 import warnings
 
 import numpy as np
@@ -15,6 +16,8 @@ from aind_mri_utils.rotations import make_homogeneous_transform
 from aind_mri_utils.sitk_volume import (
     transform_sitk_indices_to_physical_points,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def as_mesh(scene_or_mesh):
@@ -259,8 +262,9 @@ def ensure_normals_outward(mesh, verbose=True):
         Mesh with outward-pointing normals.
     """
     if not mesh.is_watertight and verbose:
-        print(
-            "Warning: Mesh is not watertight. Normal orientation may not be reliable."
+        logger.warning(
+            "Warning: Mesh is not watertight. "
+            "Normal orientation may not be reliable."
         )
     mesh.fix_normals()
     return mesh
