@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "aind_mri_utils"
 description = "MRI utilities library for aind teams."
 license = { text = "MIT" }
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 authors = [
   { name = "Allen Institute for Neural Dynamics" },
   { name = "Galen Lynch", email = "galen@galenlynch.com" },
@@ -38,7 +38,7 @@ version = { attr = "aind_mri_utils.__version__" }
 
 [tool.black]
 line-length = 79
-target_version = ['py36']
+target-version = ['py312']
 exclude = '''
 
 (
@@ -56,6 +56,15 @@ exclude = '''
   | .gitignore
 )
 '''
+
+[tool.ruff]
+line-length = 79
+target-version = 'py312'
+
+[tool.ruff.lint]
+# pyflakes, pycodestyle, isort
+select = ["F", "E", "W", "I", "C90"]
+ignore = ["E501"]
 
 [tool.coverage.run]
 omit = ["*__init__*"]

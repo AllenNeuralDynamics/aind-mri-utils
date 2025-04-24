@@ -4,7 +4,10 @@ import numpy as np
 
 
 def read_neuroglancer_annotation_layers(
-    filename, layer_names=None, return_description=False
+    filename,
+    layer_names=None,
+    return_description=True,
+    reorder=False,
 ):
     """
     Reads annotation layers from a Neuroglancer JSON file.
@@ -13,34 +16,103 @@ def read_neuroglancer_annotation_layers(
     ----------
     filename : str
         Path to the Neuroglancer JSON file.
-    layer_names : str, list of str, or None, optional
+    layer_names : str or list of str or None, optional
         Names of annotation layers to extract. If None, auto-detects all
-        annotation layers.
-    return_description : bool, optional, default=False
-        If True, returns annotation descriptions alongside points.
+        annotation layers. Default is None.
+    return_description : bool, optional
+        If True, returns annotation descriptions alongside points. Default is
+        True.
+    reorder : bool, optional
+        If True, reorders the dimensions to x, y, z order. Default is False.
 
     Returns
     -------
     annotations : dict
         Dictionary of annotation coordinates for each layer.
-    descriptions : dict, optional
+    units : list of str
+        Units of each dimension (e.g., ['m', 'm', 'm']).
+    dimension_order : list of str
+        Dimension keys in the order used (e.g., ['x', 'y', 'z']).
+    descriptions : dict or None
         Dictionary of annotation descriptions for each layer. Returned only if
-        `return_description` is True.
+        `return_description` is True, otherwise None.
     """
     data = _load_json_file(filename)
-    _, spacing, dim_order = _extract_spacing_and_order(data["dimensions"])
+    dimension_order, spacing, units, keep_dims_ndxs = (
+        _extract_spacing_and_order(data["dimensions"])
+    )
+    if reorder:
+        dim_sp = np.argsort(dimension_order)
+        dimension_order = dimension_order[dim_sp]
+    else:
+        dim_sp = None
 
     layers = data["layers"]
     layer_names = _resolve_layer_names(
         layers, layer_names, layer_type="annotation"
     )
     annotations, descriptions = _process_annotation_layers(
-        layers, layer_names, spacing, dim_order, return_description
+        layers,
+        layer_names,
+        keep_dims_ndxs,
+        spacing,
+        dim_sp,
+        return_description,
     )
 
-    if return_description:
-        return annotations, descriptions
-    return annotations
+    return annotations, units, dimension_order, descriptions
+
+
+def get_neuroglancer_annotation_points(
+    filename,
+    layer_names=None,
+    return_description=True,
+):
+    """
+    Reads annotation layers from a Neuroglancer JSON file.
+
+    Parameters
+    ----------
+    filename : str
+        Path to the Neuroglancer JSON file.
+    layer_names : str or list of str or None, optional
+        Names of annotation layers to extract. If None, auto-detects all
+        annotation layers. Default is None.
+    return_description : bool, optional
+        If True, returns annotation descriptions alongside points. Default is
+        True.
+
+    Returns
+    -------
+    annotations : dict
+        Dictionary of annotation coordinates for each layer.
+    dimension_order : list of str
+        Dimension keys in the order used (e.g., ['x', 'y', 'z']).
+    descriptions : dict or None
+        Dictionary of annotation descriptions for each layer. Returned only if
+        `return_description` is True, otherwise None.
+    """
+    data = _load_json_file(filename)
+    dimension_order, _, _, keep_dims_ndxs = _extract_spacing_and_order(
+        data["dimensions"]
+    )
+
+    layers = data["layers"]
+    layer_names = _resolve_layer_names(
+        layers, layer_names, layer_type="annotation"
+    )
+    annotations, descriptions = _process_annotation_layers(
+        layers,
+        layer_names,
+        keep_dims_ndxs=keep_dims_ndxs,
+        return_description=return_description,
+    )
+
+    return (
+        annotations,
+        dimension_order,
+        descriptions,
+    )
 
 
 def _load_json_file(filename):
@@ -61,28 +133,41 @@ def _load_json_file(filename):
         return json.load(f)
 
 
-def _extract_spacing_and_order(dimension_data):
+def _extract_spacing_and_order(dimension_data, keep_dims=["z", "y", "x"]):
     """
     Extracts voxel spacing and dimension order from the Neuroglancer file.
 
     Parameters
     ----------
-    data : dict
-        Neuroglancer JSON data.
+    dimension_data : dict
+        Neuroglancer JSON dimension data.
+    keep_dims : list of str, optional
+        List of dimensions to keep. Default is ['z', 'y', 'x'].
 
     Returns
     -------
-    dimension_order : list of str
+    dimension_order : numpy.ndarray
         Dimension keys (e.g., ['x', 'y', 'z']).
     spacing : numpy.ndarray
         Voxel spacing in each dimension.
-    dim_order : numpy.ndarray
-        Indices to reorder dimensions into x, y, z order.
+    units : list of str
+        Units of each dimension (e.g., ['m', 'm', 'm']).
+    keep_dim_ndxs : numpy.ndarray
+        Indices of dimensions to keep.
     """
-    dimension_order = list(dimension_data.keys())[:3]
-    spacing = np.array([dimension_data[key][0] for key in dimension_order])
-    dim_order = np.argsort(dimension_order)
-    return dimension_order, spacing, dim_order
+    keep_set = set(keep_dims)
+    dimension_list = np.array(list(dimension_data.keys()))
+    keep_dim_ndxs = np.array(
+        [i for i, d in enumerate(dimension_list) if d in keep_set]
+    )
+    dimension_order = dimension_list[keep_dim_ndxs]
+    spacing = []
+    units = []
+    for key in dimension_order:
+        spacing.append(dimension_data[key][0])
+        units.append(dimension_data[key][1])
+    spacing = np.array(spacing)
+    return dimension_order, spacing, units, keep_dim_ndxs
 
 
 def _resolve_layer_names(layers, layer_names, layer_type):
@@ -92,9 +177,9 @@ def _resolve_layer_names(layers, layer_names, layer_type):
 
     Parameters
     ----------
-    layers : list
+    layers : list of dict
         Neuroglancer JSON layers.
-    layer_names : str, list of str, or None
+    layer_names : str or list of str or None
         User-specified layer names or None to auto-detect.
     layer_type : str
         Type of layer to extract ('annotation' or 'probe').
@@ -118,101 +203,48 @@ def _resolve_layer_names(layers, layer_names, layer_type):
     if isinstance(layer_names, list):
         return layer_names
     raise ValueError(
-        "Invalid input for layer_names. Expected a string, list of strings, "
-        "or None."
+        "Invalid input for layer_names. Expected a string, "
+        "list of strings, or None."
     )
-
-
-def _extract_layers(
-    layers, layer_names, spacing, dim_order, layer_type, exclude_layers=None
-):
-    """
-    Extracts data for specified layers of a given type.
-
-    Parameters
-    ----------
-    layers : list
-        Neuroglancer JSON data.
-    layer_names : list of str or None
-        Names of layers to extract. If None, auto-detects layers of the given
-        type.
-    spacing : numpy.ndarray
-        Voxel spacing for scaling.
-    dim_order : numpy.ndarray
-        Indices to reorder dimensions into x, y, z order.
-    layer_type : str
-        Type of layer to extract ('annotation' or 'probe').
-    exclude_layers : list of str, optional
-        Layers to exclude from extraction.
-
-    Returns
-    -------
-    dict
-        Dictionary of layer data, keyed by layer name.
-    """
-    resolved_layer_names = _resolve_layer_names(
-        layers, layer_names, layer_type
-    )
-    if exclude_layers:
-        resolved_layer_names = [
-            name for name in resolved_layer_names if name not in exclude_layers
-        ]
-
-    sel_layers = {
-        name: _process_layer(
-            _get_layer_by_name(layers, name), spacing, dim_order
-        )
-        for name in resolved_layer_names
-    }
-    return sel_layers
-
-
-def _process_layer(layer, spacing, dim_order):
-    """
-    Processes a single layer and extracts scaled and reordered data.
-
-    Parameters
-    ----------
-    layer : dict
-        Neuroglancer layer data.
-    spacing : numpy.ndarray
-        Voxel spacing for scaling.
-    dim_order : numpy.ndarray
-        Indices to reorder dimensions into x, y, z order.
-
-    Returns
-    -------
-    numpy.ndarray
-        Array of processed data points (N, 3).
-    """
-    points = [annotation["point"][:-1] for annotation in layer["annotations"]]
-    return np.array(points) * spacing[:, dim_order]
 
 
 def _process_annotation_layers(
-    layers, layer_names, spacing, dim_order, return_description
+    layers,
+    layer_names,
+    keep_dims_ndxs=None,
+    spacing=None,
+    dim_order=None,
+    return_description=True,
+    convert_indices=False,
 ):
     """
     Processes annotation layers to extract points and descriptions.
 
     Parameters
     ----------
-    data : dict
-        Neuroglancer JSON data.
+    layers : list of dict
+        Neuroglancer JSON layers.
     layer_names : list of str
         Names of annotation layers to extract.
-    spacing : numpy.ndarray
-        Voxel spacing for scaling.
-    dim_order : numpy.ndarray
-        Indices to reorder dimensions into x, y, z order.
-    return_description : bool
-        Whether to extract descriptions alongside points.
+    keep_dims_ndxs : numpy.ndarray or None, optional
+        Indices of dimensions to keep. If None, all dimensions are kept.
+        Default is None.
+    spacing : numpy.ndarray or None, optional
+        Voxel spacing for scaling. If None, no scaling is done. Default is
+        None.
+    dim_order : numpy.ndarray or None, optional
+        Indices to reorder dimensions into x, y, z order. If None, no
+        reordering is done. Default is None.
+    return_description : bool, optional
+        Whether to extract descriptions alongside points. Default is True.
+    convert_indices : bool, optional
+        If True, converts indices to physical coordinates. Default is False.
 
     Returns
     -------
-    dict
+    annotations : dict
         Annotation points for each layer.
-    dict or None
+    descriptions : dict or None
         Annotation descriptions for each layer, or None if not requested.
     """
     annotations = {}
@@ -220,7 +252,11 @@ def _process_annotation_layers(
     for layer_name in layer_names:
         layer = _get_layer_by_name(layers, layer_name)
         points, layer_descriptions = _process_layer_and_descriptions(
-            layer, spacing, dim_order, return_description
+            layer,
+            keep_dims_ndxs=keep_dims_ndxs,
+            spacing=spacing,
+            dim_order=dim_order,
+            return_description=return_description,
         )
         annotations[layer_name] = points
         if return_description:
@@ -235,8 +271,8 @@ def _get_layer_by_name(layers, name):
 
     Parameters
     ----------
-    data : dict
-        Neuroglancer JSON data.
+    layers : list of dict
+        Neuroglancer JSON layers.
     name : str
         Layer name to retrieve.
 
@@ -257,7 +293,11 @@ def _get_layer_by_name(layers, name):
 
 
 def _process_layer_and_descriptions(
-    layer, spacing, dim_order, return_description
+    layer,
+    keep_dims_ndxs=None,
+    spacing=None,
+    dim_order=None,
+    return_description=True,
 ):
     """
     Processes layer points and descriptions.
@@ -266,23 +306,35 @@ def _process_layer_and_descriptions(
     ----------
     layer : dict
         Layer data.
-    spacing : numpy.ndarray
-        Voxel spacing for scaling.
-    dim_order : numpy.ndarray
-        Indices to reorder dimensions into x, y, z order.
-    return_description : bool
-        Whether to extract descriptions.
+    keep_dims_ndxs : numpy.ndarray or None, optional
+        Indices of dimensions to keep. If None, all dimensions are kept.
+        Default is None.
+    spacing : numpy.ndarray or None, optional
+        Voxel spacing for scaling. If None, no scaling is done. Default is
+        None.
+    dim_order : numpy.ndarray or None, optional
+        Indices to reorder dimensions into x, y, z order. Default is None.
+    return_description : bool, optional
+        Whether to extract descriptions. Default is True.
 
     Returns
     -------
-    numpy.ndarray
+    points : numpy.ndarray
         Scaled and reordered points.
-    numpy.ndarray or None
+    descriptions : numpy.ndarray or None
         Descriptions, or None if not requested.
     """
-    points = [annotation["point"][:-1] for annotation in layer["annotations"]]
-    points = np.array(points) * spacing
-    points = points[:, dim_order]
+    points = []
+    for annotation in layer["annotations"]:
+        point_arr = np.array(annotation["point"])
+        if keep_dims_ndxs is not None:
+            point_arr = point_arr[keep_dims_ndxs]
+        points.append(point_arr)
+    points = np.array(points)
+    if spacing is not None:
+        points *= spacing
+    if dim_order is not None:
+        points = points[:, dim_order]
 
     if return_description:
         descriptions = [
@@ -295,9 +347,17 @@ def _process_layer_and_descriptions(
 
 def get_image_source(filename):
     """
-    Reads image source url from a Neuroglancer JSON file.
+    Reads image source URL(s) from a Neuroglancer JSON file.
 
-    If there are multiple image layers, returns a list of image sources.
+    Parameters
+    ----------
+    filename : str
+        Path to the Neuroglancer JSON file.
+
+    Returns
+    -------
+    list of str
+        List of image source URLs.
     """
     data = _load_json_file(filename)
 

@@ -113,7 +113,6 @@ class HeadframeRotationTest(unittest.TestCase):
         self.assertTrue(np.allclose(axis, hr.lps_axes["dv"]))
 
     def test_hole_finding_and_orientation(self) -> None:
-
         seg_img = make_cylinders(
             self.sitk_test_img_size, self.cylinder_defs, self.seg_vals
         )
