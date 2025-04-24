@@ -2,8 +2,8 @@
 Code to find the rotation matrix to align a headframe to a set of holes.
 """
 
-import logging
 import itertools as itr
+import logging
 
 import numpy as np
 import SimpleITK as sitk

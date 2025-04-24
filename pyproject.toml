@@ -38,7 +38,7 @@ version = { attr = "aind_mri_utils.__version__" }
 
 [tool.black]
 line-length = 79
-target_version = ['py36']
+target-version = ['py312']
 exclude = '''
 
 (
@@ -56,6 +56,15 @@ exclude = '''
   | .gitignore
 )
 '''
+
+[tool.ruff]
+line-length = 79
+target-version = 'py312'
+
+[tool.ruff.lint]
+# pyflakes, pycodestyle, isort
+select = ["F", "E", "W", "I", "C90"]
+ignore = ["E501"]
 
 [tool.coverage.run]
 omit = ["*__init__*"]
