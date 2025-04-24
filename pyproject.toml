@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "aind_mri_utils"
 description = "MRI utilities library for aind teams."
 license = { text = "MIT" }
-requires-python = ">=3.10"
+requires-python = ">=3.7"
 authors = [
   { name = "Allen Institute for Neural Dynamics" },
   { name = "Galen Lynch", email = "galen@galenlynch.com" },
