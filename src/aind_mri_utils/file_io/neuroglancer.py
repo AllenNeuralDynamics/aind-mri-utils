@@ -215,7 +215,6 @@ def _process_annotation_layers(
     spacing=None,
     dim_order=None,
     return_description=True,
-    convert_indices=False,
 ):
     """
     Processes annotation layers to extract points and descriptions.
@@ -237,8 +236,6 @@ def _process_annotation_layers(
         reordering is done. Default is None.
     return_description : bool, optional
         Whether to extract descriptions alongside points. Default is True.
-    convert_indices : bool, optional
-        If True, converts indices to physical coordinates. Default is False.
 
     Returns
     -------
