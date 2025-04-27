@@ -7,10 +7,22 @@ def read_neuroglancer_annotation_layers(
     filename,
     layer_names=None,
     return_description=True,
-    reorder=False,
 ):
     """
-    Reads annotation layers from a Neuroglancer JSON file.
+    Reads annotation layers from a Neuroglancer JSON file and returns points in
+    physical coordinates.
+
+    This function reads the annotation layers from a Neuroglancer JSON file and
+    returns the points in physical coordinates. The points are scaled by the
+    voxel spacing found in the JSON file and are in units described by the
+    `units` return value. Optionally, it returns the descriptions of the
+    annotations if they exist.
+
+    Notes
+    -----
+    The points in the Neuroglancer annotation layers are assumed to be in the
+    order z, y, x, t. Only the spatial dimensions z, y, x are returned, in that
+    order.
 
     Parameters
     ----------
@@ -22,45 +34,37 @@ def read_neuroglancer_annotation_layers(
     return_description : bool, optional
         If True, returns annotation descriptions alongside points. Default is
         True.
-    reorder : bool, optional
-        If True, reorders the dimensions to x, y, z order. Default is False.
 
     Returns
     -------
     annotations : dict
-        Dictionary of annotation coordinates for each layer.
+        Dictionary of annotation coordinates, scaled by the values in the
+        dimension information, for each layer. The coordinates are in units
+        described by
+        the `units` return value.
     units : list of str
         Units of each dimension (e.g., ['m', 'm', 'm']).
-    dimension_order : list of str
-        Dimension keys in the order used (e.g., ['x', 'y', 'z']).
     descriptions : dict or None
         Dictionary of annotation descriptions for each layer. Returned only if
-        `return_description` is True, otherwise None.
+        `return_description` is True, otherwise None. If `return_description`
+        is True and there is no description for a point, its value will be
+        None.
     """
     data = _load_json_file(filename)
-    dimension_order, spacing, units, keep_dims_ndxs = (
-        _extract_spacing_and_order(data["dimensions"])
-    )
-    if reorder:
-        dim_sp = np.argsort(dimension_order)
-        dimension_order = dimension_order[dim_sp]
-    else:
-        dim_sp = None
+    spacing, units = _extract_spacing(data["dimensions"])
 
-    layers = data["layers"]
+    layers = data.get("layers", [])
     layer_names = _resolve_layer_names(
         layers, layer_names, layer_type="annotation"
     )
     annotations, descriptions = _process_annotation_layers(
         layers,
         layer_names,
-        keep_dims_ndxs,
-        spacing,
-        dim_sp,
-        return_description,
+        spacing=spacing,
+        return_description=return_description,
     )
 
-    return annotations, units, dimension_order, descriptions
+    return annotations, units, descriptions
 
 
 def get_neuroglancer_annotation_points(
@@ -69,7 +73,17 @@ def get_neuroglancer_annotation_points(
     return_description=True,
 ):
     """
-    Reads annotation layers from a Neuroglancer JSON file.
+    Reads annotation layers from a Neuroglancer JSON file and returns points in
+    voxel indices.
+
+    This function reads the annotation layers from a Neuroglancer JSON file and
+    returns the points in voxel indices. Optionally, it returns the
+    descriptions of the annotations if they exist.
+
+    Notes
+    -----
+    The points in the Neuroglancer annotation layers are assumed to be in the
+    order z, y, x, t. Only the indices for z, y, x are returned, in that order.
 
     Parameters
     ----------
@@ -86,33 +100,23 @@ def get_neuroglancer_annotation_points(
     -------
     annotations : dict
         Dictionary of annotation coordinates for each layer.
-    dimension_order : list of str
-        Dimension keys in the order used (e.g., ['x', 'y', 'z']).
     descriptions : dict or None
         Dictionary of annotation descriptions for each layer. Returned only if
         `return_description` is True, otherwise None.
     """
     data = _load_json_file(filename)
-    dimension_order, _, _, keep_dims_ndxs = _extract_spacing_and_order(
-        data["dimensions"]
-    )
 
-    layers = data["layers"]
+    layers = data.get("layers", [])
     layer_names = _resolve_layer_names(
         layers, layer_names, layer_type="annotation"
     )
     annotations, descriptions = _process_annotation_layers(
         layers,
         layer_names,
-        keep_dims_ndxs=keep_dims_ndxs,
         return_description=return_description,
     )
 
-    return (
-        annotations,
-        dimension_order,
-        descriptions,
-    )
+    return annotations, descriptions
 
 
 def _load_json_file(filename):
@@ -129,45 +133,46 @@ def _load_json_file(filename):
     dict
         Parsed JSON data.
     """
-    with open(filename, "r") as f:
+    with open(filename, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def _extract_spacing_and_order(dimension_data, keep_dims=["z", "y", "x"]):
+def _extract_spacing(dimension_data):
     """
-    Extracts voxel spacing and dimension order from the Neuroglancer file.
+    Extracts voxel spacing from the Neuroglancer file.
 
     Parameters
     ----------
     dimension_data : dict
         Neuroglancer JSON dimension data.
-    keep_dims : list of str, optional
-        List of dimensions to keep. Default is ['z', 'y', 'x'].
 
     Returns
     -------
-    dimension_order : numpy.ndarray
-        Dimension keys (e.g., ['x', 'y', 'z']).
     spacing : numpy.ndarray
         Voxel spacing in each dimension.
     units : list of str
         Units of each dimension (e.g., ['m', 'm', 'm']).
-    keep_dim_ndxs : numpy.ndarray
-        Indices of dimensions to keep.
+
+    Raises
+    ------
+    ValueError
+        If the required dimensions ('z', 'y', 'x') are not present in the file.
     """
-    keep_set = set(keep_dims)
-    dimension_list = np.array(list(dimension_data.keys()))
-    keep_dim_ndxs = np.array(
-        [i for i, d in enumerate(dimension_list) if d in keep_set]
-    )
-    dimension_order = dimension_list[keep_dim_ndxs]
+    keep_order = ["z", "y", "x"]
+    dimension_set = set(dimension_data.keys())
+    missing = set(keep_order) - dimension_set
+    if missing:
+        raise ValueError(
+            "Neuroglancer file must contain z, y, and x dimensions, "
+            f"but missing: {missing}."
+        )
     spacing = []
     units = []
-    for key in dimension_order:
-        spacing.append(dimension_data[key][0])
-        units.append(dimension_data[key][1])
-    spacing = np.array(spacing)
-    return dimension_order, spacing, units, keep_dim_ndxs
+    for dim in keep_order:
+        space, unit = dimension_data[dim]
+        spacing.append(space)
+        units.append(unit)
+    return np.array(spacing, dtype=float), units
 
 
 def _resolve_layer_names(layers, layer_names, layer_type):
@@ -211,9 +216,7 @@ def _resolve_layer_names(layers, layer_names, layer_type):
 def _process_annotation_layers(
     layers,
     layer_names,
-    keep_dims_ndxs=None,
     spacing=None,
-    dim_order=None,
     return_description=True,
 ):
     """
@@ -225,15 +228,8 @@ def _process_annotation_layers(
         Neuroglancer JSON layers.
     layer_names : list of str
         Names of annotation layers to extract.
-    keep_dims_ndxs : numpy.ndarray or None, optional
-        Indices of dimensions to keep. If None, all dimensions are kept.
-        Default is None.
     spacing : numpy.ndarray or None, optional
-        Voxel spacing for scaling. If None, no scaling is done. Default is
-        None.
-    dim_order : numpy.ndarray or None, optional
-        Indices to reorder dimensions into x, y, z order. If None, no
-        reordering is done. Default is None.
+        Voxel spacing for scaling. If None, no scaling is done. Default is None.
     return_description : bool, optional
         Whether to extract descriptions alongside points. Default is True.
 
@@ -250,9 +246,7 @@ def _process_annotation_layers(
         layer = _get_layer_by_name(layers, layer_name)
         points, layer_descriptions = _process_layer_and_descriptions(
             layer,
-            keep_dims_ndxs=keep_dims_ndxs,
             spacing=spacing,
-            dim_order=dim_order,
             return_description=return_description,
         )
         annotations[layer_name] = points
@@ -291,9 +285,7 @@ def _get_layer_by_name(layers, name):
 
 def _process_layer_and_descriptions(
     layer,
-    keep_dims_ndxs=None,
     spacing=None,
-    dim_order=None,
     return_description=True,
 ):
     """
@@ -303,14 +295,8 @@ def _process_layer_and_descriptions(
     ----------
     layer : dict
         Layer data.
-    keep_dims_ndxs : numpy.ndarray or None, optional
-        Indices of dimensions to keep. If None, all dimensions are kept.
-        Default is None.
     spacing : numpy.ndarray or None, optional
-        Voxel spacing for scaling. If None, no scaling is done. Default is
-        None.
-    dim_order : numpy.ndarray or None, optional
-        Indices to reorder dimensions into x, y, z order. Default is None.
+        Voxel spacing for scaling. If None, no scaling is done. Default is None.
     return_description : bool, optional
         Whether to extract descriptions. Default is True.
 
@@ -320,29 +306,35 @@ def _process_layer_and_descriptions(
         Scaled and reordered points.
     descriptions : numpy.ndarray or None
         Descriptions, or None if not requested.
+
+    Raises
+    ------
+    ValueError
+        If the annotation points do not have 4 dimensions (z, y, x, t).
     """
     points = []
-    for annotation in layer["annotations"]:
-        point_arr = np.array(annotation["point"])
-        if keep_dims_ndxs is not None:
-            point_arr = point_arr[keep_dims_ndxs]
-        points.append(point_arr)
-    points = np.array(points)
+    annotations = layer.get("annotations", [])
+    for annotation in annotations:
+        point_arr = np.array(annotation.get("point", []), dtype=float)
+        if point_arr.shape[0] != 4:
+            raise ValueError(
+                "Annotation points expected to have 4 dimensions "
+                f"(z, y, x, t), but {point_arr.shape[0]} found."
+            )
+        points.append(point_arr[:3])  # Keep only the first three dimensions
+    points = np.stack(points) if points else np.empty((0, 3), dtype=float)
     if spacing is not None:
-        points *= spacing
-    if dim_order is not None:
-        points = points[:, dim_order]
+        points = points * spacing
 
     if return_description:
         descriptions = [
-            annotation.get("description", None)
-            for annotation in layer["annotations"]
+            annotation.get("description", None) for annotation in annotations
         ]
-        return points, np.array(descriptions)
+        return points, np.array(descriptions, dtype=object)
     return points, None
 
 
-def get_image_source(filename):
+def get_image_sources(filename):
     """
     Reads image source URL(s) from a Neuroglancer JSON file.
 
@@ -353,10 +345,12 @@ def get_image_source(filename):
 
     Returns
     -------
-    list of str
-        List of image source URLs.
+    image_sources : dict
+        Dictionary mapping image layer names to their source URLs.
     """
     data = _load_json_file(filename)
-
-    image_layer = [x for x in data["layers"] if x["type"] == "image"]
-    return [x["source"]["url"] for x in image_layer]
+    image_sources = {}
+    for layer in data.get("layers", []):
+        if layer.get("type") == "image" and "name" in layer:
+            image_sources[layer["name"]] = layer.get("source", None)
+    return image_sources
