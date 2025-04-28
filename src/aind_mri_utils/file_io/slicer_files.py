@@ -230,7 +230,7 @@ def create_slicer_fcsv(filename, pts_dict, direction="LPS"):
             # sanitize the key to remove any problematic characters for CSV
             # Remove commas, newlines, carriage returns, tabs, quotes, and
             # leading/trailing whitespace
-            key = re.sub(r'[\s,\'"\\]+', "_", key.strip()).strip("_")
+            key = re.sub(r'[\r\n,\'"\\]+', "", key.strip())
             f.write(
                 "{:d},{:f},{:f},{:f},0,0,0,1,1,1,0,{!s},,vtkMRMLScalarVolumeNode1\n".format(  # noqa: E501
                     pt_no + 1, x, y, z, key
