@@ -229,7 +229,8 @@ def _process_annotation_layers(
     layer_names : list of str
         Names of annotation layers to extract.
     spacing : numpy.ndarray or None, optional
-        Voxel spacing for scaling. If None, no scaling is done. Default is None.
+        Voxel spacing for scaling. If None, no scaling is done. Default is
+        None.
     return_description : bool, optional
         Whether to extract descriptions alongside points. Default is True.
 
@@ -296,7 +297,8 @@ def _process_layer_and_descriptions(
     layer : dict
         Layer data.
     spacing : numpy.ndarray or None, optional
-        Voxel spacing for scaling. If None, no scaling is done. Default is None.
+        Voxel spacing for scaling. If None, no scaling is done. Default is
+        None.
     return_description : bool, optional
         Whether to extract descriptions. Default is True.
 
