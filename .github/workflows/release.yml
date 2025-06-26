@@ -1,22 +1,16 @@
 # .github/workflows/release.yml
 name: Create GitHub Release
 
-#Fires only when a tag is pushed by the tagging job
-on:
-  push:
-    tags:
-      - 'v*'          # use 'v*' if your tags are like v1.2.3
-
-permissions:
-  contents: write     # the default GITHUB_TOKEN needs this to create releases
+on: push
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Create release and auto-generate changelog
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Release
         uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
         with:
           generate_release_notes: true   # GitHub builds the changelog for you
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
