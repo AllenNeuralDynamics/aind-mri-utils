@@ -15,7 +15,8 @@ def calculate_arc_angles(vec, degrees=True, invert_AP=True):
     Parameters
     ----------
     vec : array_like
-        A 3-element vector.
+        A 3-element vector with ML, AP, and DV components. Directions should be
+        in RAS.
 
     Returns
     -------
