@@ -4,6 +4,7 @@ import warnings
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
+from aind_anatomical_utils.sitk_volume import find_points_equal_to
 from scipy.optimize import fmin
 from scipy.spatial.transform import Rotation
 
@@ -17,7 +18,6 @@ from aind_mri_utils.rotations import (
     combine_angles,
     rotation_matrix_from_vectors,
 )
-from aind_mri_utils.sitk_volume import find_points_equal_to
 
 
 def _params_to_rotation_translation(params):

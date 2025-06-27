@@ -17,6 +17,7 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
+  'aind-anatomical-utils >= 0.0.1, < 0.1',
   'matplotlib >= 3, < 4',
   'numpy >= 1.7, < 3',
   'openpyxl >= 3, < 4',
