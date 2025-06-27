@@ -7,14 +7,13 @@ from typing import Tuple
 
 import numpy as np
 import SimpleITK as sitk
-
-from aind_mri_utils.coordinate_systems import convert_coordinate_system
-
-from ..sitk_volume import (
+from aind_anatomical_utils.coordinate_systems import convert_coordinate_system
+from aind_anatomical_utils.sitk_volume import (
     find_points_equal_to,
     transform_sitk_indices_to_physical_points,
 )
-from ..utils import find_indices_equal_to
+
+from aind_mri_utils.utils import find_indices_equal_to
 
 logger = logging.getLogger(__name__)
 

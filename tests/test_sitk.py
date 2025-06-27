@@ -70,14 +70,6 @@ class SITKTest(unittest.TestCase):
         self.assertTrue(np.isclose(new_img.GetPixel([0, 0, 0]), 0))
         # Make RIA oriented image
 
-    def test_transform_sitk_indices_to_physical_points(self) -> None:
-        simg = sitk.Image(256, 128, 64, sitk.sitkUInt8)
-        for ndxs, ans in self.test_index_translation_sets:
-            received = sitk_volume.transform_sitk_indices_to_physical_points(
-                simg, ndxs
-            )
-            self.assertTrue(np.allclose(ans, received))
-
 
 if __name__ == "__main__":
     unittest.main()

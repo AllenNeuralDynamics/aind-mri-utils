@@ -7,15 +7,37 @@ import logging
 
 import numpy as np
 import SimpleITK as sitk
+from aind_anatomical_utils.sitk_volume import (
+    find_points_equal_to,
+    transform_sitk_indices_to_physical_points,
+)
 from scipy import optimize as opt
 from scipy.spatial.transform import Rotation
 
-from . import measurement as mrmsr
-from . import optimization as mropt
-from . import rotations as rot
-from . import sitk_volume as sv
-from . import utils as ut
-from .file_io import slicer_files as sf
+from aind_mri_utils.file_io.slicer_files import (
+    find_seg_nrrd_header_segment_info,
+)
+from aind_mri_utils.measurement import (
+    dist_point_to_line,
+    dist_point_to_plane,
+)
+from aind_mri_utils.optimization import (
+    get_headframe_hole_lines,
+    revised_error_rotate_compare_weighted_lines,
+    unpack_theta,
+)
+from aind_mri_utils.rotations import (
+    rotation_matrix_from_vectors,
+    rotation_matrix_to_sitk,
+)
+from aind_mri_utils.sitk_volume import resample3D
+from aind_mri_utils.utils import (
+    find_indices_equal_to,
+    get_first_pca_axis,
+    norm_vec,
+    signed_angle_rh,
+    vector_rejection,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,11 +91,11 @@ def get_segmentation_pca(seg_img, seg_vals):
     # Centers each segmentation value separately
     centered = []
     for seg_val in seg_vals:
-        p = sv.find_points_equal_to(seg_img, seg_val)
+        p = find_points_equal_to(seg_img, seg_val)
         m = np.mean(p, axis=0)
         centered.append(p - m)
     gp = np.concatenate(centered, axis=0)
-    return ut.get_first_pca_axis(gp)
+    return get_first_pca_axis(gp)
 
 
 def slices_centers_of_mass(
@@ -114,16 +136,14 @@ def slices_centers_of_mass(
     """
     seg_arr = sitk.GetArrayViewFromImage(seg_img)
     arr = sitk.GetArrayViewFromImage(img)
-    ndxs = ut.find_indices_equal_to(seg_arr, seg_val)
+    ndxs = find_indices_equal_to(seg_arr, seg_val)
     ndxs_sitk = ndxs[:, ::-1]
     slice_ndxs = np.unique(ndxs_sitk[:, axis_dim])
     nmask_in_slice = np.array(
         [np.count_nonzero(ndxs_sitk[:, axis_dim] == x) for x in slice_ndxs]
     )
     sel_slice_ndxs = slice_ndxs[nmask_in_slice >= slice_seg_thresh]
-    ndx_points = sv.transform_sitk_indices_to_physical_points(
-        seg_img, ndxs_sitk
-    )
+    ndx_points = transform_sitk_indices_to_physical_points(seg_img, ndxs_sitk)
     com = np.zeros((sel_slice_ndxs.size, 3))
     for i, slice_ndx in enumerate(sel_slice_ndxs):
         mask = ndxs_sitk[:, axis_dim] == slice_ndx
@@ -145,10 +165,10 @@ def find_hole(img, seg_img, seg_val, sel_ndxs):
         raise ValueError("Image and segmentation must have the same shape")
     seg_arr = sitk.GetArrayViewFromImage(seg_img)
     arr = sitk.GetArrayViewFromImage(img)
-    ndxs = ut.find_indices_equal_to(seg_arr, seg_val)
+    ndxs = find_indices_equal_to(seg_arr, seg_val)
     if np.size(ndxs) == 0:
         return None
-    ndx_points = sv.transform_sitk_indices_to_physical_points(
+    ndx_points = transform_sitk_indices_to_physical_points(
         seg_img,
         ndxs[:, [2, 1, 0]],  # convert to sitk axis order
     )
@@ -268,7 +288,7 @@ def find_hole_angles(
             )
             cd_nnan = centers_diff.copy()
             cd_nnan[np.isnan(cd_nnan)] = 0
-            centers_ang[orient] = ut.signed_angle_rh(
+            centers_ang[orient] = signed_angle_rh(
                 orient_comparison_axis[orient],
                 cd_nnan,
                 orient_axis_dict[orient],
@@ -387,17 +407,15 @@ def calculate_centers_of_mass_for_image_and_segmentation(
     for orient in orient_names:
         coms[orient] = dict()
         axis_dim = np.nonzero(orient_axes_dict[orient])[0][0]
-        r = rot.rotation_matrix_from_vectors(
+        r = rotation_matrix_from_vectors(
             initial_axes[orient], orient_axes_dict[orient]
         )
-        s = rot.rotation_matrix_to_sitk(r)
+        s = rotation_matrix_to_sitk(r)
         sinv = s.GetInverse()
-        seg_img_rs = sv.resample3D(
+        seg_img_rs = resample3D(
             seg_img, sinv, interpolator=sitk.sitkNearestNeighbor
         )
-        img_rs = sv.resample3D(
-            img, sinv, interpolator=sitk.sitkNearestNeighbor
-        )
+        img_rs = resample3D(img, sinv, interpolator=sitk.sitkNearestNeighbor)
         for ap in ap_names:
             if ap in seg_vals_dict[orient]:
                 com = slices_centers_of_mass(
@@ -453,7 +471,7 @@ def estimate_axis_rotations_from_centers_of_mass(
                 m = np.mean(com, axis=0)
                 ccoms.append(com - m[np.newaxis, :])
         joined_ccoms = np.concatenate(ccoms, axis=0)
-        tmp_axis = ut.get_first_pca_axis(joined_ccoms)
+        tmp_axis = get_first_pca_axis(joined_ccoms)
         if np.dot(tmp_axis, orient_axes_dict[orient]) < 0:
             tmp_axis *= -1
 
@@ -462,14 +480,14 @@ def estimate_axis_rotations_from_centers_of_mass(
         for ap in ap_names:
             if ap in coms[orient]:
                 com = coms[orient][ap]
-                com_proj = ut.vector_rejection(com, tmp_axis)
+                com_proj = vector_rejection(com, tmp_axis)
                 proj_m = np.mean(com_proj, axis=0)
                 coms_deproj_centered.append(com - proj_m[np.newaxis, :])
         joined_deproj_ccoms = np.concatenate(coms_deproj_centered, axis=0)
-        axis = ut.get_first_pca_axis(joined_deproj_ccoms)
+        axis = get_first_pca_axis(joined_deproj_ccoms)
         if np.dot(axis, orient_axes_dict[orient]) < 0:
             axis *= -1
-        R = rot.rotation_matrix_from_vectors(axis, orient_axes_dict[orient])
+        R = rotation_matrix_from_vectors(axis, orient_axes_dict[orient])
         axes[orient] = R.T @ orient_axes_dict[orient]
         orient_rotation_matrices[orient] = R
     return orient_rotation_matrices, axes
@@ -541,15 +559,15 @@ def find_rotation_to_match_hole_angles(
     # axes
     bases = np.zeros((3, 3))
     bases[:, 1] = axes["horizontal"]  # P
-    bases[:, 2] = ut.norm_vec(
-        ut.vector_rejection(axes["vertical"], bases[:, 1])
+    bases[:, 2] = norm_vec(
+        vector_rejection(axes["vertical"], bases[:, 1])
     )  # S
     bases[:, 0] = np.cross(bases[:, 1], bases[:, 2])  # L
 
     s_rot = (
         initial_orient_rotation_matrices["horizontal"] @ bases[:, 2]
     )  # rotated Superior axis
-    rad = ut.signed_angle_rh(
+    rad = signed_angle_rh(
         s_rot,
         lps_axes["dv"],
         lps_axes["ap"],
@@ -558,13 +576,13 @@ def find_rotation_to_match_hole_angles(
     R_y = Rot_y.as_matrix()
     R = R_y @ initial_orient_rotation_matrices["horizontal"]
 
-    S_init = rot.rotation_matrix_to_sitk(R)
+    S_init = rotation_matrix_to_sitk(R)
     S_init_inv = S_init.GetInverse()
 
-    seg_img_current = sv.resample3D(
+    seg_img_current = resample3D(
         seg_img, S_init_inv, interpolator=sitk.sitkNearestNeighbor
     )
-    img_current = sv.resample3D(
+    img_current = resample3D(
         img, S_init_inv, interpolator=sitk.sitkNearestNeighbor
     )
 
@@ -608,12 +626,12 @@ def find_rotation_to_match_hole_angles(
             )
             R_update = Rot_update.as_matrix()
             R = R_update @ R
-            S = rot.rotation_matrix_to_sitk(R)
+            S = rotation_matrix_to_sitk(R)
             S_inv = S.GetInverse()
-            seg_img_current = sv.resample3D(
+            seg_img_current = resample3D(
                 seg_img, S_inv, interpolator=sitk.sitkNearestNeighbor
             )
-            img_current = sv.resample3D(
+            img_current = resample3D(
                 img, S_inv, interpolator=sitk.sitkNearestNeighbor
             )
             found_centers_curr = find_holes_by_orientation(
@@ -882,7 +900,7 @@ def segment_dict_from_seg_odict(
     ValueError
         If no segments are found in the segmentation ordered dictionary.
     """
-    segment_info = sf.find_seg_nrrd_header_segment_info(seg_odict)
+    segment_info = find_seg_nrrd_header_segment_info(seg_odict)
     segment_dict = make_segment_dict(
         segment_info, segment_format, ap_names, orient_names, ignore_list
     )
@@ -1002,7 +1020,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
     theta0 = np.concatenate((euler0, translation))
 
     # Get design centers and hole locations
-    pts1, pts2, names = mropt.get_headframe_hole_lines(
+    pts1, pts2, names = get_headframe_hole_lines(
         insert_underscores=True, return_plane=True
     )
 
@@ -1021,7 +1039,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
             npt_plane = plane_pts.shape[0]
             weights.append(np.full(npt_plane, 1 / npt_plane))
             hole_mask.append(False)
-            group_err_funs.append(mrmsr.dist_point_to_plane)
+            group_err_funs.append(dist_point_to_plane)
         else:
             ap, orient = name.split("_")
             if orient in coms:
@@ -1034,31 +1052,31 @@ def find_hf_rotation_from_seg_and_lowerplane(
                     pts2l.append(pts2[i, :])
                     weights.append(np.full(npt, 1 / npt))
                     hole_mask.append(True)
-                    group_err_funs.append(mrmsr.dist_point_to_line)
+                    group_err_funs.append(dist_point_to_line)
     hole_only_list_of_lists = _compress_each(
         hole_mask, pts1l, pts2l, moving, weights
     )
 
     # Optimize transform only considering holes in the headframe
     output_holes_only = opt.fmin(
-        mropt.revised_error_rotate_compare_weighted_lines,
+        revised_error_rotate_compare_weighted_lines,
         theta0,
         args=tuple(hole_only_list_of_lists),
         xtol=xtol,
         maxfun=niter_com,
         retall=1,
     )
-    R_holes_only, transl_holes_only = mropt.unpack_theta(output_holes_only[0])
+    R_holes_only, transl_holes_only = unpack_theta(output_holes_only[0])
 
     # Now include the lower plane
     output_all = opt.fmin(
-        mropt.revised_error_rotate_compare_weighted_lines,
+        revised_error_rotate_compare_weighted_lines,
         output_holes_only[0],
         args=(pts1l, pts2l, moving, weights, group_err_funs),
         xtol=xtol,
         maxfun=niter_com_plane,
         retall=1,
     )
-    R_all, transl_all = mropt.unpack_theta(output_all[0])
+    R_all, transl_all = unpack_theta(output_all[0])
 
     return R, translation, R_holes_only, transl_holes_only, R_all, transl_all

@@ -9,13 +9,15 @@ import warnings
 import numpy as np
 import SimpleITK as sitk
 import trimesh
-from skimage.measure import marching_cubes
-
-from aind_mri_utils.coordinate_systems import convert_coordinate_system
-from aind_mri_utils.rotations import make_homogeneous_transform
-from aind_mri_utils.sitk_volume import (
+from aind_anatomical_utils.coordinate_systems import (
+    convert_coordinate_system,
+)
+from aind_anatomical_utils.sitk_volume import (
     transform_sitk_indices_to_physical_points,
 )
+from skimage.measure import marching_cubes
+
+from aind_mri_utils.rotations import make_homogeneous_transform
 
 logger = logging.getLogger(__name__)
 
