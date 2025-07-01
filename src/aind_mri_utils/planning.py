@@ -3,11 +3,14 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import trimesh
+from aind_anatomical_utils.sitk_volume import find_points_equal_to
+from aind_anatomical_utils.slicer import get_segmented_labels
 
-from .arc_angles import calculate_arc_angles, transform_matrix_from_angles
-from .file_io.slicer_files import get_segmented_labels
-from .meshes import apply_transform_to_trimesh, create_uv_spheres
-from .sitk_volume import find_points_equal_to
+from aind_mri_utils.arc_angles import (
+    calculate_arc_angles,
+    transform_matrix_from_angles,
+)
+from aind_mri_utils.meshes import apply_transform_to_trimesh, create_uv_spheres
 
 
 def _generate_circle_points(center, radius=0.3, num_points=360):

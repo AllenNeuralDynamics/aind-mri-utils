@@ -11,12 +11,15 @@ from aind_anatomical_utils.sitk_volume import (
     find_points_equal_to,
     transform_sitk_indices_to_physical_points,
 )
+from aind_anatomical_utils.slicer import (
+    find_seg_nrrd_header_segment_info,
+)
+from aind_anatomical_utils.utils import (
+    find_indices_equal_to,
+)
 from scipy import optimize as opt
 from scipy.spatial.transform import Rotation
 
-from aind_mri_utils.file_io.slicer_files import (
-    find_seg_nrrd_header_segment_info,
-)
 from aind_mri_utils.measurement import (
     dist_point_to_line,
     dist_point_to_plane,
@@ -32,7 +35,6 @@ from aind_mri_utils.rotations import (
 )
 from aind_mri_utils.sitk_volume import resample3D
 from aind_mri_utils.utils import (
-    find_indices_equal_to,
     get_first_pca_axis,
     norm_vec,
     signed_angle_rh,

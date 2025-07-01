@@ -5,10 +5,10 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 from aind_anatomical_utils.sitk_volume import find_points_equal_to
+from aind_anatomical_utils.slicer import get_segmented_labels
 from scipy.optimize import fmin
 from scipy.spatial.transform import Rotation
 
-from aind_mri_utils.file_io.slicer_files import get_segmented_labels
 from aind_mri_utils.meshes import (
     distance_to_all_triangles_in_mesh,
     distance_to_closest_point_for_each_triangle_in_mesh,

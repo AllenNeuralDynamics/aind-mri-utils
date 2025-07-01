@@ -8,7 +8,7 @@ from aind_mri_utils import utils as ut
 
 
 class UtilsTest(unittest.TestCase):
-    """Tests functions in `utls`."""
+    """Tests functions in `utils`."""
 
     cross_product_sets = [
         (np.array([0, 1, 1]), np.array([1, 0, 0]), np.array([0, 1, -1])),
@@ -16,7 +16,6 @@ class UtilsTest(unittest.TestCase):
         (np.array([0, 1, 0]), np.array([1, 0, 0]), np.array([0, 0, -1])),
         (np.array([1, 0, 0]), np.array([1, 0, 0]), np.array([0, 0, 0])),
     ]
-
     test_match_arr = np.arange(0, 9).reshape(3, 3)
     test_proj_vec = np.array([0.5, 0.2, 0.7])
 
@@ -47,25 +46,6 @@ class UtilsTest(unittest.TestCase):
             ut.norm_vec(np.array([0, 0, 0]))
         self.assertTrue(
             np.allclose(ut.norm_vec(np.array([2, 0, 0])), np.array([1, 0, 0]))
-        )
-
-    def test_find_indices_equal_to(self) -> None:
-        self.assertTrue(
-            np.array_equal(
-                ut.find_indices_equal_to(self.test_match_arr, 1),
-                np.array([[0, 1]]),
-            )
-        )
-        self.assertEqual(
-            len(ut.find_indices_equal_to(self.test_match_arr, 9)), 0
-        )
-        B = np.copy(self.test_match_arr)
-        B[1, :] = 9
-        self.assertTrue(
-            np.array_equal(
-                ut.find_indices_equal_to(B, 9),
-                np.array([[1, 0], [1, 1], [1, 2]]),
-            )
         )
 
     def test_vector_rejection(self) -> None:

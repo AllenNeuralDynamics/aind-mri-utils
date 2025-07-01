@@ -58,11 +58,6 @@ def mask_arr_by_annotations(arr, anno_arr, seg_vals, default_val=0):
     return masked_arr
 
 
-def find_indices_equal_to(arr, v):
-    """Find array indices equal to v"""
-    return np.column_stack(np.nonzero(arr == v))
-
-
 def get_first_pca_axis(pts):
     """Find first PC of points"""
     centered = pts - np.mean(pts, axis=0)[np.newaxis, :]
