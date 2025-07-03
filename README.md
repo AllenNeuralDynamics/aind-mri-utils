@@ -4,7 +4,7 @@
 ![Code Style](https://img.shields.io/badge/code%20style-black-black)
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 ![Interrogate](https://img.shields.io/badge/interrogate-97.3%25-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-61%25-red?logo=codecov)
+![Coverage](https://img.shields.io/badge/coverage-63%25-red?logo=codecov)
 ![Python](https://img.shields.io/badge/python->=3.9-blue?logo=python)
 
 Library for aind mri utilities.
