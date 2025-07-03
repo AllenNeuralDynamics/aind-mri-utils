@@ -7,8 +7,8 @@ from aind_anatomical_utils.sitk_volume import find_points_equal_to
 from aind_anatomical_utils.slicer import get_segmented_labels
 
 from aind_mri_utils.arc_angles import (
-    calculate_arc_angles,
-    transform_matrix_from_angles,
+    arc_angles_to_affine,
+    vector_to_arc_angles,
 )
 from aind_mri_utils.meshes import apply_transform_to_trimesh, create_uv_spheres
 
@@ -25,7 +25,7 @@ def _generate_circle_points(center, radius=0.3, num_points=360):
 def _calculate_angle_ranges(target_point, circle_points):
     """Calculate the ranges of AP and ML angles for points on a circle."""
     angles = np.array(
-        [calculate_arc_angles(target_point, point) for point in circle_points]
+        [vector_to_arc_angles(target_point, point) for point in circle_points]
     )
     ml_range = (np.max(angles[:, 1]) - np.min(angles[:, 1])) / 2
     ap_range = (np.max(angles[:, 0]) - np.min(angles[:, 0])) / 2
@@ -73,7 +73,7 @@ def candidate_insertions(
         for implant_idx, implant_point in enumerate(transformed_implant):
             implant_name = implant_names[implant_idx]
 
-            ap, ml = calculate_arc_angles(
+            ap, ml = vector_to_arc_angles(
                 target_point, implant_point, ap_offset=0
             )
             rig_ap = ap + 14
@@ -259,9 +259,7 @@ def apply_transform_and_add_mesh(
         )
         apply_transform_to_trimesh(mesh, rotation_matrix)
 
-    transform_matrix = transform_matrix_from_angles(
-        ap_angle, -ml_angle, target_loc
-    )
+    transform_matrix = arc_angles_to_affine(ap_angle, -ml_angle, target_loc)
     apply_transform_to_trimesh(mesh, transform_matrix)
     scene.add_geometry(mesh)
 
@@ -427,7 +425,7 @@ def _apply_rotation_and_transform(mesh, angle, ap, ml, target_loc):
         The transformed mesh.
     """
     TA = trimesh.transformations.euler_matrix(0, 0, np.deg2rad(angle))
-    TB = transform_matrix_from_angles(ap, -ml)
+    TB = arc_angles_to_affine(ap, -ml)
 
     apply_transform_to_trimesh(mesh, TA)
     apply_transform_to_trimesh(mesh, TB)
