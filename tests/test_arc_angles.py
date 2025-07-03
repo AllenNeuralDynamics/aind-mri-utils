@@ -30,7 +30,7 @@ def _angle_close(a, b, tol=1e-7):
 
 
 def _vec_close(v1, v2, tol=1e-7):
-    """Compare two vectors disregarding overall scale (both are normalised)."""
+    """Compare two vectors disregarding overall scale (both are normalized)."""
     return np.allclose(
         v1 / np.linalg.norm(v1), v2 / np.linalg.norm(v2), atol=tol
     )
