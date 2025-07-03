@@ -40,7 +40,7 @@ version = { attr = "aind_mri_utils.__version__" }
 
 [tool.black]
 line-length = 79
-target-version = ['py312']
+target-version = ['py313']
 exclude = '''
 
 (

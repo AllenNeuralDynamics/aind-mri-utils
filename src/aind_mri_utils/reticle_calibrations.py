@@ -14,7 +14,7 @@ from openpyxl import load_workbook
 from scipy import optimize as opt
 from scipy.spatial.transform import Rotation
 
-from aind_mri_utils.arc_angles import calculate_arc_angles
+from aind_mri_utils.arc_angles import vector_to_arc_angles
 from aind_mri_utils.rotations import (
     apply_affine,
     apply_inverse_affine,
@@ -1236,7 +1236,7 @@ def find_probe_angle(R, newscale_z_down=np.array([0, 0, 1]), **kwargs):
     """
     # Probe coordinate system has z-axis pointing down
     z_axis = find_probe_insertion_vector(R, newscale_z_down=newscale_z_down)
-    return calculate_arc_angles(z_axis, **kwargs)
+    return vector_to_arc_angles(z_axis, **kwargs)
 
 
 def _validate_combined_calibration_inputs(
