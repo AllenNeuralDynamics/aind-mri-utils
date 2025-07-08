@@ -57,7 +57,7 @@ def _extract_calibration_metadata(ws):
     reticle_name = metadata_values[col_name_lookup["Reticule"]]
     offset_x_pos = col_name_lookup["GlobalOffsetX"]
     global_offset = np.array(
-        metadata_values[offset_x_pos : offset_x_pos + 3],  # noqa: E203
+        metadata_values[offset_x_pos : offset_x_pos + 3],
         dtype=float,
     )
     return (

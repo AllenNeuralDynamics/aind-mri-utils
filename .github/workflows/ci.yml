@@ -71,6 +71,7 @@ jobs:
           TEMP_DIR=${{ runner.temp }}/wheeltest
           mkdir "$TEMP_DIR"
           cp -r tests "$TEMP_DIR/"
+          cp -r test-data "$TEMP_DIR/"
           cp dist/*.whl "$TEMP_DIR/"
           cd "$TEMP_DIR"
           uv venv

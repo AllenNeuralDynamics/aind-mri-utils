@@ -50,35 +50,35 @@ class UtilsTest(unittest.TestCase):
 
     def test_vector_rejection(self) -> None:
         for i in range(0, 3):
-            ans = np.copy(self.test_proj_vec)
-            ans[i] = 0
+            result = np.copy(self.test_proj_vec)
+            result[i] = 0
             basis_vec = np.zeros((3,))
             basis_vec[i] = 1
             self.assertTrue(
                 np.allclose(
                     ut.vector_rejection(self.test_proj_vec, basis_vec),
-                    ans,
+                    result,
                 )
             )
 
     def test_mask_arr_by_annotation(self) -> None:
-        ans = ut.mask_arr_by_annotations(
+        result = ut.mask_arr_by_annotations(
             self.test_match_arr, self.test_match_arr, [9]
         )
-        self.assertTrue(np.allclose(ans, np.zeros((3, 3))))
-        ans = ut.mask_arr_by_annotations(
+        self.assertTrue(np.allclose(result, np.zeros((3, 3))))
+        result = ut.mask_arr_by_annotations(
             self.test_match_arr, self.test_match_arr, [1]
         )
-        self.assertTrue(np.isclose(self.test_match_arr[0, 1], ans[0, 1]))
-        modified_ans = np.copy(ans)
-        modified_ans[0, 1] = 0
-        self.assertTrue(np.allclose(modified_ans, np.zeros((3, 3))))
+        self.assertTrue(np.isclose(self.test_match_arr[0, 1], result[0, 1]))
+        modified_result = np.copy(result)
+        modified_result[0, 1] = 0
+        self.assertTrue(np.allclose(modified_result, np.zeros((3, 3))))
 
     def test_signed_angle(self) -> None:
-        for a, b, n, ans in self.signed_angle_sets:
+        for a, b, n, result in self.signed_angle_sets:
             received = ut.signed_angle_rh(a, b, n)
-            self.assertTrue(np.isclose(received, ans))
-            self.assertTrue(np.isclose(ans, ut.signed_angle_lh(b, a, n)))
+            self.assertTrue(np.isclose(received, result))
+            self.assertTrue(np.isclose(result, ut.signed_angle_lh(b, a, n)))
 
     def test_get_first_pca_axis(self) -> None:
         pts = np.array([[1, 2], [3, 4], [5, 6]])
@@ -91,9 +91,9 @@ class UtilsTest(unittest.TestCase):
         )
 
     def test_unsigned_angle(self) -> None:
-        for a, b, n, ans in self.signed_angle_sets:
+        for a, b, n, result in self.signed_angle_sets:
             received = ut.unsigned_angle(a, b)
-            self.assertTrue(np.isclose(received, abs(ans)))
+            self.assertTrue(np.isclose(received, abs(result)))
 
 
 if __name__ == "__main__":

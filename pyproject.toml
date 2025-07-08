@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aind_mri_utils"
 description = "MRI utilities library for aind teams."
-license = { text = "MIT" }
+license = "MIT"
 requires-python = ">=3.9"
 authors = [
   { name = "Allen Institute for Neural Dynamics" },
@@ -29,14 +29,32 @@ dependencies = [
   'trimesh >= 4, < 5',
 ]
 
+[project.urls]
+Repository = "https://github.com/AllenNeuralDynamics/aind-mri-utils/"
+Issues = "https://github.com/AllenNeuralDynamics/aind-mri-utils/issues"
+Changelog = "https://github.com/AllenNeuralDynamics/aind-mri-utils/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
-dev = ['black', 'coverage', 'flake8', 'interrogate', 'isort', 'Sphinx', 'furo']
+dev = ['codespell', 'pytest', 'pytest-cov', 'ruff', 'interrogate']
+vscode = ['aind-mri-targeting[dev]', 'ipykernel', 'pip']
+docs = [
+  'mkdocs',
+  'mkdocs-material',
+  'mkdocstrings[python]',
+  'pymdown-extensions',
+  'ruff',
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.dynamic]
 version = { attr = "aind_mri_utils.__version__" }
+readme = { file = "README.md", content-type = "text/markdown" }
+
+[tool.ruff]
+line-length = 79
+target-version = 'py313'
 
 [tool.black]
 line-length = 79
@@ -59,14 +77,22 @@ exclude = '''
 )
 '''
 
-[tool.ruff]
-line-length = 79
-target-version = 'py313'
-
 [tool.ruff.lint]
-# pyflakes, pycodestyle, isort
-select = ["F", "E", "W", "I", "C90"]
-ignore = ["E501"]
+extend-select = ['Q', 'RUF100', 'C90', 'I', 'F', 'E', 'W']
+extend-ignore = []
+mccabe = { max-complexity = 14 }
+pydocstyle = { convention = 'numpy' }
+
+[tool.codespell]
+skip = '.git,*.pdf,*.svg,./bonsai,*.bonsai,./docs/_build,uv.lock,./doc_template'
+ignore-words-list = 'nd'
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --tb=short --cov=src --cov-report=term-missing --cov-fail-under=0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 
 [tool.coverage.run]
 omit = ["*__init__*"]
@@ -81,5 +107,22 @@ line_length = 79
 profile = "black"
 
 [tool.interrogate]
-exclude = ["setup.py", "docs", "build", "tests"]
-fail-under = 70
+ignore-init-method = true
+ignore-magic = true
+ignore_module = true
+fail-under = 30
+exclude = [
+  "__init__.py",
+  "tests",
+  "docs",
+  "build",
+  "setup.py",
+  "examples",
+  "site",
+]
+
+[tool.commitizen]
+version_files = ["src/aind_mri_utils/__init__.py:__version__"]
+update_changelog_on_bump = true
+tag_format = "v$version"
+version = "0.8.1"
