@@ -1,0 +1,79 @@
+name: "CI"
+
+permissions:
+  contents: read          # checkout
+  pull-requests: read     # annotate PRs
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    if: >
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false) &&
+      github.actor != 'github-actions[bot]' &&
+      !(github.event_name == 'push' && startsWith(github.event.head_commit.message, 'bump:'))
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.9, 3.13] # spans the range of supported Python versions
+      fail-fast: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install project + dev dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Ruff (lint + format-check)
+        run: |
+          uv run --frozen ruff format --check --diff .
+          uv run --frozen ruff check --output-format=github .
+
+      - name: Interrogate (docstring coverage)
+        run: uv run --frozen interrogate -v
+
+      - name: Codespell (typo checker)
+        run: uv run --frozen codespell --check-filenames
+
+      - name: Pytest (unit tests)
+        run: uv run --frozen pytest --cov aind-mri-utils
+
+      - name: Build
+        run: uv build
+
+      - name: Smoke-test built wheel
+        run: |
+          TEMP_DIR=${{ runner.temp }}/wheeltest
+          mkdir "$TEMP_DIR"
+          cp -r tests "$TEMP_DIR/"
+          cp dist/*.whl "$TEMP_DIR/"
+          cd "$TEMP_DIR"
+          uv venv
+          source .venv/bin/activate
+          uv pip install pytest *.whl
+          pytest -q

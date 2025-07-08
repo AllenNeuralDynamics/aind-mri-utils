@@ -1,0 +1,42 @@
+name: "Version Bump"
+
+# Needs write permission to push commit + tag
+permissions:
+  contents: write
+  id-token: write
+
+on:
+  workflow_run:
+    workflows: ["CI"]         # name of your CI workflow
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: bump-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bump:
+    # Don’t re-run on the bot’s own “bump:” commits
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      !contains(github.event.workflow_run.head_commit.message, 'bump:')
+    env:
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEFAULT_BRANCH }}
+          fetch-depth: 0
+          token: ${{ secrets.SERVICE_TOKEN }}
+
+      - name: Commitizen bump & changelog
+        id: cz
+        uses: commitizen-tools/commitizen-action@master
+        with:
+          github_token: ${{ secrets.SERVICE_TOKEN }}
+      - name: Show the new version
+        run: echo "Bumped to ${{ steps.cz.outputs.version }}"
