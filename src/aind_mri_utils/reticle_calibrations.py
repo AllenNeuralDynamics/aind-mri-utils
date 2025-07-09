@@ -20,8 +20,6 @@ from aind_mri_utils.rotations import (
     apply_inverse_affine,
     combine_angles,
     compose_transforms,
-    prepare_data_for_homogeneous_transform,
-    rotation_matrix_from_vectors,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,6 +65,68 @@ def _extract_calibration_metadata(ws):
         global_offset,
         reticle_name,
     )
+
+
+def anisotropic_similarity(X, Y):
+    """
+    Estimate the anisotropic similarity transform between two sets of points X
+    and Y.
+
+    Finds the rotation matrix R, diagonal scaling factors S_diag, translation
+    vector t, and the sign of the determinant of the original rotation matrix
+    s. The transformation is such that:
+    Y = S_diag * (R @ X) + t
+
+    where X and Y are Nx3 arrays of points in the source and target frames,
+
+    Parameters
+    ----------
+    X : array_like
+        Points in the source frame (shape Nx3).
+    Y : array_like
+        Points in the target frame (shape Nx3).
+
+    Returns
+    -------
+    R : numpy.ndarray
+        The rotation matrix (shape 3x3).
+    S_diag : numpy.ndarray
+        The diagonal scaling factors (shape 3,).
+    t : numpy.ndarray
+        The translation vector (shape 3,).
+    s : float
+        The sign of the determinant of the original rotation matrix, indicating
+        handedness. If s < 0, the handedness was corrected by flipping one
+        axis.
+    """
+    X, Y = np.asarray(X), np.asarray(Y)
+    Xm, Ym = X.mean(0), Y.mean(0)
+    Xc, Yc = X - Xm, Y - Ym
+
+    H = Yc.T @ Xc  # shape (3,3)
+    U, S, Vt = np.linalg.svd(H, full_matrices=False)
+    tol = max(H.shape) * np.finfo(S.dtype).eps * S[0]
+    rank = np.sum(S > tol)
+    # ---- handedness correction ---------------------------------------------
+    R = U @ Vt
+    d = np.sign(np.linalg.det(R))
+    F = np.eye(3)
+    if d < 0:
+        U[:, -1] *= -1  # flip exactly one axis in Vt
+        R = U @ Vt  # recompute R with corrected Vt
+        if rank == 3:
+            F[-1, -1] = -1  # flip the same axis in F
+
+    # ---- diagonal scales ----------------------------------------------------
+    X_rot = (Xc @ F) @ R.T
+    s = (X_rot * Yc).sum(0) / (X_rot * X_rot).sum(0)
+    if (s <= 0).any():
+        raise RuntimeError("Scale became non-positive; check handedness step.")
+
+    # ---- translation --------------------------------------------------------
+    t = Ym - s * (R @ (F @ Xm))
+
+    return F, R, s, t, int(rank)
 
 
 def reticle_metadata_transform(global_rotation_degrees):
@@ -468,114 +528,14 @@ def _unpack_theta_scale(theta):
     return R, scale, translation
 
 
-def _fit_params_with_scaling(reticle_pts, probe_pts, lamb=0.1, **kwargs):
-    """
-    Fit rotation parameters to align reticle points with probe points using
-    least squares optimization. The rotation matrix and translation vector
-    are the solution for the equation
-
-    probe_pts = R @ reticle_pts + translation
-
-    where each point is a column vector.
-
-    Because numpy is row-major, points are often stored as row vectors. In this
-    case, you should use the transpose of this equation:
-
-    probe_pts = reticle_pts @ R.T + translation
-
-    Parameters
-    ----------
-    reticle_pts : numpy.ndarray
-        The reticle points to be transformed.
-    probe_pts : numpy.ndarray
-        The probe points to align with.
-    find_scaling : bool, optional
-        If True, find a scaling factor to apply to the reticle points.
-        The default is True.
-    **kwargs : dict
-        Additional keyword arguments to pass to the least squares optimization
-        function.
-
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - R (numpy.ndarray): The 3x3 rotation matrix.
-        - translation (numpy.ndarray): The 3-element translation vector.
-        - scaling (float): The scaling factor.
-    """
-
-    def residuals(theta, probe_pts, bregma_pts, lamb):
-        """cost function for least squares optimization"""
-        R, scale, translation = _unpack_theta_scale(theta)
-        transformed_reticle = bregma_pts @ R.T * scale + translation
-        res = (transformed_reticle - probe_pts).flatten()
-        if lamb == 0:
-            return res
-        else:
-            reg = np.sqrt(lamb) * (np.abs(scale) - np.ones(3))
-            return np.concatenate((res, reg))
-
-    # Initial guess of parameters
-    theta0 = np.zeros(9)
-    theta0[3:6] = 1.0
-    npt = probe_pts.shape[0]
-    if npt > 1:
-        # Initial guess of rotation: align the vectors between the first
-        # two points
-        for other_pt in range(1, npt):
-            probe_diff = probe_pts[other_pt, :] - probe_pts[0, :]
-            reticle_diff = reticle_pts[other_pt, :] - reticle_pts[0, :]
-            reticle_norm = np.linalg.norm(reticle_diff.squeeze())
-            if reticle_norm > 0:
-                break
-        if reticle_norm > 0:
-            R_init = rotation_matrix_from_vectors(
-                reticle_diff.squeeze(), probe_diff.squeeze()
-            )
-            theta0[0:3] = Rotation.from_matrix(R_init).as_euler("xyz")
-
-    # Initial guess of translation: find the point on the reticle closest to
-    # zero
-    smallest_pt = np.argmin(np.linalg.norm(reticle_pts, axis=1))
-    theta0[6:] = probe_pts[smallest_pt, :]
-
-    res = opt.least_squares(
-        residuals,
-        theta0,
-        args=(probe_pts, reticle_pts, lamb),
-        **kwargs,
-    )
-    R, scale, translation = _unpack_theta_scale(res.x)
-    scale_positive = np.abs(scale)
-    scale_sign = np.sign(scale)
-    R = np.diag(scale_sign) @ R
-    R = np.diag(scale_positive) @ R
-    return R, translation, scale_positive
-
-
-def _unpack_theta(theta):
-    """
-    Helper function to unpack theta into rotation matrix and translation.
-
-    Parameters
-    ----------
-    theta : numpy.ndarray
-        The array containing rotation angles and translation values.
-
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - R (numpy.ndarray): The rotation matrix.
-        - offset (numpy.ndarray): The translation vector.
-    """
-    R = combine_angles(*theta[0:3])
-    offset = theta[3:6]
-    return R, offset
-
-
-def fit_rotation_params(bregma_pts, probe_pts, find_scaling=True, **kwargs):
+def fit_rotation_params_interpretable(
+    bregma_pts,
+    probe_pts,
+    find_scaling=True,
+    joint_optimization=True,
+    lamb=0.1,
+    **kwargs,
+):
     """
     Fit rotation parameters to align bregma points with probe points using
     least squares optimization. The rotation matrix and translation vector
@@ -612,43 +572,86 @@ def fit_rotation_params(bregma_pts, probe_pts, find_scaling=True, **kwargs):
     if bregma_pts.shape[1] != 3:
         raise ValueError("bregma_pts and probe_pts must have 3 columns")
 
-    if find_scaling:
-        return _fit_params_with_scaling(bregma_pts, probe_pts, **kwargs)
+    F, R, s, t, rank = anisotropic_similarity(bregma_pts, probe_pts)
+    if not find_scaling:
+        # If we are not finding scaling, return the rotation and translation
+        # matrices directly.
+        t_noscale = probe_pts.mean(0) - R @ (F @ bregma_pts.mean(0))
+        return F, R, np.ones(3), t_noscale, rank
+    if not joint_optimization:
+        return F, R, s, t, rank
 
-    R_homog = np.eye(4)
-    bregma_pts_homog = prepare_data_for_homogeneous_transform(bregma_pts)
-    transformed_pts_homog = np.empty_like(bregma_pts_homog)
-
-    def fun(theta):
-        """cost function for least squares optimization"""
-        R_homog[0:3, 0:3] = combine_angles(*theta[0:3])
-        R_homog[0:3, 3] = theta[3:6]  # translation
-        np.matmul(bregma_pts_homog, R_homog.T, out=transformed_pts_homog)
-        residuals = (transformed_pts_homog[:, 0:3] - probe_pts).flatten()
-        return residuals
-
+    # Jointly optimize rotation, scaling, and translation.
     # Initial guess of parameters
-    theta0 = np.zeros(6)
+    theta0 = np.zeros(9)
+    xr, yr, zr = Rotation.from_matrix(R).as_euler("xyz")
+    theta0[0:3] = [xr, yr, zr]  # rotation angles in degrees
+    theta0[3:6] = F @ s  # scaling factors
+    theta0[6:] = t  # translation vector
 
-    if probe_pts.shape[0] > 1:
-        # Initial guess of rotation: align the vectors between the first
-        # two points
-        probe_diff = np.diff(probe_pts[:2, :], axis=0)
-        bregma_diff = np.diff(bregma_pts[:2, :], axis=0)
-        R_init = rotation_matrix_from_vectors(
-            bregma_diff.squeeze(), probe_diff.squeeze()
-        )
-        theta0[0:3] = Rotation.from_matrix(R_init).as_euler("xyz")
+    # Scaling with joint optimization
+    def residuals(theta, probe_pts, bregma_pts, lamb):
+        """cost function for least squares optimization"""
+        R, scale, translation = _unpack_theta_scale(theta)
+        transformed_reticle = bregma_pts @ R.T * scale + translation
+        res = (transformed_reticle - probe_pts).flatten()
+        if lamb == 0:
+            return res
+        else:
+            reg = np.sqrt(lamb) * (np.abs(scale) - np.ones(3))
+            return np.concatenate((res, reg))
 
-    # Initial guess of translation: find the point on the bregma closest to
-    # zero
-    smallest_pt = np.argmin(np.linalg.norm(bregma_pts, axis=1))
-    theta0[3:6] = probe_pts[smallest_pt, :]
+    res = opt.least_squares(
+        residuals,
+        theta0,
+        args=(probe_pts, bregma_pts, lamb),
+        **kwargs,
+    )
+    Rjoint, s_joint, t_joint = _unpack_theta_scale(res.x)
+    s_joint_p = np.abs(s_joint)
+    Fjoint = np.diag(np.sign(s_joint))
+    return Fjoint, Rjoint, s_joint_p, t_joint, rank
 
-    res = opt.least_squares(fun, theta0, **kwargs)
-    R, translation = _unpack_theta(res.x)
-    scaling = np.ones(3)
-    return R, translation, scaling
+
+def fit_rotation_params(bregma_pts, probe_pts, **kwargs):
+    """
+    Fit rotation parameters to align bregma points with probe points using
+    least squares optimization. The rotation matrix and translation vector
+    are the solution for the equation
+
+    probe_pts = R @ bregma_pts + translation
+
+    where each point is a column vector.
+
+    Because numpy is row-major, points are often stored as row vectors. In this
+    case, you should use the transpose of this equation:
+
+    probe_pts = bregma_pts @ R.T + translation
+
+    Parameters
+    ----------
+    bregma_pts : numpy.ndarray
+        The bregma points to be transformed.
+    probe_pts : numpy.ndarray
+        The probe points to align with.
+    **kwargs : dict
+        Additional keyword arguments to pass to the least squares optimization
+        function.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - R (numpy.ndarray): The 3x3 matrix that may be a rotation, or may be a
+        scaled improper rotation.
+        - translation (numpy.ndarray): The 3-element translation vector.
+        - scaling (numpy.ndarray): The 3-element scaling vector.
+    """
+    F, R, s, t, rank = fit_rotation_params_interpretable(
+        bregma_pts, probe_pts, **kwargs
+    )
+    Rcomb = np.diag(s) @ R @ F
+    return Rcomb, t, s
 
 
 def _fit_by_probe(pairs_by_probe, *args, **kwargs):
