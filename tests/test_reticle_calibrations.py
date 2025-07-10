@@ -8,8 +8,10 @@ import unittest
 from pathlib import Path
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 from aind_mri_utils.reticle_calibrations import (
+    anisotropic_similarity,
     combine_parallax_and_manual_calibrations,
     debug_manual_calibration,
     debug_parallax_and_manual_calibrations,
@@ -552,6 +554,73 @@ class CalibrationTest(unittest.TestCase):
             self.assertTrue(
                 np.allclose(errs, errs_by_probe[probe_id], atol=1e-2)
             )
+
+    def test_anisotropic_similarity_scaling(self):
+        """Test scaling factors."""
+        np.random.seed(42)
+        X = np.random.rand(100, 3)
+        scale = np.array([1.5, 1.7, 1.3])
+        Y = scale * X
+        F, R, s, t, rank = anisotropic_similarity(X, Y)
+        self.assertTrue(np.allclose(F, np.diag([1.0, 1.0, 1.0])))
+        self.assertTrue(np.allclose(R, np.eye(3), atol=0.02))
+        self.assertTrue(np.allclose(s, scale, atol=0.02))
+        self.assertTrue(np.allclose(t, np.zeros(3), atol=0.02))
+        self.assertEqual(rank, 3)
+
+    def test_anisotropic_similarity_reflection(self):
+        """Test reflections."""
+        # Generate random points with a reflection
+        # First fix the random seed for reproducibility
+        np.random.seed(42)
+        X = np.random.rand(100, 3)
+        theta = 45
+        Rz = Rotation.from_euler("z", theta, degrees=True).as_matrix()
+        Y = X @ Rz.T * np.array([-1, 1, 1])  # Reflect across the x-axis
+        F, R, s, t, rank = anisotropic_similarity(X, Y)
+        self.assertTrue(np.linalg.det(F) < 0)
+        self.assertTrue(np.linalg.det(R) > 0)
+        Y_pred = (X @ F) @ R.T * s + t
+        self.assertTrue(np.allclose(Y, Y_pred, atol=1e-5))
+        self.assertEqual(rank, 3)
+
+    def test_anisotropic_similarity_translation_rotation(self):
+        """
+        Test translation and rotation.
+        """
+        np.random.seed(42)
+        X = np.random.rand(100, 3)
+        theta = 30
+        Rz = Rotation.from_euler("z", theta, degrees=True).as_matrix()
+        t = np.array([1.0, 2.0, 3.0])
+        Y = X @ Rz.T + t
+        F, R, s, t_out, rank = anisotropic_similarity(X, Y)
+        self.assertTrue(np.allclose(F, np.eye(3)))
+        self.assertTrue(np.allclose(R, Rz, atol=1e-2))
+        self.assertTrue(np.allclose(s, np.ones(3), atol=1e-2))
+        self.assertTrue(np.allclose(t_out, t, atol=1e-2))
+        self.assertEqual(rank, 3)
+
+    def test_anisotropic_similarity_rank_deficient(self):
+        """
+        Test rank deficiency handling in anisotropic_similarity.
+        """
+        X = np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [1.0, 1.0, 0.0],
+            ]
+        )
+        theta = 45
+        Rz = Rotation.from_euler("z", theta, degrees=True).as_matrix()
+        Y = X @ Rz.T
+        F, R, s, t, rank = anisotropic_similarity(X, Y)
+        self.assertEqual(rank, 2)
+        self.assertTrue(np.allclose(F, np.eye(3)))
+        self.assertTrue(np.allclose(s, np.ones(3)))
+        self.assertTrue(np.allclose(R, Rz, atol=1e-2))
 
 
 if __name__ == "__main__":

@@ -116,16 +116,24 @@ def anisotropic_similarity(X, Y):
     d = np.sign(np.linalg.det(R))
     D = np.eye(3)
     if d < 0:
-        U[:, -1] *= -1  # flip exactly one axis in Vt
-        R = U @ Vt  # recompute R with corrected Vt
+        U[:, -1] *= -1  # Flip last column of U
+        R = U @ Vt
+        # Record flipped handedness in D
         if rank == ndim:
-            D[-1, -1] = -1  # flip the same axis in D
+            D[-1, -1] = -1  # Flip last diagonal element of D
+    # Generate the reflection correction matrix F
     F = Vt.T @ D @ Vt
-    # ---- diagonal scales ----------------------------------------------------
+
+    # Compute scaling factors robustly
     X_rot = (Xc @ F) @ R.T
-    s = (X_rot * Yc).sum(0) / (X_rot * X_rot).sum(0)
-    if (s <= 0).any():
-        raise RuntimeError("Scale became non-positive; check handedness step.")
+    s = np.zeros(3)
+    for i in range(3):
+        numerator = (X_rot[:, i] * Yc[:, i]).sum()
+        denominator = (X_rot[:, i] ** 2).sum()
+        if denominator > 0:
+            s[i] = numerator / denominator
+        else:
+            s[i] = 1.0  # Default to 1 if denominator is zero
 
     # ---- translation --------------------------------------------------------
     t = Ym - s * (R @ (F @ Xm))
@@ -537,7 +545,7 @@ def fit_rotation_params_interpretable(
     probe_pts,
     find_scaling=True,
     joint_optimization=True,
-    lamb=0.1,
+    lambda_reg=0.1,
     **kwargs,
 ):
     """
@@ -565,7 +573,7 @@ def fit_rotation_params_interpretable(
     joint_optimization : bool, optional
         Whether to jointly optimize rotation, scaling, and translation. Default
         is True.
-    lamb : float, optional
+    lambda_reg : float, optional
         Regularization parameter for scaling. Default is 0.1.
     **kwargs
         Additional keyword arguments for least squares optimization.
@@ -592,8 +600,8 @@ def fit_rotation_params_interpretable(
     if not find_scaling:
         # If we are not finding scaling, return the rotation and translation
         # matrices directly.
-        t_noscale = probe_pts.mean(0) - R @ (F @ bregma_pts.mean(0))
-        return F, R, np.ones(3), t_noscale, rank
+        t_no_scale = probe_pts.mean(0) - R @ (F @ bregma_pts.mean(0))
+        return F, R, np.ones(3), t_no_scale, rank
     if not joint_optimization:
         return F, R, s, t, rank
 
@@ -606,21 +614,26 @@ def fit_rotation_params_interpretable(
     theta0[6:] = t  # translation vector
 
     # Scaling with joint optimization
-    def residuals(theta, probe_pts, bregma_pts, lamb):
+    def _residuals(theta, probe_pts, bregma_pts, lambda_reg):
         """cost function for least squares optimization"""
         R, scale, translation = _unpack_theta_scale(theta)
+        # Apply the transformation
         transformed_reticle = bregma_pts @ R.T * scale + translation
+        # Calculate residuals
         res = (transformed_reticle - probe_pts).flatten()
-        if lamb == 0:
+        if lambda_reg == 0:
+            # No regularization, return only the residuals
             return res
         else:
-            reg = np.sqrt(lamb) * (np.abs(scale) - np.ones(3))
+            # Regularization term encouraging scale to be close to 1
+            reg = np.sqrt(lambda_reg) * (np.abs(scale) - np.ones(3))
+            # Concatenate residuals and regularization term
             return np.concatenate((res, reg))
 
     res = opt.least_squares(
-        residuals,
+        _residuals,
         theta0,
-        args=(probe_pts, bregma_pts, lamb),
+        args=(probe_pts, bregma_pts, lambda_reg),
         **kwargs,
     )
     R_joint, s_joint, t_joint = _unpack_theta_scale(res.x)
@@ -1200,7 +1213,7 @@ def transform_probe_to_reticle(
     )
 
 
-def find_probe_insertion_vector(R, newscale_z_down=np.array([0, 0, 1])):
+def find_probe_insertion_vector(R, newscale_z_down=None):
     """
     Find the probe insertion vector from the rotation matrix.
 
@@ -1217,12 +1230,14 @@ def find_probe_insertion_vector(R, newscale_z_down=np.array([0, 0, 1])):
     numpy.ndarray, shape (3,)
         Probe insertion vector in bregma coordinates.
     """
+    if newscale_z_down is None:
+        newscale_z_down = np.array([0, 0, 1])
     # Probe coordinate system has z-axis pointing down
     z_axis = transform_probe_to_bregma(newscale_z_down, R, np.zeros(3))
     return z_axis
 
 
-def find_probe_angle(R, newscale_z_down=np.array([0, 0, 1]), **kwargs):
+def find_probe_angle(R, newscale_z_down=None, **kwargs):
     """
     Find the probe angle from the calibration rotation matrix.
 
@@ -1243,6 +1258,8 @@ def find_probe_angle(R, newscale_z_down=np.array([0, 0, 1]), **kwargs):
         around the x-axis, and the second element is the angle around the
         y-axis.  Returns None if the input vector is a zero vector.
     """
+    if newscale_z_down is None:
+        newscale_z_down = np.array([0, 0, 1])
     # Probe coordinate system has z-axis pointing down
     z_axis = find_probe_insertion_vector(R, newscale_z_down=newscale_z_down)
     return vector_to_arc_angles(z_axis, **kwargs)
