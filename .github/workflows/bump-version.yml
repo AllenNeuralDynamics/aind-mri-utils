@@ -8,20 +8,25 @@ permissions:
 on:
   workflow_run:
     workflows: ["CI"]         # name of your CI workflow
+    branches: [main]           # default branch filter
     types: [completed]
   workflow_dispatch:
 
 concurrency:
-  group: bump-${{ github.ref }}
+  group: bump-${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: true
 
 jobs:
   bump:
-    # Don’t re-run on the bot’s own “bump:” commits
     runs-on: ubuntu-latest
+    # Don’t re-run on the bot’s own “bump:” commits
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      !contains(github.event.workflow_run.head_commit.message, 'bump:')
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       !contains(github.event.workflow_run.head_commit.message, 'bump:')) ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.ref == 'refs/heads/main')
+
     env:
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
 
