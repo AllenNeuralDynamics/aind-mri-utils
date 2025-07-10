@@ -26,23 +26,28 @@ logger = logging.getLogger(__name__)
 
 
 def _extract_calibration_metadata(ws):
-    """Extract calibration metadata from an Excel worksheet.
+    """
+    Extract calibration metadata from an Excel worksheet.
 
     Parameters
     ----------
     ws : openpyxl.worksheet.worksheet.Worksheet
-        The worksheet object from which to extract the calibration metadata.
+        Worksheet object from which to extract the calibration metadata.
 
     Returns
     -------
     tuple
-        A tuple containing:
-        - global_factor (float): The global scale value.
-        - global_rotation_degrees (float): The global rotation in degrees.
-        - manipulator_factor (float): The manipulator scale value.
-        - global_offset (numpy.ndarray): The global offset as a 3-element
-          array.
-        - reticle_name (str): The name of the reticle.
+        Tuple containing:
+        - global_factor : float
+            The global scale value.
+        - global_rotation_degrees : float
+            The global rotation in degrees.
+        - manipulator_factor : float
+            The manipulator scale value.
+        - global_offset : numpy.ndarray
+            The global offset as a 3-element array.
+        - reticle_name : str
+            The name of the reticle.
     """
     row_iter = ws.iter_rows(min_row=1, max_row=2, values_only=True)
     col_name_lookup = {k: i for i, k in enumerate(next(row_iter))}
@@ -69,54 +74,53 @@ def _extract_calibration_metadata(ws):
 
 def anisotropic_similarity(X, Y):
     """
-    Estimate the anisotropic similarity transform between two sets of points X
-    and Y.
+    Estimate the anisotropic similarity transform between two sets of points.
 
-    Finds the rotation matrix R, diagonal scaling factors S_diag, translation
-    vector t, and the sign of the determinant of the original rotation matrix
-    s. The transformation is such that:
-    Y = S_diag * (R @ X) + t
+    Finds the rotation matrix R, diagonal scaling factors s, translation
+    vector t, and the reflection correction matrix F. For data arrays with
+    points in rows (transposed), the transformation is:
 
-    where X and Y are Nx3 arrays of points in the source and target frames,
+        Y = (X @ F) @ R.T * s + t
 
     Parameters
     ----------
-    X : array_like
-        Points in the source frame (shape Nx3).
-    Y : array_like
-        Points in the target frame (shape Nx3).
+    X : array_like, shape (N, 3)
+        Points in the source frame.
+    Y : array_like, shape (N, 3)
+        Points in the target frame.
 
     Returns
     -------
-    R : numpy.ndarray
-        The rotation matrix (shape 3x3).
-    S_diag : numpy.ndarray
-        The diagonal scaling factors (shape 3,).
-    t : numpy.ndarray
-        The translation vector (shape 3,).
-    s : float
-        The sign of the determinant of the original rotation matrix, indicating
-        handedness. If s < 0, the handedness was corrected by flipping one
-        axis.
+    F : numpy.ndarray, shape (3, 3)
+        Reflection correction matrix.
+    R : numpy.ndarray, shape (3, 3)
+        Rotation matrix.
+    s : numpy.ndarray, shape (3,)
+        Diagonal scaling factors.
+    t : numpy.ndarray, shape (3,)
+        Translation vector.
+    rank : int
+        Rank of the cross-covariance matrix.
     """
     X, Y = np.asarray(X), np.asarray(Y)
     Xm, Ym = X.mean(0), Y.mean(0)
     Xc, Yc = X - Xm, Y - Ym
 
     H = Yc.T @ Xc  # shape (3,3)
+    ndim = H.shape[0]
     U, S, Vt = np.linalg.svd(H, full_matrices=False)
     tol = max(H.shape) * np.finfo(S.dtype).eps * S[0]
     rank = np.sum(S > tol)
     # ---- handedness correction ---------------------------------------------
     R = U @ Vt
     d = np.sign(np.linalg.det(R))
-    F = np.eye(3)
+    D = np.eye(3)
     if d < 0:
         U[:, -1] *= -1  # flip exactly one axis in Vt
         R = U @ Vt  # recompute R with corrected Vt
-        if rank == 3:
-            F[-1, -1] = -1  # flip the same axis in F
-
+        if rank == ndim:
+            D[-1, -1] = -1  # flip the same axis in D
+    F = Vt.T @ D @ Vt
     # ---- diagonal scales ----------------------------------------------------
     X_rot = (Xc @ F) @ R.T
     s = (X_rot * Yc).sum(0) / (X_rot * X_rot).sum(0)
@@ -131,8 +135,7 @@ def anisotropic_similarity(X, Y):
 
 def reticle_metadata_transform(global_rotation_degrees):
     """
-    Calculate the transformation matrix that will apply the global offset and
-    rotation to reticle points.
+    Calculate the rotation matrix for the global rotation.
 
     Parameters
     ----------
@@ -154,12 +157,12 @@ def reticle_metadata_transform(global_rotation_degrees):
 
 def _contains_none(arr):
     """
-    Checks if all arguments are not None.
+    Check if any element in the iterable is None.
 
     Parameters
     ----------
     arr : iterable
-        An iterable of elements to check.
+        Iterable of elements to check.
 
     Returns
     -------
@@ -171,19 +174,18 @@ def _contains_none(arr):
 
 def _combine_pairs(list_of_pairs):
     """
-    Combine lists of pairs into separate global and manipulator points
-    matrices.
+    Combine lists of pairs into separate global and manipulator points arrays.
 
     Parameters
     ----------
     list_of_pairs : list of tuple
-        A list of tuples, each containing a reticle point and a probe point as
+        List of tuples, each containing a reticle point and a probe point as
         numpy arrays.
 
     Returns
     -------
-    tuple
-        Two numpy arrays, one for global points and one for manipulator points.
+    tuple of numpy.ndarray
+        Two arrays: one for global points, one for manipulator points.
     """
     global_pts, manipulator_pts = [np.vstack(x) for x in zip(*list_of_pairs)]
     return global_pts, manipulator_pts
@@ -196,13 +198,13 @@ def _extract_calibration_pairs(ws):
     Parameters
     ----------
     ws : openpyxl.worksheet.worksheet.Worksheet
-        The worksheet object from which to extract the calibration pairs.
+        Worksheet object from which to extract the calibration pairs.
 
     Returns
     -------
     dict
-        A dictionary where keys are probe names and values are lists of tuples,
-        each containing a reticle point and a probe point as numpy arrays.
+        Keys are probe names, values are tuples of arrays (global_pts,
+        manipulator_pts).
     """
     pair_lists_by_probe = dict()
     for row in ws.iter_rows(min_row=2, max_col=7, values_only=True):
@@ -231,27 +233,27 @@ def _apply_metadata_to_pair_mats(
     manipulator_factor,
 ):
     """
-    Apply calibration metadata to global and manipulator points matrices.
+    Apply calibration metadata to global and manipulator points arrays.
 
     Parameters
     ----------
     global_pts : numpy.ndarray
-        The global points matrix.
+        Global points array.
     manipulator_pts : numpy.ndarray
-        The manipulator points matrix.
+        Manipulator points array.
     global_factor : float
-        The global factor value.
+        Global scale factor.
     global_rotation_degrees : float
-        The global rotation in degrees.
+        Global rotation in degrees.
     global_offset : numpy.ndarray
-        The global offset as a 3-element array.
+        Global offset as a 3-element array.
     manipulator_factor : float
-        The manipulator factor value.
+        Manipulator scale factor.
 
     Returns
     -------
-    tuple
-        The adjusted global points and manipulator points matrices.
+    tuple of numpy.ndarray
+        Adjusted global points and manipulator points arrays.
     """
     if global_rotation_degrees != 0:
         rot_mat = reticle_metadata_transform(global_rotation_degrees)
@@ -265,24 +267,26 @@ def _apply_metadata_to_pair_mats(
 def read_manual_reticle_calibration(
     filename, points_sheet_name="points", metadata_sheet_name="metadata"
 ):
-    """Read reticle calibration data from an Excel file.
+    """
+    Read reticle calibration data from an Excel file.
 
     Parameters
     ----------
     filename : str
-        The path to the Excel file containing the calibration data.
+        Path to the Excel file containing the calibration data.
     points_sheet_name : str, optional
-        The name of the sheet containing the calibration points.
-        The default is "points".
+        Name of the sheet containing the calibration points. Default is
+        "points".
     metadata_sheet_name : str, optional
-        The name of the sheet containing the calibration metadata.
-        The default is "metadata".
+        Name of the sheet containing the calibration metadata. Default is
+        "metadata".
 
     Returns
     -------
     adjusted_pairs_by_probe : dict
         Adjusted calibration pairs by probe name.
-    global_offset : numpy.ndarray The global offset as a 3-element array.
+    global_offset : numpy.ndarray
+        The global offset as a 3-element array.
     global_rotation_degrees : float
         The global rotation in degrees.
     reticle_name : str
@@ -292,7 +296,6 @@ def read_manual_reticle_calibration(
     ------
     ValueError
         If the specified sheets are not found in the Excel file.
-
     """
     in_mem_file = None
     with open(filename, "rb") as f:
@@ -342,20 +345,19 @@ def read_parallax_calibration_dir(
     Parameters
     ----------
     parallax_points_dir : str
-        The directory containing the parallax calibration CSV files.
+        Directory containing the parallax calibration CSV files.
     sn_filename_regexp : re.Pattern, optional
-        The regular expression pattern to match filenames (default is
-        r"(?i)points_SN\\d+(?:_.*)?.csv$").
-    *args : tuple
+        Regular expression pattern to match filenames.
+    *args
         Additional arguments to pass to the calibration file reader.
-    **kwargs : dict
+    **kwargs
         Additional keyword arguments to pass to the calibration file reader.
 
     Returns
     -------
     dict
-        A dictionary where keys are controller numbers and values are tuples
-        of numpy arrays for global and manipulator points.
+        Keys are controller numbers, values are tuples of arrays (global_pts,
+        manipulator_pts).
     """
     pairs_by_controller = {}
     p_path = Path(parallax_points_dir)
@@ -377,17 +379,17 @@ def read_parallax_calibration_file(parallax_points_filename, *args, **kwargs):
     Parameters
     ----------
     parallax_points_filename : str
-        The path to the CSV file containing the parallax points data.
-    *args : tuple
+        Path to the CSV file containing the parallax points data.
+    *args
         Additional arguments to pass to the calibration file reader.
-    **kwargs : dict
+    **kwargs
         Additional keyword arguments to pass to the calibration file reader.
 
     Returns
     -------
     dict
-        A dictionary where keys are controller numbers and values are tuples
-        of numpy arrays for global and manipulator points.
+        Keys are controller numbers, values are tuples of arrays (global_pts,
+        manipulator_pts).
     """
     pairs_by_controller = {}
     _append_parallax_calibration_file(
@@ -418,15 +420,15 @@ def read_parallax_calibration_dir_and_correct(
     reticle_rotation : float
         Rotation of the reticle in degrees.
     local_scale_factor : float, optional
-        Local scale factor for calibration, by default 1/1000.
+        Local scale factor for calibration. Default is 1/1000.
     global_scale_factor : float, optional
-        Global scale factor for calibration, by default 1/1000.
+        Global scale factor for calibration. Default is 1/1000.
 
     Returns
     -------
     dict
-        A dictionary where keys are controller numbers and values are tuples
-        of numpy arrays for global and manipulator points.
+        Keys are controller numbers, values are tuples of arrays (global_pts,
+        manipulator_pts).
     """
     pairs_by_probe = read_parallax_calibration_dir(parallax_calibration_dir)
     corrected_pairs_by_probe = {}
@@ -449,26 +451,25 @@ def _append_parallax_calibration_file(
     sn_regexp=re.compile(r"(\d+)$"),
 ):
     """
-    Reads parallax calibration data from a CSV file and organizes it by
-    controller number.
+    Read parallax calibration data from a CSV file and organize by controller
+    number.
 
     Parameters
     ----------
+    pairs_by_controller : dict
+        Dictionary to append results to.
     parallax_points_filename : str
-        The path to the CSV file containing parallax points data.
+        Path to the CSV file containing parallax points data.
     sn_colname : str, optional
-        The column name for the serial number (default is "sn").
+        Column name for the serial number. Default is "sn".
     sn_regexp : re.Pattern, optional
-        The regular expression pattern to extract the controller number from
-        the serial number
+        Regular expression pattern to extract the controller number.
 
     Returns
     -------
     dict
-        A dictionary where the keys are controller numbers and the values are
-        lists of tuples. Each tuple contains two numpy arrays: the first array
-        represents the reticle points (global coordinates) and the second array
-        represents the manipulator points (local coordinates).
+        Keys are controller numbers, values are lists of tuples (reticle_pt,
+        manip_pt).
 
     Notes
     -----
@@ -506,21 +507,24 @@ def _append_parallax_calibration_file(
 
 def _unpack_theta_scale(theta):
     """
-    Helper function to unpack theta into rotation matrix and translation.
+    Unpack theta into rotation matrix, scale, and translation.
 
     Parameters
     ----------
     theta : numpy.ndarray
-        The array containing rotation angles, scale factors, and translation
+        Array containing rotation angles, scale factors, and translation
         values.
 
     Returns
     -------
     tuple
-        A tuple containing:
-        - R (numpy.ndarray): The rotation matrix.
-        - scale (numpy.ndarray): The scale factors.
-        - translation (numpy.ndarray): The translation vector.
+        (R, scale, translation)
+        R : numpy.ndarray
+            Rotation matrix.
+        scale : numpy.ndarray
+            Scale factors.
+        translation : numpy.ndarray
+            Translation vector.
     """
     R = combine_angles(*theta[0:3])
     scale = theta[3:6]
@@ -552,20 +556,32 @@ def fit_rotation_params_interpretable(
 
     Parameters
     ----------
-    bregma_pts : numpy.ndarray
-        The bregma points to be transformed.
-    probe_pts : numpy.ndarray
-        The probe points to align with.
-    **kwargs : dict
-        Additional keyword arguments to pass to the least squares optimization
-        function.
+    bregma_pts : numpy.ndarray, shape (N, 3)
+        Bregma points to be transformed.
+    probe_pts : numpy.ndarray, shape (N, 3)
+        Probe points to align with.
+    find_scaling : bool, optional
+        Whether to fit scaling. Default is True.
+    joint_optimization : bool, optional
+        Whether to jointly optimize rotation, scaling, and translation. Default
+        is True.
+    lamb : float, optional
+        Regularization parameter for scaling. Default is 0.1.
+    **kwargs
+        Additional keyword arguments for least squares optimization.
 
     Returns
     -------
-    tuple
-        A tuple containing:
-        - R (numpy.ndarray): The 3x3 rotation matrix.
-        - translation (numpy.ndarray): The 3-element translation vector.
+    F : numpy.ndarray, shape (3, 3)
+        Handedness correction matrix.
+    R : numpy.ndarray, shape (3, 3)
+        Rotation matrix.
+    s : numpy.ndarray, shape (3,)
+        Scaling factors.
+    t : numpy.ndarray, shape (3,)
+        Translation vector.
+    rank : int
+        Rank of the cross-covariance matrix.
     """
     if bregma_pts.shape != probe_pts.shape:
         raise ValueError("bregma_pts and probe_pts must have the same shape")
@@ -607,10 +623,10 @@ def fit_rotation_params_interpretable(
         args=(probe_pts, bregma_pts, lamb),
         **kwargs,
     )
-    Rjoint, s_joint, t_joint = _unpack_theta_scale(res.x)
+    R_joint, s_joint, t_joint = _unpack_theta_scale(res.x)
     s_joint_p = np.abs(s_joint)
-    Fjoint = np.diag(np.sign(s_joint))
-    return Fjoint, Rjoint, s_joint_p, t_joint, rank
+    F_joint = np.diag(np.sign(s_joint))
+    return F_joint, R_joint, s_joint_p, t_joint, rank
 
 
 def fit_rotation_params(bregma_pts, probe_pts, **kwargs):
@@ -630,22 +646,21 @@ def fit_rotation_params(bregma_pts, probe_pts, **kwargs):
 
     Parameters
     ----------
-    bregma_pts : numpy.ndarray
-        The bregma points to be transformed.
-    probe_pts : numpy.ndarray
-        The probe points to align with.
-    **kwargs : dict
-        Additional keyword arguments to pass to the least squares optimization
-        function.
+    bregma_pts : numpy.ndarray, shape (N, 3)
+        Bregma points to be transformed.
+    probe_pts : numpy.ndarray, shape (N, 3)
+        Probe points to align with.
+    **kwargs
+        Additional keyword arguments for fitting.
 
     Returns
     -------
-    tuple
-        A tuple containing:
-        - R (numpy.ndarray): The 3x3 matrix that may be a rotation, or may be a
-        scaled improper rotation.
-        - translation (numpy.ndarray): The 3-element translation vector.
-        - scaling (numpy.ndarray): The 3-element scaling vector.
+    Rcomb : numpy.ndarray, shape (3, 3)
+        Combined transformation matrix.
+    t : numpy.ndarray, shape (3,)
+        Translation vector.
+    s : numpy.ndarray, shape (3,)
+        Scaling vector.
     """
     F, R, s, t, rank = fit_rotation_params_interpretable(
         bregma_pts, probe_pts, **kwargs
@@ -661,18 +676,17 @@ def _fit_by_probe(pairs_by_probe, *args, **kwargs):
     Parameters
     ----------
     pairs_by_probe : dict
-        A dictionary where keys are probe names and values are tuples of numpy
-        arrays for reticle and probe points.
-    *args : tuple
-        Additional arguments to pass to the fitting function.
-    **kwargs : dict
-        Additional keyword arguments to pass to the fitting function.
+        Keys are probe names, values are tuples of arrays (reticle_pts,
+        probe_pts).
+    *args
+        Additional arguments for fitting.
+    **kwargs
+        Additional keyword arguments for fitting.
 
     Returns
     -------
     dict
-        A dictionary where keys are probe names and values are tuples
-        containing the rotation matrix, translation vector, and scaling factor.
+        Keys are probe names, values are tuples (R, t, s).
     """
     cal_by_probe = {
         k: fit_rotation_params(*v, *args, **kwargs)
@@ -683,18 +697,16 @@ def _fit_by_probe(pairs_by_probe, *args, **kwargs):
 
 def fit_rotation_params_from_manual_calibration(filename, *args, **kwargs):
     """
-    Fits rotation parameters from manual calibration data.
+    Fit rotation parameters from manual calibration data.
 
     Parameters
     ----------
     filename : str
-        File containing the calibration data, stored as a `.xslx` file.
-    *args : tuple
-        Additional arguments to pass to the fitting function. See
-        `fit_rotation_params`.
-    **kwargs : dict
-        Additional keyword arguments to pass to the fitting function.
-        See `fit_rotation_params`.
+        Path to the `.xlsx` file containing calibration data.
+    *args
+        Additional arguments for fitting.
+    **kwargs
+        Additional keyword arguments for fitting.
 
     Returns
     -------
@@ -704,9 +716,9 @@ def fit_rotation_params_from_manual_calibration(filename, *args, **kwargs):
         parameters transform bregma points to probe points, both in
         millimeters.
     R_reticle_to_bregma : numpy.ndarray
-        Rotation matrix from reticle to bregma coordinates, in millimeters.
-    t_reticle_to_bregma : float
-        Translation vector from reticle to bregma coordinates, in millimeters.
+        Rotation matrix from reticle to bregma coordinates.
+    t_reticle_to_bregma : numpy.ndarray
+        Translation vector from reticle to bregma coordinates.
     """
     adjusted_pairs_by_probe, global_offset, global_rotation_degrees, _ = (
         read_manual_reticle_calibration(filename)
@@ -726,15 +738,14 @@ def fit_rotation_params_from_parallax(
     **kwargs,
 ):
     """
-    Fits rotation parameters from parallax calibration data.
+    Fit rotation parameters from parallax calibration data.
 
     Parameters
     ----------
     parallax_calibration_dir : str
         Directory containing parallax calibration data.
-    reticle_offset : float
-        Offset of the reticle, i.e. the location of the center of the reticle
-        pattern in bregma-relative coordinates.
+    reticle_offset : numpy.ndarray
+        Offset of the reticle in bregma-relative coordinates.
     reticle_rotation : float
         Rotation of the reticle. i.e. the angle about the z-axis of the reticle
         coordinate system and the bregma coordinate system in degrees. The sign
@@ -782,15 +793,15 @@ def _debug_print_pt_err(reticle, probe, predicted_probe, err, decimals=3):
     Parameters
     ----------
     reticle : numpy.ndarray
-        The reticle point.
+        Reticle point.
     probe : numpy.ndarray
-        The probe point.
+        Probe point.
     predicted_probe : numpy.ndarray
-        The predicted probe point.
+        Predicted probe point.
     err : float
-        The error value.
+        Error value.
     decimals : int, optional
-        The number of decimal places to round to (default is 3).
+        Number of decimal places to round to. Default is 3.
     """
     rounded_reticle = np.round(reticle, decimals=decimals)
     rounded_probe = np.round(probe, decimals=decimals)
@@ -808,10 +819,8 @@ def _debug_print_err_stats(errs):
 
     Parameters
     ----------
-    name : str
-        The name of the probe.
     errs : numpy.ndarray
-        The array of error values.
+        Array of error values.
     """
     logger.debug(
         f"mean error {errs.mean():.2f} µm, max error {errs.max():.2f} µm"
@@ -841,8 +850,7 @@ def _debug_fits(
     Returns
     -------
     dict
-        A dictionary where keys are probe names and values are arrays of error
-        values.
+        Keys are probe names, values are arrays of error values.
     """
     errs_by_probe = {}
     for probe, (bregma_pts, probe_pts) in adjusted_pairs_by_probe.items():
@@ -879,12 +887,11 @@ def debug_manual_calibration(filename, *args, **kwargs):
     Parameters
     ----------
     filename : str
-        The path to the file containing manual calibration data.
-    *args : tuple
-        Additional positional arguments to be passed to the calibration
-        functions.
-    **kwargs : dict
-        Additional keyword arguments to be passed to the calibration functions.
+        Path to the file containing manual calibration data.
+    *args
+        Additional arguments for calibration.
+    **kwargs
+        Additional keyword arguments for calibration.
 
     Returns
     -------
@@ -940,24 +947,24 @@ def debug_parallax_calibration(
     ----------
     parallax_calibration_dir : str
         Directory containing the parallax calibration data.
-    reticle_offset : array-like
+    reticle_offset : numpy.ndarray
         Offset of the reticle in the calibration setup.
-    reticle_rotation : array-like
+    reticle_rotation : float
         Rotation of the reticle in the calibration setup.
     local_scale_factor : float, optional
-        Scale factor for local adjustments, by default 1/1000.
+        Scale factor for local adjustments. Default is 1/1000.
     global_scale_factor : float, optional
-        Scale factor for global adjustments, by default 1/1000.
-    *args : tuple
-        Additional arguments to pass to the fitting function.
-    **kwargs : dict
-        Additional keyword arguments to pass to the fitting function.
+        Scale factor for global adjustments. Default is 1/1000.
+    *args
+        Additional arguments for fitting.
+    **kwargs
+        Additional keyword arguments for fitting.
 
     Returns
     -------
     cal_by_probe : dict
         Calibration data organized by probe.
-    R_reticle_to_bregma : array-like
+    R_reticle_to_bregma : numpy.ndarray
         Transformation matrix from reticle coordinates to bregma coordinates.
     adjusted_pairs_by_probe : dict
         Adjusted calibration pairs organized by probe.
@@ -989,20 +996,20 @@ def debug_parallax_calibration(
 
 def transform_bregma_to_probe(bregma_pts, R, translation):
     """
-    Transform reticle points to probe points using rotation and translation.
+    Transform bregma points to probe points using rotation and translation.
 
     Parameters
     ----------
-    bregma_pts : np.array(N,3)
+    bregma_pts : numpy.ndarray, shape (N, 3)
         Bregma points to transform.
-    R : np.array(3,3)
+    R : numpy.ndarray, shape (3, 3)
         Affine matrix as provided from fit functions in this module.
-    translation : np.array(3,)
+    translation : numpy.ndarray, shape (3,)
         Translation vector as provided from fit functions in this module.
 
     Returns
     -------
-    np.array(N,3)
+    numpy.ndarray, shape (N, 3)
         Transformed probe points.
 
     Notes
@@ -1014,20 +1021,20 @@ def transform_bregma_to_probe(bregma_pts, R, translation):
 
 def transform_probe_to_bregma(probe_pts, R, translation):
     """
-    Transform probe points to reticle points using rotation and translation.
+    Transform probe points to bregma points using rotation and translation.
 
     Parameters
     ----------
-    probe_pts : np.array(N,3)
+    probe_pts : numpy.ndarray, shape (N, 3)
         Probe points to transform.
-    R : np.array(3,3)
+    R : numpy.ndarray, shape (3, 3)
         Affine matrix as provided from fit functions in this module.
-    translation : np.array(3,)
+    translation : numpy.ndarray, shape (3,)
         Translation vector as provided from fit functions in this module.
 
     Returns
     -------
-    np.array(N,3)
+    numpy.ndarray, shape (N, 3)
         Transformed bregma points.
 
     Notes
@@ -1043,17 +1050,17 @@ def transform_bregma_to_reticle(bregma_pts, R, translation):
 
     Parameters
     ----------
-    bregma_pts : numpy.ndarray
-        The bregma points to transform.
-    R : np.array(3,3)
+    bregma_pts : numpy.ndarray, shape (N, 3)
+        Bregma points to transform.
+    R : numpy.ndarray, shape (3, 3)
         Affine matrix as provided from fit functions in this module.
-    translation : np.array(3,)
+    translation : numpy.ndarray, shape (3,)
         Translation vector as provided from fit functions in this module.
 
     Returns
     -------
-    numpy.ndarray
-        The transformed reticle points.
+    numpy.ndarray, shape (N, 3)
+        Transformed reticle points.
     """
     return apply_inverse_affine(bregma_pts, R, translation)
 
@@ -1064,17 +1071,17 @@ def transform_reticle_to_bregma(reticle_pts, R, translation):
 
     Parameters
     ----------
-    reticle_pts : numpy.ndarray
-        The reticle points to transform.
-    R : np.array(3,3)
+    reticle_pts : numpy.ndarray, shape (N, 3)
+        Reticle points to transform.
+    R : numpy.ndarray, shape (3, 3)
         Affine matrix as provided from fit functions in this module.
-    translation : np.array(3,)
+    translation : numpy.ndarray, shape (3,)
         Translation vector as provided from fit functions in this module.
 
     Returns
     -------
-    numpy.ndarray
-        The transformed bregma points.
+    numpy.ndarray, shape (N, 3)
+        Transformed bregma points.
     """
     return apply_affine(reticle_pts, R, translation)
 
@@ -1086,23 +1093,23 @@ def combine_reticle_to_probe_transforms(
     t_reticle_to_bregma,
 ):
     """
-    Combines the transformation matrices and translation vectors from reticle
-    to bregma and bregma to probe.
+    Combine transformation matrices and translation vectors from reticle to
+    bregma and bregma to probe.
 
     Parameters
     ----------
-    R_bregma_to_probe : numpy.ndarray
+    R_bregma_to_probe : numpy.ndarray, shape (3, 3)
         Rotation matrix from bregma to probe.
-    t_bregma_to_probe : numpy.ndarray
+    t_bregma_to_probe : numpy.ndarray, shape (3,)
         Translation vector from bregma to probe.
-    R_reticle_to_bregma : numpy.ndarray
+    R_reticle_to_bregma : numpy.ndarray, shape (3, 3)
         Rotation matrix from reticle to bregma.
-    t_reticle_to_bregma : numpy.ndarray
+    t_reticle_to_bregma : numpy.ndarray, shape (3,)
         Translation vector from reticle to bregma.
 
     Returns
     -------
-    numpy.ndarray
+    tuple
         Combined rotation matrix and translation vector from reticle to probe.
     """
     return compose_transforms(
@@ -1125,21 +1132,21 @@ def transform_reticle_to_probe(
 
     Parameters
     ----------
-    reticle_pts : numpy.ndarray
-        The reticle points to transform.
-    R_bregma_to_probe : numpy.ndarray
+    reticle_pts : numpy.ndarray, shape (N, 3)
+        Reticle points to transform.
+    R_bregma_to_probe : numpy.ndarray, shape (3, 3)
         Rotation matrix from bregma to probe coordinates.
-    t_bregma_to_probe : numpy.ndarray
+    t_bregma_to_probe : numpy.ndarray, shape (3,)
         Translation vector from bregma to probe coordinates.
-    R_reticle_to_bregma : numpy.ndarray
+    R_reticle_to_bregma : numpy.ndarray, shape (3, 3)
         Rotation matrix from reticle to bregma coordinates.
-    t_reticle_to_bregma : numpy.ndarray
+    t_reticle_to_bregma : numpy.ndarray, shape (3,)
         Translation vector from reticle to bregma coordinates.
 
     Returns
     -------
-    numpy.ndarray
-        The transformed probe points.
+    numpy.ndarray, shape (N, 3)
+        Transformed probe points.
     """
     R_reticle_to_probe, t_reticle_to_probe = (
         combine_reticle_to_probe_transforms(
@@ -1160,24 +1167,24 @@ def transform_probe_to_reticle(
     t_reticle_to_bregma,
 ):
     """
-    Transforms probe points to reticle coordinates.
+    Transform probe points to reticle coordinates.
 
     Parameters
     ----------
-    probe_pts : ndarray
-        Array of points in probe coordinates.
-    R_bregma_to_probe : ndarray
+    probe_pts : numpy.ndarray, shape (N, 3)
+        Probe points to transform.
+    R_bregma_to_probe : numpy.ndarray, shape (3, 3)
         Rotation matrix from bregma to probe coordinates.
-    t_bregma_to_probe : ndarray
+    t_bregma_to_probe : numpy.ndarray, shape (3,)
         Translation vector from bregma to probe coordinates.
-    R_reticle_to_bregma : ndarray
+    R_reticle_to_bregma : numpy.ndarray, shape (3, 3)
         Rotation matrix from reticle to bregma coordinates.
-    t_reticle_to_bregma : ndarray
+    t_reticle_to_bregma : numpy.ndarray, shape (3,)
         Translation vector from reticle to bregma coordinates.
 
     Returns
     -------
-    ndarray
+    numpy.ndarray, shape (N, 3)
         Transformed points in reticle coordinates.
     """
     R_reticle_to_probe, t_reticle_to_probe = (
@@ -1195,20 +1202,20 @@ def transform_probe_to_reticle(
 
 def find_probe_insertion_vector(R, newscale_z_down=np.array([0, 0, 1])):
     """
-    Find the probe insertion vector from the rotation matrix and translation
-    vector.
+    Find the probe insertion vector from the rotation matrix.
 
     Parameters
     ----------
-    R : numpy.ndarray
-        The 3x3 rotation matrix.
-    translation : numpy.ndarray
-        The 3-element translation vector.
+    R : numpy.ndarray, shape (3, 3)
+        Rotation matrix.
+    newscale_z_down : numpy.ndarray, shape (3,), optional
+        Vector representing the z-axis in probe coordinates.
+        Default is [0, 0, 1].
 
     Returns
     -------
-    numpy.ndarray
-        The probe insertion vector.
+    numpy.ndarray, shape (3,)
+        Probe insertion vector in bregma coordinates.
     """
     # Probe coordinate system has z-axis pointing down
     z_axis = transform_probe_to_bregma(newscale_z_down, R, np.zeros(3))
@@ -1221,14 +1228,13 @@ def find_probe_angle(R, newscale_z_down=np.array([0, 0, 1]), **kwargs):
 
     Parameters
     ----------
-    R : numpy.ndarray
-        The 3x3 rotation matrix.
-    translation : numpy.ndarray
-        The 3-element translation vector.
-    newscale_z_down : numpy.ndarray, optional
-        The new z-axis pointing down vector (default is [0, 0, 1]).
-    **kwargs : dict
-        Additional keyword arguments to pass to the `calculate_arc_angles`
+    R : numpy.ndarray, shape (3, 3)
+        Rotation matrix.
+    newscale_z_down : numpy.ndarray, shape (3,), optional
+        Vector representing the z-axis in probe coordinates.
+        Default is [0, 0, 1].
+    **kwargs
+        Additional keyword arguments for arc angle calculation.
 
     Returns
     -------
@@ -1245,6 +1251,21 @@ def find_probe_angle(R, newscale_z_down=np.array([0, 0, 1]), **kwargs):
 def _validate_combined_calibration_inputs(
     manual_calibration_files, parallax_directories
 ):
+    """
+    Validate and normalize input lists for combined calibration.
+
+    Parameters
+    ----------
+    manual_calibration_files : str or list of str
+        Manual calibration file(s).
+    parallax_directories : str or list of str
+        Parallax calibration directory(ies).
+
+    Returns
+    -------
+    tuple
+        (manual_calibration_files, parallax_directories) as lists.
+    """
     if isinstance(manual_calibration_files, list):
         if len(manual_calibration_files) == 0:
             raise ValueError("No manual calibration files provided")
@@ -1265,11 +1286,12 @@ def combine_parallax_and_manual_calibrations(
     *args,
     **kwargs,
 ):
-    """Combines parallax and manual calibration data
+    """
+    Combine parallax and manual calibration data.
 
-    In each list of calibrations, calibrations later in the list will take
-    priority over the earlier ones. Manual calibrations will take priority over
-    parallax calibrations, unless specified by `probe_to_ignore_manual`.
+    In each list of calibrations, calibrations later in the list take priority.
+    Manual calibrations take priority over parallax calibrations, unless
+    specified.
 
     Parameters
     ----------
@@ -1278,24 +1300,18 @@ def combine_parallax_and_manual_calibrations(
     parallax_directories : list of str
         List of directories containing parallax calibration data.
     probes_to_ignore_manual : list of str, optional
-        List of probe names to ignore from the manual calibrations, by default
-        [].
+        List of probe names to ignore from the manual calibrations.
+        Default is [].
     find_scaling : bool, optional
-        If True, find a scaling factor to apply to the calibration data, by
-        default None, which means the default behavior in the fit function is
-        used.
+        Whether to find scaling for all calibrations. Default is None.
     find_scaling_parallax : bool, optional
-        If True, find a scaling factor to apply to the parallax calibration
-        data, by default None, which means the default behavior in the fit
-        function is used. Overrides `find_scaling` if not None.
+        Whether to find scaling for parallax calibrations. Default is None.
     find_scaling_manual : bool, optional
-        If True, find a scaling factor to apply to the manual calibration data,
-        by default None, which means the default behavior in the fit function
-        is used. Overrides `find_scaling` if not None.
-    *args : tuple
-        Additional positional arguments to pass to the fitting functions.
-    **kwargs : dict
-        Additional keyword arguments to pass to the fitting functions.
+        Whether to find scaling for manual calibrations. Default is None.
+    *args
+        Additional arguments for fitting.
+    **kwargs
+        Additional keyword arguments for fitting.
 
     Returns
     -------
@@ -1309,10 +1325,7 @@ def combine_parallax_and_manual_calibrations(
     Raises
     ------
     ValueError
-        If no manual calibration files are provided.
-    ValueError
-        If no parallax directories are provided.
-
+        If no manual calibration files or parallax directories are provided.
     """
     manual_calibration_files, parallax_directories = (
         _validate_combined_calibration_inputs(
@@ -1382,11 +1395,12 @@ def debug_parallax_and_manual_calibrations(
     *args,
     **kwargs,
 ):
-    """Debugs combined parallax and manual calibrations
+    """
+    Debug combined parallax and manual calibrations.
 
-    In each list of calibrations, calibrations later in the list will take
-    priority over the earlier ones. Manual calibrations will take priority over
-    parallax calibrations, unless specified by `probe_to_ignore_manual`.
+    In each list of calibrations, calibrations later in the list take priority.
+    Manual calibrations take priority over parallax calibrations, unless
+    specified.
 
     Parameters
     ----------
@@ -1395,30 +1409,23 @@ def debug_parallax_and_manual_calibrations(
     parallax_directories : list of str
         List of directories containing parallax calibration data.
     probes_to_ignore_manual : list of str, optional
-        List of probe names to ignore from the manual calibration data, by
-        default [].
+        List of probe names to ignore from the manual calibration data.
+        Default is [].
     find_scaling : bool, optional
-        If True, find a scaling factor to apply to the calibration data, by
-        default None, which means the default behavior in the fit function is
-        used.
+        Whether to find scaling for all calibrations. Default is None.
     find_scaling_parallax : bool, optional
-        If True, find a scaling factor to apply to the parallax calibration
-        data, by default None, which means the default behavior in the fit
-        function is used. Overrides `find_scaling` if not None.
+        Whether to find scaling for parallax calibrations. Default is None.
     find_scaling_manual : bool, optional
-        If True, find a scaling factor to apply to the manual calibration data,
-        by default None, which means the default behavior in the fit function
-        is used. Overrides `find_scaling` if not None.
+        Whether to find scaling for manual calibrations. Default is None.
     local_scale_factor : float, optional
-        Local scale factor to apply to the calibration data, by default
-        1 / 1000.
+        Local scale factor to apply to the calibration data. Default is 1/1000.
     global_scale_factor : float, optional
-        Global scale factor to apply to the calibration data, by default
-        1 / 1000.
-    *args : tuple
-        Additional positional arguments to pass to the calibration functions.
-    **kwargs : dict
-        Additional keyword arguments to pass to the calibration functions.
+        Global scale factor to apply to the calibration data.
+        Default is 1/1000.
+    *args
+        Additional arguments for calibration.
+    **kwargs
+        Additional keyword arguments for calibration.
 
     Returns
     -------
