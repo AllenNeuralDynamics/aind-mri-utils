@@ -107,7 +107,6 @@ def anisotropic_similarity(X, Y):
     Xc, Yc = X - Xm, Y - Ym
 
     H = Yc.T @ Xc  # shape (3,3)
-    ndim = H.shape[0]
     U, S, Vt = np.linalg.svd(H, full_matrices=False)
     tol = max(H.shape) * np.finfo(S.dtype).eps * S[0]
     rank = np.sum(S > tol)
@@ -118,9 +117,7 @@ def anisotropic_similarity(X, Y):
     if d < 0:
         U[:, -1] *= -1  # Flip last column of U
         R = U @ Vt
-        # Record flipped handedness in D
-        if rank == ndim:
-            D[-1, -1] = -1  # Flip last diagonal element of D
+        D[-1, -1] = -1  # Flip last diagonal element of D
     # Generate the reflection correction matrix F
     F = Vt.T @ D @ Vt
 
