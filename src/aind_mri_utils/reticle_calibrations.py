@@ -72,7 +72,7 @@ def _extract_calibration_metadata(ws):
     )
 
 
-def anisotropic_similarity(X, Y):
+def anisotropic_similarity(X, Y, atol_factor=1e-12):
     """
     Estimate the anisotropic similarity transform between two sets of points.
 
@@ -88,6 +88,9 @@ def anisotropic_similarity(X, Y):
         Points in the source frame.
     Y : array_like, shape (N, 3)
         Points in the target frame.
+    atol_factor : float, optional
+        Factor to determine the absolute tolerance for scaling. Default is
+        1e-12.
 
     Returns
     -------
@@ -123,19 +126,20 @@ def anisotropic_similarity(X, Y):
 
     # Compute scaling factors robustly
     X_rot = (Xc @ F) @ R.T
-    s = np.zeros(3)
-    for i in range(3):
-        numerator = (X_rot[:, i] * Yc[:, i]).sum()
-        denominator = (X_rot[:, i] ** 2).sum()
-        if denominator > 0:
-            s[i] = numerator / denominator
-        else:
-            s[i] = 1.0  # Default to 1 if denominator is zero
+    fro2 = np.linalg.norm(X_rot, "fro") ** 2
+    atol = atol_factor * fro2 + np.finfo(float).eps
+
+    num = (X_rot * Yc).sum(0)
+    denom = (X_rot * X_rot).sum(0)
+    deg = denom < atol  # boolean mask
+
+    scale = np.ones(3)  # default 1
+    scale[~deg] = num[~deg] / denom[~deg]
 
     # ---- translation --------------------------------------------------------
-    t = Ym - s * (R @ (F @ Xm))
+    translation_vector = Ym - scale * (R @ (F @ Xm))
 
-    return F, R, s, t, int(rank)
+    return F, R, scale, translation_vector, int(rank)
 
 
 def reticle_metadata_transform(global_rotation_degrees):
