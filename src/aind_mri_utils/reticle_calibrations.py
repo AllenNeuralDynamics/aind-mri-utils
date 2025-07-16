@@ -72,7 +72,7 @@ def _extract_calibration_metadata(ws):
     )
 
 
-def anisotropic_similarity(X, Y):
+def anisotropic_similarity(X, Y, atol_factor=1e-12):
     """
     Estimate the anisotropic similarity transform between two sets of points.
 
@@ -84,20 +84,23 @@ def anisotropic_similarity(X, Y):
 
     Parameters
     ----------
-    X : array_like, shape (N, 3)
-        Points in the source frame.
-    Y : array_like, shape (N, 3)
-        Points in the target frame.
+    X : array_like, shape (N, M)
+        M-D Points in the source frame.
+    Y : array_like, shape (N, M)
+        M-D Points in the target frame.
+    atol_factor : float, optional
+        Factor to determine the absolute tolerance for scaling. Default is
+        1e-12.
 
     Returns
     -------
-    F : numpy.ndarray, shape (3, 3)
+    F : numpy.ndarray, shape (M, M)
         Reflection correction matrix.
-    R : numpy.ndarray, shape (3, 3)
+    R : numpy.ndarray, shape (M, M)
         Rotation matrix.
-    s : numpy.ndarray, shape (3,)
+    scale : numpy.ndarray, shape (M,)
         Diagonal scaling factors.
-    t : numpy.ndarray, shape (3,)
+    translation_vector : numpy.ndarray, shape (M,)
         Translation vector.
     rank : int
         Rank of the cross-covariance matrix.
@@ -106,36 +109,43 @@ def anisotropic_similarity(X, Y):
     Xm, Ym = X.mean(0), Y.mean(0)
     Xc, Yc = X - Xm, Y - Ym
 
-    H = Yc.T @ Xc  # shape (3,3)
+    H = Yc.T @ Xc
+    ndim = H.shape[0]
+    H_det = np.linalg.det(H)
     U, S, Vt = np.linalg.svd(H, full_matrices=False)
     tol = max(H.shape) * np.finfo(S.dtype).eps * S[0]
     rank = np.sum(S > tol)
     # ---- handedness correction ---------------------------------------------
     R = U @ Vt
     d = np.sign(np.linalg.det(R))
-    D = np.eye(3)
+    D = np.eye(ndim)
     if d < 0:
         U[:, -1] *= -1  # Flip last column of U
         R = U @ Vt
         D[-1, -1] = -1  # Flip last diagonal element of D
     # Generate the reflection correction matrix F
-    F = Vt.T @ D @ Vt
+    # If Hdet is close to zero, use the identity matrix
+    if np.isclose(H_det, 0):
+        F = np.eye(ndim)
+    else:
+        F = Vt.T @ D @ Vt
 
     # Compute scaling factors robustly
     X_rot = (Xc @ F) @ R.T
-    s = np.zeros(3)
-    for i in range(3):
-        numerator = (X_rot[:, i] * Yc[:, i]).sum()
-        denominator = (X_rot[:, i] ** 2).sum()
-        if denominator > 0:
-            s[i] = numerator / denominator
-        else:
-            s[i] = 1.0  # Default to 1 if denominator is zero
+    fro2 = np.linalg.norm(X_rot, "fro") ** 2  # codespell:ignore
+    atol = atol_factor * fro2 + np.finfo(float).eps
+
+    num = (X_rot * Yc).sum(0)
+    denom = (X_rot * X_rot).sum(0)
+    deg = denom < atol  # boolean mask
+
+    scale = np.ones(ndim)  # default 1
+    scale[~deg] = num[~deg] / denom[~deg]
 
     # ---- translation --------------------------------------------------------
-    t = Ym - s * (R @ (F @ Xm))
+    translation_vector = Ym - scale * (R @ (F @ Xm))
 
-    return F, R, s, t, int(rank)
+    return F, R, scale, translation_vector, int(rank)
 
 
 def reticle_metadata_transform(global_rotation_degrees):
