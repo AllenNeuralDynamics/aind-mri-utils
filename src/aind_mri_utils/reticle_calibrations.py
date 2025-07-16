@@ -84,23 +84,23 @@ def anisotropic_similarity(X, Y, atol_factor=1e-12):
 
     Parameters
     ----------
-    X : array_like, shape (N, 3)
-        Points in the source frame.
-    Y : array_like, shape (N, 3)
-        Points in the target frame.
+    X : array_like, shape (N, M)
+        M-D Points in the source frame.
+    Y : array_like, shape (N, M)
+        M-D Points in the target frame.
     atol_factor : float, optional
         Factor to determine the absolute tolerance for scaling. Default is
         1e-12.
 
     Returns
     -------
-    F : numpy.ndarray, shape (3, 3)
+    F : numpy.ndarray, shape (M, M)
         Reflection correction matrix.
-    R : numpy.ndarray, shape (3, 3)
+    R : numpy.ndarray, shape (M, M)
         Rotation matrix.
-    s : numpy.ndarray, shape (3,)
+    scale : numpy.ndarray, shape (M,)
         Diagonal scaling factors.
-    t : numpy.ndarray, shape (3,)
+    translation_vector : numpy.ndarray, shape (M,)
         Translation vector.
     rank : int
         Rank of the cross-covariance matrix.
@@ -109,7 +109,7 @@ def anisotropic_similarity(X, Y, atol_factor=1e-12):
     Xm, Ym = X.mean(0), Y.mean(0)
     Xc, Yc = X - Xm, Y - Ym
 
-    H = Yc.T @ Xc  # shape (3,3)
+    H = Yc.T @ Xc
     ndim = H.shape[0]
     H_det = np.linalg.det(H)
     U, S, Vt = np.linalg.svd(H, full_matrices=False)
@@ -132,7 +132,7 @@ def anisotropic_similarity(X, Y, atol_factor=1e-12):
 
     # Compute scaling factors robustly
     X_rot = (Xc @ F) @ R.T
-    fro2 = np.linalg.norm(X_rot, "fro") ** 2
+    fro2 = np.linalg.norm(X_rot, "fro") ** 2  # codespell:ignore
     atol = atol_factor * fro2 + np.finfo(float).eps
 
     num = (X_rot * Yc).sum(0)
