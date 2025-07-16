@@ -1,3 +1,9 @@
+## v0.9.2 (2025-07-16)
+
+### Fix
+
+- Fix anisotropic similarity (#106)
+
 ## v0.9.1 (2025-07-11)
 
 ### Fix
