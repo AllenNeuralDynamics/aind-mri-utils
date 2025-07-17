@@ -1,0 +1,24 @@
+name: "Release"
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'          # semver tags
+  workflow_dispatch:
+
+permissions:
+  contents: write    # create release + upload assets
+
+concurrency:
+  group: release
+  cancel-in-progress: false   # let releases finish
+
+jobs:
+  run-release:
+    uses: AllenNeuralDynamics/galen-uv-workflows/.github/workflows/publish.yml@main
+    with:
+      tag-name: ${{ github.ref_name }}
+      python-version: "3.13"
+    secrets:
+      repo-token: ${{ secrets.GITHUB_TOKEN }}
+      pypi-token: ${{ secrets.AIND_PYPI_TOKEN }}    
