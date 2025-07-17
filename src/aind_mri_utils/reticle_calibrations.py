@@ -11,14 +11,12 @@ from pathlib import Path
 
 import numpy as np
 from openpyxl import load_workbook
-from scipy import optimize as opt
 from scipy.spatial.transform import Rotation
 
 from aind_mri_utils.arc_angles import vector_to_arc_angles
 from aind_mri_utils.rotations import (
     apply_affine,
     apply_inverse_affine,
-    combine_angles,
     compose_transforms,
 )
 
@@ -72,15 +70,15 @@ def _extract_calibration_metadata(ws):
     )
 
 
-def anisotropic_similarity(X, Y, atol_factor=1e-12):
+def find_similarity(X, Y):
     """
-    Estimate the anisotropic similarity transform between two sets of points.
+    Estimate the similarity transform between two sets of points.
 
-    Finds the rotation matrix R, diagonal scaling factors s, translation
-    vector t, and the reflection correction matrix F. For data arrays with
-    points in rows (transposed), the transformation is:
+    Finds the rotation matrix R, translation vector t, and the reflection
+    correction matrix F. For data arrays with points in rows (transposed), the
+    transformation is:
 
-        Y = (X @ F) @ R.T * s + t
+        Y = (X @ F) @ R.T + t
 
     Parameters
     ----------
@@ -88,9 +86,6 @@ def anisotropic_similarity(X, Y, atol_factor=1e-12):
         M-D Points in the source frame.
     Y : array_like, shape (N, M)
         M-D Points in the target frame.
-    atol_factor : float, optional
-        Factor to determine the absolute tolerance for scaling. Default is
-        1e-12.
 
     Returns
     -------
@@ -98,8 +93,6 @@ def anisotropic_similarity(X, Y, atol_factor=1e-12):
         Reflection correction matrix.
     R : numpy.ndarray, shape (M, M)
         Rotation matrix.
-    scale : numpy.ndarray, shape (M,)
-        Diagonal scaling factors.
     translation_vector : numpy.ndarray, shape (M,)
         Translation vector.
     rank : int
@@ -130,22 +123,10 @@ def anisotropic_similarity(X, Y, atol_factor=1e-12):
     else:
         F = Vt.T @ D @ Vt
 
-    # Compute scaling factors robustly
-    X_rot = (Xc @ F) @ R.T
-    fro2 = np.linalg.norm(X_rot, "fro") ** 2  # codespell:ignore
-    atol = atol_factor * fro2 + np.finfo(float).eps
-
-    num = (X_rot * Yc).sum(0)
-    denom = (X_rot * X_rot).sum(0)
-    deg = denom < atol  # boolean mask
-
-    scale = np.ones(ndim)  # default 1
-    scale[~deg] = num[~deg] / denom[~deg]
-
     # ---- translation --------------------------------------------------------
-    translation_vector = Ym - scale * (R @ (F @ Xm))
+    translation_vector = Ym - (R @ (F @ Xm))
 
-    return F, R, scale, translation_vector, int(rank)
+    return F, R, translation_vector, int(rank)
 
 
 def reticle_metadata_transform(global_rotation_degrees):
@@ -520,40 +501,9 @@ def _append_parallax_calibration_file(
     return pairs_by_controller
 
 
-def _unpack_theta_scale(theta):
-    """
-    Unpack theta into rotation matrix, scale, and translation.
-
-    Parameters
-    ----------
-    theta : numpy.ndarray
-        Array containing rotation angles, scale factors, and translation
-        values.
-
-    Returns
-    -------
-    tuple
-        (R, scale, translation)
-        R : numpy.ndarray
-            Rotation matrix.
-        scale : numpy.ndarray
-            Scale factors.
-        translation : numpy.ndarray
-            Translation vector.
-    """
-    R = combine_angles(*theta[0:3])
-    scale = theta[3:6]
-    translation = theta[6:]
-    return R, scale, translation
-
-
 def fit_rotation_params_interpretable(
     bregma_pts,
     probe_pts,
-    find_scaling=True,
-    joint_optimization=True,
-    lambda_reg=0.1,
-    **kwargs,
 ):
     """
     Fit rotation parameters to align bregma points with probe points using
@@ -575,15 +525,6 @@ def fit_rotation_params_interpretable(
         Bregma points to be transformed.
     probe_pts : numpy.ndarray, shape (N, 3)
         Probe points to align with.
-    find_scaling : bool, optional
-        Whether to fit scaling. Default is True.
-    joint_optimization : bool, optional
-        Whether to jointly optimize rotation, scaling, and translation. Default
-        is True.
-    lambda_reg : float, optional
-        Regularization parameter for scaling. Default is 0.1.
-    **kwargs
-        Additional keyword arguments for least squares optimization.
 
     Returns
     -------
@@ -591,8 +532,6 @@ def fit_rotation_params_interpretable(
         Handedness correction matrix.
     R : numpy.ndarray, shape (3, 3)
         Rotation matrix.
-    s : numpy.ndarray, shape (3,)
-        Scaling factors.
     t : numpy.ndarray, shape (3,)
         Translation vector.
     rank : int
@@ -603,50 +542,8 @@ def fit_rotation_params_interpretable(
     if bregma_pts.shape[1] != 3:
         raise ValueError("bregma_pts and probe_pts must have 3 columns")
 
-    F, R, s, t, rank = anisotropic_similarity(bregma_pts, probe_pts)
-    if not find_scaling:
-        # If we are not finding scaling, return the rotation and translation
-        # matrices directly.
-        t_no_scale = probe_pts.mean(0) - R @ (F @ bregma_pts.mean(0))
-        return F, R, np.ones(3), t_no_scale, rank
-    if not joint_optimization:
-        return F, R, s, t, rank
-
-    # Jointly optimize rotation, scaling, and translation.
-    # Initial guess of parameters
-    theta0 = np.zeros(9)
-    xr, yr, zr = Rotation.from_matrix(R).as_euler("xyz")
-    theta0[0:3] = [xr, yr, zr]  # rotation angles in degrees
-    theta0[3:6] = F @ s  # scaling factors
-    theta0[6:] = t  # translation vector
-
-    # Scaling with joint optimization
-    def _residuals(theta, probe_pts, bregma_pts, lambda_reg):
-        """cost function for least squares optimization"""
-        R, scale, translation = _unpack_theta_scale(theta)
-        # Apply the transformation
-        transformed_reticle = bregma_pts @ R.T * scale + translation
-        # Calculate residuals
-        res = (transformed_reticle - probe_pts).flatten()
-        if lambda_reg == 0:
-            # No regularization, return only the residuals
-            return res
-        else:
-            # Regularization term encouraging scale to be close to 1
-            reg = np.sqrt(lambda_reg) * (np.abs(scale) - np.ones(3))
-            # Concatenate residuals and regularization term
-            return np.concatenate((res, reg))
-
-    res = opt.least_squares(
-        _residuals,
-        theta0,
-        args=(probe_pts, bregma_pts, lambda_reg),
-        **kwargs,
-    )
-    R_joint, s_joint, t_joint = _unpack_theta_scale(res.x)
-    s_joint_p = np.abs(s_joint)
-    F_joint = np.diag(np.sign(s_joint))
-    return F_joint, R_joint, s_joint_p, t_joint, rank
+    F, R, t, rank = find_similarity(bregma_pts, probe_pts)
+    return F, R, t, rank
 
 
 def fit_rotation_params(bregma_pts, probe_pts, **kwargs):
@@ -679,14 +576,12 @@ def fit_rotation_params(bregma_pts, probe_pts, **kwargs):
         Combined transformation matrix.
     t : numpy.ndarray, shape (3,)
         Translation vector.
-    s : numpy.ndarray, shape (3,)
-        Scaling vector.
     """
-    F, R, s, t, rank = fit_rotation_params_interpretable(
+    F, R, t, rank = fit_rotation_params_interpretable(
         bregma_pts, probe_pts, **kwargs
     )
-    Rcomb = np.diag(s) @ R @ F
-    return Rcomb, t, s
+    R_comb = R @ F
+    return R_comb, t
 
 
 def _fit_by_probe(pairs_by_probe, *args, **kwargs):
@@ -706,7 +601,7 @@ def _fit_by_probe(pairs_by_probe, *args, **kwargs):
     Returns
     -------
     dict
-        Keys are probe names, values are tuples (R, t, s).
+        Keys are probe names, values are tuples (R, t).
     """
     cal_by_probe = {
         k: fit_rotation_params(*v, *args, **kwargs)
@@ -874,7 +769,7 @@ def _debug_fits(
     """
     errs_by_probe = {}
     for probe, (bregma_pts, probe_pts) in adjusted_pairs_by_probe.items():
-        R, t, scaling = cal_by_probe[probe]
+        R, t = cal_by_probe[probe]
         predicted_probe_pts = transform_bregma_to_probe(bregma_pts, R, t)
         # in mm
         errs = np.linalg.norm(predicted_probe_pts - probe_pts, axis=1)
@@ -884,7 +779,6 @@ def _debug_fits(
             logger.debug("rotation:")
             logger.debug(R)
             logger.debug(f"translation: {t}")
-            logger.debug(f"scaling: {scaling}")
             _debug_print_err_stats(1000 * errs)
             reticle_pts = transform_probe_to_bregma(
                 bregma_pts, R_reticle_to_bregma, t_reticle_to_bregma
@@ -1304,9 +1198,6 @@ def combine_parallax_and_manual_calibrations(
     manual_calibration_files,
     parallax_directories,
     probes_to_ignore_manual=[],
-    find_scaling=None,
-    find_scaling_parallax=None,
-    find_scaling_manual=None,
     *args,
     **kwargs,
 ):
@@ -1326,12 +1217,6 @@ def combine_parallax_and_manual_calibrations(
     probes_to_ignore_manual : list of str, optional
         List of probe names to ignore from the manual calibrations.
         Default is [].
-    find_scaling : bool, optional
-        Whether to find scaling for all calibrations. Default is None.
-    find_scaling_parallax : bool, optional
-        Whether to find scaling for parallax calibrations. Default is None.
-    find_scaling_manual : bool, optional
-        Whether to find scaling for manual calibrations. Default is None.
     *args
         Additional arguments for fitting.
     **kwargs
@@ -1364,28 +1249,16 @@ def combine_parallax_and_manual_calibrations(
     R_reticle_to_bregma = reticle_metadata_transform(global_rotation_degrees)
 
     # Fit the manual calibrations
-    manual_scaling_kwargs = {
-        "find_scaling": v
-        for v in [find_scaling, find_scaling_manual]
-        if v is not None
-    }
     cal_by_probe_manual = _fit_by_probe(
         adjusted_pairs_by_probe, *args, **kwargs
     )
-    comb_kwargs = {**manual_scaling_kwargs, **kwargs}
     for manual_calibration_file in manual_calibration_files[1:]:
         cal_by_probe, _, _ = fit_rotation_params_from_manual_calibration(
-            manual_calibration_file, *args, **comb_kwargs
+            manual_calibration_file, *args, **kwargs
         )
         cal_by_probe_manual.update(cal_by_probe)
 
     # Fit the parallax calibrations
-    parallax_scaling_kwargs = {
-        "find_scaling": v
-        for v in [find_scaling, find_scaling_parallax]
-        if v is not None
-    }
-    comb_kwargs = {**parallax_scaling_kwargs, **kwargs}
     cal_by_probe_combined = {}
     for parallax_dir in parallax_directories:
         cal_by_probe, _ = fit_rotation_params_from_parallax(
@@ -1393,7 +1266,7 @@ def combine_parallax_and_manual_calibrations(
             global_offset,
             global_rotation_degrees,
             *args,
-            **comb_kwargs,
+            **kwargs,
         )
         cal_by_probe_combined.update(cal_by_probe)
 
@@ -1411,9 +1284,6 @@ def debug_parallax_and_manual_calibrations(
     manual_calibration_files,
     parallax_directories,
     probes_to_ignore_manual=[],
-    find_scaling=None,
-    find_scaling_parallax=None,
-    find_scaling_manual=None,
     local_scale_factor=1 / 1000,
     global_scale_factor=1 / 1000,
     *args,
@@ -1435,12 +1305,6 @@ def debug_parallax_and_manual_calibrations(
     probes_to_ignore_manual : list of str, optional
         List of probe names to ignore from the manual calibration data.
         Default is [].
-    find_scaling : bool, optional
-        Whether to find scaling for all calibrations. Default is None.
-    find_scaling_parallax : bool, optional
-        Whether to find scaling for parallax calibrations. Default is None.
-    find_scaling_manual : bool, optional
-        Whether to find scaling for manual calibrations. Default is None.
     local_scale_factor : float, optional
         Local scale factor to apply to the calibration data. Default is 1/1000.
     global_scale_factor : float, optional
@@ -1475,16 +1339,10 @@ def debug_parallax_and_manual_calibrations(
     manual_cal_by_probe = {}
     manual_pairs_by_probe = {}
 
-    manual_scaling_kwargs = {
-        "find_scaling": v
-        for v in [find_scaling, find_scaling_manual]
-        if v is not None
-    }
-    comb_kwargs = {**manual_scaling_kwargs, **kwargs}
     for filename in manual_calibration_files:
         cal_by_probe, R_reticle_to_bregma, t_reticle_to_bregma = (
             fit_rotation_params_from_manual_calibration(
-                filename, *args, **comb_kwargs
+                filename, *args, **kwargs
             )
         )
         manual_cal_by_probe.update(cal_by_probe)
@@ -1496,12 +1354,6 @@ def debug_parallax_and_manual_calibrations(
         ) = read_manual_reticle_calibration(filename)
         manual_pairs_by_probe.update(adjusted_pairs_by_probe)
 
-    parallax_scaling_kwargs = {
-        "find_scaling": v
-        for v in [find_scaling, find_scaling_parallax]
-        if v is not None
-    }
-    comb_kwargs = {**parallax_scaling_kwargs, **kwargs}
     combined_cal_by_probe = {}
     combined_pairs_by_probe = {}
     for parallax_dir in parallax_directories:
@@ -1513,7 +1365,7 @@ def debug_parallax_and_manual_calibrations(
             global_scale_factor,
         )
         combined_cal_by_probe.update(
-            _fit_by_probe(adjusted_pairs_by_probe, *args, **comb_kwargs)
+            _fit_by_probe(adjusted_pairs_by_probe, *args, **kwargs)
         )
         combined_pairs_by_probe.update(adjusted_pairs_by_probe)
     for probe_name in probes_to_ignore_manual:

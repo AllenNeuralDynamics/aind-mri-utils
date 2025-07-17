@@ -478,29 +478,6 @@ def apply_inverse_affine(pts, affine_R, translation):
     return apply_affine(pts, R_inv, t_inv)
 
 
-def affine_from_rotate_scale(R, scale=None):
-    """
-    Create an affine transformation matrix from a rotation matrix and scaling
-    factors.
-
-    Parameters
-    ----------
-    R : numpy.ndarray
-        The rotation matrix.
-    scale : numpy.ndarray, optional
-        The scaling factors, by default None.
-
-    Returns
-    -------
-    numpy.ndarray
-        The affine transformation matrix.
-    """
-    if scale is None:
-        scale = np.ones(3)
-    R_adj = np.diag(scale) @ R
-    return R_adj
-
-
 def apply_rotate_translate(pts, R, translation):
     """
     Apply rotation and translation to a set of points.
