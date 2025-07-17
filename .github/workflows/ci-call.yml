@@ -32,6 +32,6 @@ jobs:
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
-      package-name: aind-mri-utils
+      package-name: aind_mri_utils
     secrets:
       repo-token: ${{ secrets.GITHUB_TOKEN }}
