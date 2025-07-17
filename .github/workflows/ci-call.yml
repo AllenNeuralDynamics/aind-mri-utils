@@ -33,6 +33,5 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       package-name: aind-mri-utils
-      skip_commit_prefix: "bump:"
     secrets:
       repo-token: ${{ secrets.GITHUB_TOKEN }}
