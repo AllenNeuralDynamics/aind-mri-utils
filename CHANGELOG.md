@@ -1,3 +1,14 @@
+## v0.10.0 (2025-07-17)
+
+### BREAKING CHANGE
+
+- calibration functions do not fit scale nor return it, and
+  affine_from_rotate_scale was removed
+
+### Fix
+
+- remove scaling parameter
+
 ## v0.9.2 (2025-07-16)
 
 ### Fix
