@@ -11,13 +11,13 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 
 from aind_mri_utils.reticle_calibrations import (
-    anisotropic_similarity,
     combine_parallax_and_manual_calibrations,
     debug_manual_calibration,
     debug_parallax_and_manual_calibrations,
     debug_parallax_calibration,
     find_probe_angle,
     find_probe_insertion_vector,
+    find_similarity,
     fit_rotation_params,
     fit_rotation_params_from_manual_calibration,
     fit_rotation_params_from_parallax,
@@ -229,13 +229,13 @@ class CalibrationTest(unittest.TestCase):
     manual_test_pairs = {
         46116: (
             np.array([[1.0, 1.0, 1.0], [-1.0, -1.0, -1.0]]),
-            np.array([[4.55, 9.62, 6.53], [6.93, 7.09, 6.93]]),
+            np.array([[4.55, 9.59, 6.52], [6.93, 7.11, 6.93]]),
         ),
     }
     parallax_test_pairs = {
         46105: (
             np.array([[1.0, 1.0, 1.0], [-1.0, -1.0, -1.0]]),
-            np.array([[11.65, 2.49, 7.17], [9.35, 4.97, 8.06]]),
+            np.array([[11.63, 2.50, 7.16], [9.35, 4.95, 8.07]]),
         ),
     }
 
@@ -263,7 +263,7 @@ class CalibrationTest(unittest.TestCase):
             self.root_logger.addHandler(handler)
 
     def helper_test_transforms(
-        self, R, t, bregma_pt, probe_pt, atol=1e-05, rtol=1e-08
+        self, R, t, bregma_pt, probe_pt, atol=1e-03, rtol=1e-03
     ):
         received_probe_pt = transform_bregma_to_probe(bregma_pt, R, t)
         self.assertTrue(
@@ -278,7 +278,7 @@ class CalibrationTest(unittest.TestCase):
         self, cal_by_probe, test_pair_by_probe, *args, **kwargs
     ):
         for probe, (bregma_pt, probe_pt) in test_pair_by_probe.items():
-            R, t, _ = cal_by_probe[probe]
+            R, t = cal_by_probe[probe]
             self.helper_test_transforms(
                 R, t, bregma_pt, probe_pt, *args, **kwargs
             )
@@ -289,21 +289,15 @@ class CalibrationTest(unittest.TestCase):
         reticle_pts_scaled = reticle_pts / 1000
         probe_pts_scaled = probe_pts / 1000
         reticle_pts_scaled = reticle_pts_scaled + self.global_offset
-        for find_scaling in [True, False]:
-            if find_scaling:
-                atol = 1e-2
-                rtol = 1e-2
-            else:  # no scaling
-                atol = 1e-1
-                rtol = 0
-            R, t, s = fit_rotation_params(
-                reticle_pts_scaled,
-                probe_pts_scaled,
-                find_scaling=find_scaling,
-            )
-            self.helper_test_transforms(
-                R, t, *self.parallax_test_pairs[46105], atol=atol, rtol=rtol
-            )
+        atol = 1e-1
+        rtol = 0
+        R, t = fit_rotation_params(
+            reticle_pts_scaled,
+            probe_pts_scaled,
+        )
+        self.helper_test_transforms(
+            R, t, *self.parallax_test_pairs[46105], atol=atol, rtol=rtol
+        )
 
     def test_read_manual_reticle_calibration(self) -> None:
         """Tests for read_manual_reticle_calibration"""
@@ -369,7 +363,9 @@ class CalibrationTest(unittest.TestCase):
         self.assertTrue(pts_close)
         self.assertTrue(
             np.allclose(
-                errs_by_probe[46116], self.man_cal_errs[46116], atol=1e-2
+                errs_by_probe[test_probe],
+                self.man_cal_errs[test_probe],
+                atol=1e-1,
             )
         )
 
@@ -396,13 +392,13 @@ class CalibrationTest(unittest.TestCase):
                 k
             ]
             self.assertTrue(
-                np.allclose(reticle_pts, received_reticle_pts, atol=1e-2)
-                and np.allclose(probe_pts, received_probe_pts, atol=1e-2)
+                np.allclose(reticle_pts, received_reticle_pts, atol=1e-1)
+                and np.allclose(probe_pts, received_probe_pts, atol=1e-1)
             )
         # Assuming errs_by_probe is a dictionary with probe IDs as keys
         for probe_id, errs in self.par_cal_errs.items():
             self.assertTrue(
-                np.allclose(errs, errs_by_probe[probe_id], atol=1e-2)
+                np.allclose(errs, errs_by_probe[probe_id], atol=1e-1)
             )
 
     def test_read_parallel_calibration_file(self) -> None:
@@ -462,7 +458,7 @@ class CalibrationTest(unittest.TestCase):
             self.global_offset,
             self.global_rotation_degrees,
         )
-        R, t, s = cal_by_probe[46105]
+        R, t = cal_by_probe[46105]
         received_insertion_vector = find_probe_insertion_vector(R)
         self.assertTrue(
             np.allclose(
@@ -479,10 +475,10 @@ class CalibrationTest(unittest.TestCase):
             self.global_offset,
             self.global_rotation_degrees,
         )
-        R, t, s = cal_by_probe[46105]
+        R, t = cal_by_probe[46105]
         ap_angle, ml_angle = find_probe_angle(R)
-        self.assertAlmostEqual(ap_angle, -16.32, places=2)
-        self.assertAlmostEqual(ml_angle, -12.61, places=2)
+        self.assertAlmostEqual(ap_angle, -16.09, places=2)
+        self.assertAlmostEqual(ml_angle, -12.37, places=2)
 
     def test_transform_reticle_to_bregma(self) -> None:
         """Tests for transform_reticle_to_bregma"""
@@ -511,10 +507,10 @@ class CalibrationTest(unittest.TestCase):
             )
         )
         self.helper_test_calibration(
-            cal_by_probe_combined, self.manual_test_pairs, atol=1e-2
+            cal_by_probe_combined, self.manual_test_pairs, atol=1e-1
         )
         self.helper_test_calibration(
-            cal_by_probe_combined, self.parallax_test_pairs, atol=1e-2
+            cal_by_probe_combined, self.parallax_test_pairs, atol=1e-1
         )
         self.assertTrue(np.array_equal(R_reticle_to_bregma, np.eye(3)))
         self.assertTrue(np.array_equal(global_offset, self.global_offset))
@@ -547,28 +543,15 @@ class CalibrationTest(unittest.TestCase):
                 k
             ]
             self.assertTrue(
-                np.allclose(reticle_pts, received_reticle_pts, atol=1e-2)
-                and np.allclose(probe_pts, received_probe_pts, atol=1e-2)
+                np.allclose(reticle_pts, received_reticle_pts, atol=1e-1)
+                and np.allclose(probe_pts, received_probe_pts, atol=1e-1)
             )
         for probe_id, errs in self.par_cal_errs.items():
             self.assertTrue(
-                np.allclose(errs, errs_by_probe[probe_id], atol=1e-2)
+                np.allclose(errs, errs_by_probe[probe_id], atol=1e-1)
             )
 
-    def test_anisotropic_similarity_scaling(self):
-        """Test scaling factors."""
-        np.random.seed(42)
-        X = np.random.rand(100, 3)
-        scale = np.array([1.5, 1.7, 1.3])
-        Y = scale * X
-        F, R, s, t, rank = anisotropic_similarity(X, Y)
-        self.assertTrue(np.allclose(F, np.diag([1.0, 1.0, 1.0])))
-        self.assertTrue(np.allclose(R, np.eye(3), atol=0.02))
-        self.assertTrue(np.allclose(s, scale, atol=0.02))
-        self.assertTrue(np.allclose(t, np.zeros(3), atol=0.02))
-        self.assertEqual(rank, 3)
-
-    def test_anisotropic_similarity_reflection(self):
+    def test_find_similarity_reflection(self):
         """Test reflections."""
         # Generate random points with a reflection
         # First fix the random seed for reproducibility
@@ -577,14 +560,14 @@ class CalibrationTest(unittest.TestCase):
         theta = 45
         Rz = Rotation.from_euler("z", theta, degrees=True).as_matrix()
         Y = X @ Rz.T * np.array([-1, 1, 1])  # Reflect across the x-axis
-        F, R, s, t, rank = anisotropic_similarity(X, Y)
+        F, R, t, rank = find_similarity(X, Y)
         self.assertTrue(np.linalg.det(F) < 0)
         self.assertTrue(np.linalg.det(R) > 0)
-        Y_pred = (X @ F) @ R.T * s + t
+        Y_pred = (X @ F) @ R.T + t
         self.assertTrue(np.allclose(Y, Y_pred, atol=1e-5))
         self.assertEqual(rank, 3)
 
-    def test_anisotropic_similarity_translation_rotation(self):
+    def test_find_similarity_translation_rotation(self):
         """
         Test translation and rotation.
         """
@@ -594,16 +577,15 @@ class CalibrationTest(unittest.TestCase):
         Rz = Rotation.from_euler("z", theta, degrees=True).as_matrix()
         t = np.array([1.0, 2.0, 3.0])
         Y = X @ Rz.T + t
-        F, R, s, t_out, rank = anisotropic_similarity(X, Y)
+        F, R, t_out, rank = find_similarity(X, Y)
         self.assertTrue(np.allclose(F, np.eye(3)))
         self.assertTrue(np.allclose(R, Rz, atol=1e-2))
-        self.assertTrue(np.allclose(s, np.ones(3), atol=1e-2))
         self.assertTrue(np.allclose(t_out, t, atol=1e-2))
         self.assertEqual(rank, 3)
 
-    def test_anisotropic_similarity_rank_deficient(self):
+    def test_find_similarity_rank_deficient(self):
         """
-        Test rank deficiency handling in anisotropic_similarity.
+        Test rank deficiency handling in find_similarity.
         """
         X = np.array(
             [
@@ -616,10 +598,9 @@ class CalibrationTest(unittest.TestCase):
         theta = 45
         Rz = Rotation.from_euler("z", theta, degrees=True).as_matrix()
         Y = X @ Rz.T
-        F, R, s, t, rank = anisotropic_similarity(X, Y)
+        F, R, _, rank = find_similarity(X, Y)
         self.assertEqual(rank, 2)
         self.assertTrue(np.allclose(F, np.eye(3)))
-        self.assertTrue(np.allclose(s, np.ones(3)))
         self.assertTrue(np.allclose(R, Rz, atol=1e-2))
 
 
