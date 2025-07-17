@@ -125,3 +125,4 @@ version_provider = "pep621"
 version_files = ["pyproject.toml", "src/aind_mri_utils/__init__.py:__version__"]
 update_changelog_on_bump = true
 tag_format = "v$version"
+major_version_zero = true
