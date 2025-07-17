@@ -8,16 +8,18 @@ main() {
   case $1 in
       -c|--checks) checks=true;
   esac
-
   # Run linters
-  black . && isort .
+  uv sync --frozen --extra dev
+  uv run --frozen ruff format
 
   # Optionally run style checks, docstring coverage, and test coverage.
   # The results of the test coverage will additionally be saved to htmlcov.
   if [ $checks ]
   then
-    flake8 . && interrogate --verbose . && coverage run -m unittest discover
-    coverage report && coverage html
+    uv run --frozen ruff check
+    uv run --frozen interrogate -v
+    uv run --frozen codespell --check-filenames
+    uv run --frozen pytest --cov aind_mri_utils
   fi
 }
 
