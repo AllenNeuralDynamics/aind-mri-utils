@@ -26,7 +26,7 @@ jobs:
        !startsWith(github.event.workflow_run.head_commit.message, 'bump:')) ||
       (github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/main')
-    uses: AllenNeuralDynamics/galen-uv-workflows/.github/workflows/bump-version.yml@main
+    uses: AllenNeuralDynamics/galen-uv-workflows/.github/workflows/bump-version.yml@v1
     with:
       default-branch: main
     secrets:
