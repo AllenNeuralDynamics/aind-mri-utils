@@ -9,7 +9,7 @@ main() {
       -c|--checks) checks=true;
   esac
   # Run linters
-  uv sync --frozen --extra dev
+  uv sync
   uv run --frozen ruff format
 
   # Optionally run style checks, docstring coverage, and test coverage.
