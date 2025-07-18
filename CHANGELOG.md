@@ -1,3 +1,10 @@
+## v0.10.1 (2025-07-18)
+
+### Fix
+
+- Attempt to fix CI problems
+- move dev deps to dependency-groups
+
 ## v0.10.0 (2025-07-17)
 
 ### BREAKING CHANGE
