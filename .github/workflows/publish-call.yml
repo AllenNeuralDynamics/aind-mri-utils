@@ -15,10 +15,11 @@ concurrency:
 
 jobs:
   run-release:
-    uses: AllenNeuralDynamics/galen-uv-workflows/.github/workflows/publish.yml@v1
+    uses: AllenNeuralDynamics/galen-uv-workflows/.github/workflows/publish.yml@v2
     with:
       tag-name: ${{ github.ref_name }}
       python-version: "3.13"
+      publish-to-pypi: true
     secrets:
       repo-token: ${{ secrets.GITHUB_TOKEN }}
-      pypi-token: ${{ secrets.AIND_PYPI_TOKEN }}    
+      pypi-token: ${{ secrets.AIND_PYPI_TOKEN }}
