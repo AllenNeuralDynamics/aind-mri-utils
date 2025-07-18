@@ -34,10 +34,11 @@ Repository = "https://github.com/AllenNeuralDynamics/aind-mri-utils/"
 Issues = "https://github.com/AllenNeuralDynamics/aind-mri-utils/issues"
 Changelog = "https://github.com/AllenNeuralDynamics/aind-mri-utils/blob/main/CHANGELOG.md"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = ['codespell', 'pytest', 'pytest-cov', 'ruff', 'interrogate']
-vscode = ['aind-mri-targeting[dev]', 'ipykernel', 'pip']
+vscode = [{include-group = 'dev'}, 'ipykernel', 'pip']
 docs = [
+  {include-group = 'dev'},
   'mkdocs',
   'mkdocs-material',
   'mkdocstrings[python]',
