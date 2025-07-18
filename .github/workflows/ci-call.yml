@@ -28,10 +28,11 @@ jobs:
       github.actor != 'github-actions[bot]' &&
       !(github.event_name == 'push' && startsWith(github.event.head_commit.message, 'bump:'))
 
-    uses: AllenNeuralDynamics/galen-uv-workflows/.github/workflows/ci.yml@v1
+    uses: AllenNeuralDynamics/galen-uv-workflows/.github/workflows/ci.yml@main
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       package-name: aind_mri_utils
+      smoke-test-paths: "tests test-data"
     secrets:
       repo-token: ${{ secrets.GITHUB_TOKEN }}
