@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -10,7 +10,7 @@ resolution-markers = [
 
 [[package]]
 name = "aind-anatomical-utils"
-version = "0.1.0"
+version = "0.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -18,9 +18,9 @@ dependencies = [
     { name = "numpy", version = "2.3.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "simpleitk" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0e/11/b82e648ed8671d8b12982a75a48fd27ba5dcc301172bb67765f8c73814e3/aind_anatomical_utils-0.1.0.tar.gz", hash = "sha256:e42fe5ddde9c56ded698cbf9bdd91707ac752ac65eb5b4132ef8912bd3865227", size = 100033, upload-time = "2025-07-01T15:51:28.311Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/d0/e82350214d5902803313752e497a0d85f67cfee8d7a8300528df1695a638/aind_anatomical_utils-0.1.1.tar.gz", hash = "sha256:d47deef0c3937353daf147f03cdeaf393873dc53b2b65447d7efa3682105a54b", size = 140536, upload-time = "2025-07-28T19:10:53.578Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/2d/1a95c741f2dc7b73dbfb4292b11673500e4ca196835efeca1c66aa3d92eb/aind_anatomical_utils-0.1.0-py3-none-any.whl", hash = "sha256:51fa98c4a674db955a5014847d73497a1bb2d4d974be61ff43fb32c061497785", size = 11589, upload-time = "2025-07-01T15:51:27.273Z" },
+    { url = "https://files.pythonhosted.org/packages/14/2b/e498ff777ffa1a3ef9450ccf85f174b9441c35334593c31102f4d28975ba/aind_anatomical_utils-0.1.1-py3-none-any.whl", hash = "sha256:07fc3cbabc242230e6b53a9a57487dc7bc7980c6f25a125224fcd4cf2ebc702b", size = 12454, upload-time = "2025-07-28T19:10:52.578Z" },
 ]
 
 [[package]]
