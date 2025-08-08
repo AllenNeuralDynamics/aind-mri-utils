@@ -2,6 +2,8 @@
 Functions for correcting for chemical shift in MRI images
 """
 
+from warnings import warn
+
 import numpy as np
 
 
@@ -60,15 +62,17 @@ def compute_chemical_shift(
         }
         direction = readout_axes.get(frequency_encoding_direction, None)
         if direction is None:
-            raise ValueError(
-                "Invalid frequency encoding direction "
-                f"{frequency_encoding_direction}"
+            warn(
+                ValueError(
+                    "Invalid frequency encoding direction "
+                    f"{frequency_encoding_direction}"
+                )
             )
         dot_products = np.abs(dir_mat @ direction)
         index_axis = np.argmax(dot_products)
         spacing = spacing_tuple[index_axis]
     else:
-        # If it is not, assume it is a spacing tuple
+        # If it is not, assume it is a spacing value
         spacing = image_or_spacing
     shift = spacing * (ppm * mag_freq) / pixel_bandwidth
     return shift
@@ -112,10 +116,10 @@ def chemical_shift_transform(shift, readout="AP"):
             )
         )
 
-    if readout == "AP":
-        translation = np.array([0, shift, 0])
-    elif readout == "LR":
+    if readout == "LR":
         translation = np.array([shift, 0, 0])
+    elif readout == "AP":
+        translation = np.array([0, shift, 0])
     elif readout == "IS":
         translation = np.array([0, 0, shift])
     else:
