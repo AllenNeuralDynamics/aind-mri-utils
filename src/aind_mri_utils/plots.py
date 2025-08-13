@@ -188,6 +188,35 @@ def rgb_to_int(r, g, b):
     return out
 
 
+def int_to_rgb(color_int):
+    """Converts an integer color representation to an RGB color.
+
+    Parameters
+    ----------
+    color_int : int
+        The integer representation of the color.
+
+    Returns
+    -------
+    tuple
+        A tuple (r, g, b) representing the RGB color.
+
+    Examples
+    --------
+    >>> int_to_rgb(16711680)
+    (255, 0, 0)
+    >>> int_to_rgb(65280)
+    (0, 255, 0)
+    >>> int_to_rgb(255)
+    (0, 0, 255)
+
+    """
+    r = (color_int >> 16) & 0xFF
+    g = (color_int >> 8) & 0xFF
+    b = color_int & 0xFF
+    return (r, g, b)
+
+
 def rgb_to_hex_string(r, g, b):
     """Converts an RGB color to a hex string.
 
@@ -234,3 +263,30 @@ def hex_string_to_int(hx):
 
     """
     return int(hx.lstrip("#"), 16)
+
+
+def hex_string_to_rgb(hx):
+    """Converts a hex color string to an RGB color.
+
+    Parameters
+    ----------
+    hx : str
+        Hexadecimal string representation of the color.
+
+    Returns
+    -------
+    tuple
+        A tuple (r, g, b) representing the RGB color.
+
+    Examples
+    --------
+    >>> hex_string_to_rgb("#FF0000")
+    (255, 0, 0)
+    >>> hex_string_to_rgb("0x00FF00")
+    (0, 255, 0)
+    >>> hex_string_to_rgb("0000FF")
+    (0, 0, 255)
+
+    """
+    color_int = hex_string_to_int(hx)
+    return int_to_rgb(color_int)
