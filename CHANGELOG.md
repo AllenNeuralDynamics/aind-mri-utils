@@ -1,3 +1,9 @@
+## v0.11.0 (2025-08-14)
+
+### Feat
+
+- Add plot convenience functions (#116)
+
 ## v0.10.2 (2025-08-08)
 
 ### Fix
