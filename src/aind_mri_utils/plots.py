@@ -146,7 +146,7 @@ def plot_vector(a, pt, *args, **kwargs):
     return a.plot(plt_pts[:, 0], plt_pts[:, 1], plt_pts[:, 2], *args, **kwargs)
 
 
-def rgb_to_int(r, g, b):
+def rgb_to_int(r, g, b, a=None):
     """Converts an RGB color to an integer.
 
     Parameters
@@ -157,6 +157,9 @@ def rgb_to_int(r, g, b):
         Green component of the color, must be in the range [0, 255].
     b : int
         Blue component of the color, must be in the range [0, 255].
+    a : int, optional
+        Alpha component of the color, must be in the range [0, 255].
+        If None, only RGB is used.
 
     Returns
     -------
@@ -178,8 +181,10 @@ def rgb_to_int(r, g, b):
     255
 
     """
+    comps = (b, g, r) if a is None else (b, g, r, a)
     out = 0
-    for i, v in enumerate((b, g, r)):
+
+    for i, v in enumerate(comps):
         if v < 0 or v > 255:
             raise ValueError(
                 f"RGB values must be in the range [0, 255], got {v}"
@@ -188,13 +193,17 @@ def rgb_to_int(r, g, b):
     return out
 
 
-def int_to_rgb(color_int):
+def int_to_rgb(color_int, has_alpha=None):
     """Converts an integer color representation to an RGB color.
 
     Parameters
     ----------
     color_int : int
         The integer representation of the color.
+    has_alpha : bool, optional
+        If True, returns RGBA. If False, returns RGB. If None,
+        automatically detects based on whether the integer uses
+        more than 24 bits.
 
     Returns
     -------
@@ -205,19 +214,29 @@ def int_to_rgb(color_int):
     --------
     >>> int_to_rgb(16711680)
     (255, 0, 0)
+    >>> int_to_rgb(2164195328)
+    (255, 0, 0, 128)
     >>> int_to_rgb(65280)
     (0, 255, 0)
     >>> int_to_rgb(255)
     (0, 0, 255)
-
     """
+
     r = (color_int >> 16) & 0xFF
     g = (color_int >> 8) & 0xFF
     b = color_int & 0xFF
-    return (r, g, b)
+    # Auto-detect alpha if not specified
+    if has_alpha is None:
+        has_alpha = color_int > 0xFFFFFF
+
+    if has_alpha:
+        a = (color_int >> 24) & 0xFF
+        return (r, g, b, a)
+    else:
+        return (r, g, b)
 
 
-def rgb_to_hex_string(r, g, b):
+def rgb_to_hex_string(r, g, b, a=None):
     """Converts an RGB color to a hex string.
 
     Parameters
@@ -228,15 +247,28 @@ def rgb_to_hex_string(r, g, b):
         Green component of the color (0-255).
     b : int
         Blue component of the color (0-255).
+    a : int, optional
+        Alpha component of the color (0-255).
+        If None, only RGB is used.
+
 
     Returns
     -------
     str
         Hexadecimal string representation of the color.
 
+    Examples
+    --------
+    >>> rgb_to_hex_string(255, 0, 0)
+    '0xFF0000'
+    >>> rgb_to_hex_string(255, 0, 0, 128)
+    '0x80FF0000'
     """
-    color_int = rgb_to_int(r, g, b)
-    return "0x{0:06X}".format(color_int)
+    color_int = rgb_to_int(r, g, b, a)
+    if a is None:
+        return "0x{0:06X}".format(color_int)
+    else:
+        return "0x{0:08X}".format(color_int)
 
 
 def hex_string_to_int(hx):
@@ -266,27 +298,34 @@ def hex_string_to_int(hx):
 
 
 def hex_string_to_rgb(hx):
-    """Converts a hex color string to an RGB color.
+    """Converts a hex color string to an RGB or RGBA color.
 
     Parameters
     ----------
     hx : str
         Hexadecimal string representation of the color.
+        Supports both RGB (6 chars) and RGBA (8 chars) formats.
 
     Returns
     -------
     tuple
-        A tuple (r, g, b) representing the RGB color.
+        A tuple (r, g, b) for RGB or (r, g, b, a) for RGBA color.
 
     Examples
     --------
     >>> hex_string_to_rgb("#FF0000")
     (255, 0, 0)
+    >>> hex_string_to_rgb("0x80FF0000")
+    (255, 0, 0, 128)
     >>> hex_string_to_rgb("0x00FF00")
     (0, 255, 0)
     >>> hex_string_to_rgb("0000FF")
     (0, 0, 255)
-
     """
     color_int = hex_string_to_int(hx)
-    return int_to_rgb(color_int)
+
+    # Determine if this is RGBA based on hex string length
+    clean_hex = hx.lstrip("#").lstrip("0x")
+    has_alpha = len(clean_hex) > 6
+
+    return int_to_rgb(color_int, has_alpha)
