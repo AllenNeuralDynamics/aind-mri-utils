@@ -168,7 +168,7 @@ def stereotax_angles_to_vector(ry, rz, degrees=True, zero_rz_to_left=False):
 
 
 def arc_angles_to_affine(
-    AP, ML, rotation=0, invert_AP=True, invert_rotation=True
+    AP, ML, rotation=0.0, invert_AP=True, invert_rotation=True
 ):
     """
     Create a transform from arc angles.
