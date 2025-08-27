@@ -1,3 +1,9 @@
+## v0.11.1 (2025-08-27)
+
+### Fix
+
+- probe to reticle transforms were in the wrong order
+
 ## v0.11.0 (2025-08-14)
 
 ### Feat
