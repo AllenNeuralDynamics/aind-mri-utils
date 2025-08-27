@@ -1064,10 +1064,10 @@ def transform_reticle_to_probe(
     """
     R_reticle_to_probe, t_reticle_to_probe = (
         combine_reticle_to_probe_transforms(
-            R_reticle_to_bregma,
-            t_reticle_to_bregma,
             R_bregma_to_probe,
             t_bregma_to_probe,
+            R_reticle_to_bregma,
+            t_reticle_to_bregma,
         )
     )
     return apply_affine(reticle_pts, R_reticle_to_probe, t_reticle_to_probe)
@@ -1103,10 +1103,10 @@ def transform_probe_to_reticle(
     """
     R_reticle_to_probe, t_reticle_to_probe = (
         combine_reticle_to_probe_transforms(
-            R_reticle_to_bregma,
-            t_reticle_to_bregma,
             R_bregma_to_probe,
             t_bregma_to_probe,
+            R_reticle_to_bregma,
+            t_reticle_to_bregma,
         )
     )
     return apply_inverse_affine(
