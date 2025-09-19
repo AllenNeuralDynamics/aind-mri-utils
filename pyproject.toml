@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -36,7 +36,7 @@ Changelog = "https://github.com/AllenNeuralDynamics/aind-mri-utils/blob/main/CHA
 
 [dependency-groups]
 dev = ['codespell', 'pytest', 'pytest-cov', 'ruff', 'interrogate']
-vscode = [{include-group = 'dev'}, 'ipykernel', 'pip']
+jupyter = [{include-group = 'dev'}, 'ipykernel', 'pip']
 docs = [
   {include-group = 'dev'},
   'mkdocs',
@@ -48,9 +48,6 @@ docs = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.dynamic]
-readme = { file = "README.md", content-type = "text/markdown" }
 
 [tool.ruff]
 line-length = 79
@@ -123,7 +120,7 @@ exclude = [
 
 [tool.commitizen]
 version_provider = "pep621"
-version_files = ["pyproject.toml", "src/aind_mri_utils/__init__.py:__version__"]
+version_files = ["src/aind_mri_utils/__init__.py:__version__"]
 update_changelog_on_bump = true
 tag_format = "v$version"
 major_version_zero = true
