@@ -1,56 +1,78 @@
 # aind-mri-utils
 
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
-![Code Style](https://img.shields.io/badge/code%20style-black-black)
+![Code Style](https://img.shields.io/badge/code%20style-ruff-black)
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
-![Interrogate](https://img.shields.io/badge/interrogate-97.3%25-brightgreen)
+![Interrogate](https://img.shields.io/badge/interrogate-98.2%25-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-63%25-red?logo=codecov)
 ![Python](https://img.shields.io/badge/python->=3.9-blue?logo=python)
+![MyPy](https://img.shields.io/badge/mypy-typed-blue)
 
-Library for aind mri utilities.
+MRI utilities toolkit for neuroscience experiment planning developed by Allen Institute for Neural Dynamics.
 
 ## Installation
-To use the software, in the root directory, run
+
 ```bash
-pip install -e .
+pip install aind-mri-utils
 ```
 
-To develop the code, run
+For development:
 ```bash
-pip install -e .[dev]
+git clone https://github.com/AllenNeuralDynamics/aind-mri-utils
+cd aind-mri-utils
+uv sync --group dev
+```
+
+## Usage
+
+```python
+# Arc angle conversions for probe positioning systems
+from aind_mri_utils.arc_angles import vector_to_arc_angles, arc_angles_to_vector
+probe_vector = [0.0, 0.5, -0.866]  # 30° from vertical
+arc_angles = vector_to_arc_angles(probe_vector)  # → (30.0, 0.0)
+
+# Reticle calibration from measurement data
+from aind_mri_utils.reticle_calibrations import fit_rotation_params_from_parallax
+calibration_file = "path/to/parallax_measurements.xlsx"
+rotation_params = fit_rotation_params_from_parallax(calibration_file)
+
+# Chemical shift correction for MRI images
+from aind_mri_utils.chemical_shift import compute_chemical_shift
+import SimpleITK as sitk
+mri_image = sitk.ReadImage("brain_scan.nii")
+shift_vector = compute_chemical_shift(mri_image, ppm=3.5, mag_freq=599.0)
+
+# 3D geometric measurements
+from aind_mri_utils.measurement import find_circle, dist_point_to_line
+circle_center, radius = find_circle(measurement_points)
+distance = dist_point_to_line(point, line_start, line_end)
+
+# Medical image I/O
+from aind_mri_utils.file_io import read_dicom, write_nii
+dicom_volume = read_dicom("dicom_folder/")
+write_nii(processed_volume, "output.nii")
 ```
 
 ## Contributing
 
-### Linters and testing
-
-There are several libraries used to run linters, check documentation, and run tests.
-
-- Please test your changes using the **coverage** library, which will run the tests and log a coverage report:
+### Development workflow
 
 ```bash
-coverage run -m unittest discover && coverage report
-```
+# Setup development environment
+uv sync --group dev
 
-- Use **interrogate** to check that modules, methods, etc. have been documented thoroughly:
+# Run linting and formatting
+uv run ruff check
+uv run ruff format
 
-```bash
-interrogate .
-```
+# Run type checking
+uv run mypy src/
 
-- Use **flake8** to check that code is up to standards (no unused imports, etc.):
-```bash
-flake8 .
-```
+# Run tests with coverage
+uv run pytest
 
-- Use **black** to automatically format the code into PEP standards:
-```bash
-black .
-```
-
-- Use **isort** to automatically sort import statements:
-```bash
-isort .
+# Run all checks
+./scripts/run_linters_and_checks.sh --checks
 ```
 
 ### Pull requests
@@ -72,12 +94,8 @@ where scope (optional) describes the packages affected by the code changes and t
 - **test**: Adding missing tests or correcting existing tests
 
 ### Documentation
-To generate the rst files source files for documentation, run
+To build documentation:
 ```bash
-sphinx-apidoc -o doc_template/source/ src
+uv sync --group docs
+uv run mkdocs serve
 ```
-Then to create the documentation HTML files, run
-```bash
-sphinx-build -b html doc_template/source/ doc_template/build/html
-```
-More info on sphinx installation can be found [here](https://www.sphinx-doc.org/en/master/usage/installation.html).
