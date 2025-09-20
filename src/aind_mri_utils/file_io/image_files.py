@@ -2,12 +2,15 @@
 IO functions for SITK
 """
 
+from __future__ import annotations
+
 import os
+from typing import Any
 
 import SimpleITK as sitk
 
 
-def read_image(filename):
+def read_image(filename: str) -> Any:
     """
     Reads generic image files/folders in SITK using
     Currently explicitly supported: .dcm, .nii, .tiff
@@ -56,7 +59,7 @@ def read_image(filename):
             return sitk.ReadImage(filename)
 
 
-def read_dicom(filename):
+def read_dicom(filename: str) -> Any:
     """Reader to import Dicom file and convert to sitk image
 
     See
@@ -90,7 +93,7 @@ def read_dicom(filename):
     return reader.Execute()
 
 
-def read_dcm(filename):
+def read_dcm(filename: str) -> Any:
     """
     Reader to import Dicom file and convert to sitk image.
     This function is a wrapper on read_dicom to handle multiple naming
@@ -111,7 +114,7 @@ def read_dcm(filename):
     return read_dicom(filename)
 
 
-def read_nii(filename):
+def read_nii(filename: str) -> Any:
     """
     Reader to import nifti file and convert to sitk image
     This function is just a wrapper to match convention.
@@ -130,7 +133,7 @@ def read_nii(filename):
     return sitk.ReadImage(filename)
 
 
-def read_nifti(filename):
+def read_nifti(filename: str) -> Any:
     """
     Reader to import nifti file and convert to sitk image
     This function is a wrapper on read_nii to handle multiple naming
@@ -150,7 +153,7 @@ def read_nifti(filename):
     return read_nii(filename)
 
 
-def read_tiff_stack(folder):
+def read_tiff_stack(folder: str) -> Any:
     """
     Code to read a tiff stack
     THIS CODE IS INCOMPLETE: needs metadata handling (resolution, etc.) and
@@ -180,7 +183,7 @@ def read_tiff_stack(folder):
     return reader.Execute()
 
 
-def write_nii(image, filename):
+def write_nii(image: Any, filename: str) -> None:
     """
 
     Write an sitk image to .nii file
@@ -203,7 +206,7 @@ def write_nii(image, filename):
     sitk.WriteImage(image, f_name + f_ext)
 
 
-def write_dicom(image, foldername):
+def write_dicom(image: Any, foldername: str) -> None:
     """
     Save SITK image as dicom stack.
     Heavily borrowed from

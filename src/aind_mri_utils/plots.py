@@ -1,12 +1,26 @@
 """Plotting functions"""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import tri as mpt
 from matplotlib.colors import ListedColormap
 
+if TYPE_CHECKING:
+    from mpl_toolkits.mplot3d import Axes3D
+    from numpy.typing import NDArray
 
-def plot_tri_mesh(ax, vertices, faces, *plot_args, **plot_kwargs):
+
+def plot_tri_mesh(
+    ax: Any,
+    vertices: NDArray[np.floating[Any]],
+    faces: NDArray[np.integer[Any]],
+    *plot_args: Any,
+    **plot_kwargs: Any,
+) -> tuple[Any, Any]:
     """
     Adds a mesh to a 3d plot
 
@@ -28,7 +42,9 @@ def plot_tri_mesh(ax, vertices, faces, *plot_args, **plot_kwargs):
 
 
 # Function from @Mateen Ulhaq and @karlo
-def _set_axes_radius(ax, origin, radius):
+def _set_axes_radius(
+    ax: Any, origin: NDArray[np.floating[Any]], radius: float
+) -> None:
     """
     Set all three axes to have the same distance around the origin
 
@@ -46,7 +62,7 @@ def _set_axes_radius(ax, origin, radius):
 
 
 # Function from @Mateen Ulhaq and @karlo
-def set_axes_equal(ax: plt.Axes):
+def set_axes_equal(ax: Axes3D) -> None:
     """Set 3D plot axes to equal scale.
 
     Make axes of 3D plot have equal scale so that spheres appear as
@@ -65,7 +81,7 @@ def set_axes_equal(ax: plt.Axes):
     _set_axes_radius(ax, origin, radius)
 
 
-def make_3d_ax_look_normal(ax: plt.Axes):
+def make_3d_ax_look_normal(ax: Axes3D) -> None:
     """
     Changes the aspect ratio of a 3d plot so that dimensions are approximately
     the same size
@@ -78,7 +94,7 @@ def make_3d_ax_look_normal(ax: plt.Axes):
     set_axes_equal(ax)
 
 
-def get_prop_cycle():
+def get_prop_cycle() -> Any:
     """
     Returns the colors in the current prop cycle
     """
@@ -86,19 +102,21 @@ def get_prop_cycle():
     return prop_cycle.by_key()["color"]
 
 
-def plot_point_cloud_3d(a, pts, *args, **kwargs):
+def plot_point_cloud_3d(
+    a: Any, pts: NDArray[np.floating[Any]], *args: Any, **kwargs: Any
+) -> Any:
     """Scatter plots a Nx3 array as N 3D points"""
     return a.scatter(pts[:, 0], pts[:, 1], pts[:, 2], *args, **kwargs)
 
 
 def create_single_colormap(
-    color_name,
-    N=256,
-    saturation=0,
-    start_color="white",
-    is_transparent=True,
-    is_reverse=False,
-):
+    color_name: str,
+    N: int = 256,
+    saturation: float = 0,
+    start_color: str = "white",
+    is_transparent: bool = True,
+    is_reverse: bool = False,
+) -> ListedColormap:
     """ "
     Creates a colormap with a single color
 
@@ -116,14 +134,14 @@ def create_single_colormap(
 
     """
     cmap = ListedColormap([start_color, color_name])
-    start_color = np.array(cmap(0))
+    start_color_array = np.array(cmap(0))
     if is_transparent:
-        start_color[-1] = 0
+        start_color_array[-1] = 0
     if not is_reverse:
         cmap = ListedColormap(
             np.vstack(
                 (
-                    np.linspace(start_color, cmap(1), N),
+                    np.linspace(start_color_array, cmap(1), N),
                     np.tile(cmap(1), (int(saturation * N), 1)),
                 )
             )
@@ -133,20 +151,22 @@ def create_single_colormap(
             np.vstack(
                 (
                     np.tile(cmap(1), (int(saturation * N), 1)),
-                    np.linspace(cmap(1), start_color, N),
+                    np.linspace(cmap(1), start_color_array, N),
                 )
             )
         )
     return cmap
 
 
-def plot_vector(a, pt, *args, **kwargs):
+def plot_vector(
+    a: Any, pt: NDArray[np.floating[Any]], *args: Any, **kwargs: Any
+) -> Any:
     """Plots a 3D point as a vector from the origin"""
     plt_pts = np.vstack([np.array([0, 0, 0]), pt])
     return a.plot(plt_pts[:, 0], plt_pts[:, 1], plt_pts[:, 2], *args, **kwargs)
 
 
-def rgb_to_int(r, g, b, a=None):
+def rgb_to_int(r: int, g: int, b: int, a: int | None = None) -> int:
     """Converts an RGB color to an integer.
 
     Parameters
@@ -193,7 +213,9 @@ def rgb_to_int(r, g, b, a=None):
     return out
 
 
-def int_to_rgb(color_int, has_alpha=None):
+def int_to_rgb(
+    color_int: int, has_alpha: bool | None = None
+) -> tuple[int, int, int] | tuple[int, int, int, int]:
     """Converts an integer color representation to an RGB color.
 
     Parameters
@@ -236,7 +258,7 @@ def int_to_rgb(color_int, has_alpha=None):
         return (r, g, b)
 
 
-def rgb_to_hex_string(r, g, b, a=None):
+def rgb_to_hex_string(r: int, g: int, b: int, a: int | None = None) -> str:
     """Converts an RGB color to a hex string.
 
     Parameters
@@ -266,12 +288,12 @@ def rgb_to_hex_string(r, g, b, a=None):
     """
     color_int = rgb_to_int(r, g, b, a)
     if a is None:
-        return "0x{0:06X}".format(color_int)
+        return f"0x{color_int:06X}"
     else:
-        return "0x{0:08X}".format(color_int)
+        return f"0x{color_int:08X}"
 
 
-def hex_string_to_int(hx):
+def hex_string_to_int(hx: str) -> int:
     """Converts a hex color string to an integer.
 
     Parameters
@@ -297,7 +319,9 @@ def hex_string_to_int(hx):
     return int(hx.lstrip("#"), 16)
 
 
-def hex_string_to_rgb(hx):
+def hex_string_to_rgb(
+    hx: str,
+) -> tuple[int, int, int] | tuple[int, int, int, int]:
     """Converts a hex color string to an RGB or RGBA color.
 
     Parameters

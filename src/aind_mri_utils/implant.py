@@ -1,13 +1,19 @@
 """Module to fit implant rotations to MRI data."""
 
+from __future__ import annotations
+
 import warnings
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from aind_anatomical_utils.sitk_volume import find_points_equal_to
 from aind_anatomical_utils.slicer import get_segmented_labels
 from scipy.optimize import fmin
 from scipy.spatial.transform import Rotation
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from aind_mri_utils.meshes import (
     distance_to_all_triangles_in_mesh,
@@ -20,7 +26,9 @@ from aind_mri_utils.rotations import (
 )
 
 
-def _params_to_rotation_translation(params):
+def _params_to_rotation_translation(
+    params: NDArray[np.floating[Any]],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Convert parameters to rotation matrix and translation vector.
 
@@ -42,7 +50,12 @@ def _params_to_rotation_translation(params):
     return rotation_matrix, translation
 
 
-def _implant_cost_fun(T, hole_mesh_dict, hole_seg_dict, run_parallel=True):
+def _implant_cost_fun(
+    T: NDArray[np.floating[Any]],
+    hole_mesh_dict: dict[int, Any],
+    hole_seg_dict: dict[int, NDArray[np.floating[Any]]],
+    run_parallel: bool = True,
+) -> float:
     """
     Computes the total distance cost for implant alignment based on the
     provided transformation parameters.
@@ -97,11 +110,11 @@ def _implant_cost_fun(T, hole_mesh_dict, hole_seg_dict, run_parallel=True):
 
 
 def fit_implant_to_mri(
-    hole_seg_dict,
-    hole_mesh_dict,
-    initialization_hole=4,
-    other_init_holes=[3, 9],
-):
+    hole_seg_dict: dict[int, NDArray[np.floating[Any]]],
+    hole_mesh_dict: dict[int, Any],
+    initialization_hole: int = 4,
+    other_init_holes: list[int] = [3, 9],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Fits an implant model to MRI data by optimizing the alignment of hole
     segments.
@@ -186,7 +199,9 @@ def fit_implant_to_mri(
     return rotation_matrix, translation
 
 
-def make_hole_seg_dict(implant_annotations, fun: callable = lambda x: x):
+def make_hole_seg_dict(
+    implant_annotations: Any, fun: Any = lambda x: x
+) -> dict[int, NDArray[np.floating[Any]]]:
     """
     Creates a dictionary mapping hole names to their segmented positions.
 

@@ -3,15 +3,21 @@ Functions to read reticle calibration data, find a transformation between
 coordinate frames, and apply the transformation.
 """
 
+from __future__ import annotations
+
 import csv
 import io
 import logging
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from openpyxl import load_workbook
 from scipy.spatial.transform import Rotation
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from aind_mri_utils.arc_angles import vector_to_arc_angles
 from aind_mri_utils.rotations import (
@@ -23,7 +29,9 @@ from aind_mri_utils.rotations import (
 logger = logging.getLogger(__name__)
 
 
-def _extract_calibration_metadata(ws):
+def _extract_calibration_metadata(
+    ws: Any,
+) -> tuple[float, float, float, NDArray[np.floating[Any]], str]:
     """
     Extract calibration metadata from an Excel worksheet.
 
@@ -70,7 +78,9 @@ def _extract_calibration_metadata(ws):
     )
 
 
-def find_similarity(X, Y):
+def find_similarity(
+    X: NDArray[np.floating[Any]], Y: NDArray[np.floating[Any]]
+) -> tuple[NDArray, NDArray, NDArray, int]:
     """
     Estimate the similarity transform between two sets of points.
 
@@ -107,7 +117,7 @@ def find_similarity(X, Y):
     H_det = np.linalg.det(H)
     U, S, Vt = np.linalg.svd(H, full_matrices=False)
     tol = max(H.shape) * np.finfo(S.dtype).eps * S[0]
-    rank = np.sum(S > tol)
+    rank: int = np.sum(S > tol)
     # ---- handedness correction ---------------------------------------------
     R = U @ Vt
     d = np.sign(np.linalg.det(R))
@@ -129,7 +139,9 @@ def find_similarity(X, Y):
     return F, R, translation_vector, int(rank)
 
 
-def reticle_metadata_transform(global_rotation_degrees):
+def reticle_metadata_transform(
+    global_rotation_degrees: float,
+) -> NDArray[np.floating[Any]]:
     """
     Calculate the rotation matrix for the global rotation.
 
@@ -151,7 +163,7 @@ def reticle_metadata_transform(global_rotation_degrees):
     return R
 
 
-def _contains_none(arr):
+def _contains_none(arr: NDArray[Any]) -> bool:
     """
     Check if any element in the iterable is None.
 
@@ -168,7 +180,11 @@ def _contains_none(arr):
     return any(x is None for x in arr)
 
 
-def _combine_pairs(list_of_pairs):
+def _combine_pairs(
+    list_of_pairs: list[
+        tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]
+    ],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Combine lists of pairs into separate global and manipulator points arrays.
 
@@ -187,7 +203,9 @@ def _combine_pairs(list_of_pairs):
     return global_pts, manipulator_pts
 
 
-def _extract_calibration_pairs(ws):
+def _extract_calibration_pairs(
+    ws: Any,
+) -> dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]]:
     """
     Extract calibration pairs from an Excel worksheet.
 
@@ -202,7 +220,9 @@ def _extract_calibration_pairs(ws):
         Keys are probe names, values are tuples of arrays (global_pts,
         manipulator_pts).
     """
-    pair_lists_by_probe = dict()
+    pair_lists_by_probe: dict[
+        int, list[tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]]
+    ] = dict()
     for row in ws.iter_rows(min_row=2, max_col=7, values_only=True):
         probe_name = row[0]
         if probe_name is None:
@@ -221,13 +241,13 @@ def _extract_calibration_pairs(ws):
 
 
 def _apply_metadata_to_pair_mats(
-    global_pts,
-    manipulator_pts,
-    global_factor,
-    global_rotation_degrees,
-    global_offset,
-    manipulator_factor,
-):
+    global_pts: NDArray[np.floating[Any]],
+    manipulator_pts: NDArray[np.floating[Any]],
+    global_factor: float,
+    global_rotation_degrees: float,
+    global_offset: NDArray[np.floating[Any]],
+    manipulator_factor: float,
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Apply calibration metadata to global and manipulator points arrays.
 
@@ -261,8 +281,15 @@ def _apply_metadata_to_pair_mats(
 
 
 def read_manual_reticle_calibration(
-    filename, points_sheet_name="points", metadata_sheet_name="metadata"
-):
+    filename: str,
+    points_sheet_name: str = "points",
+    metadata_sheet_name: str = "metadata",
+) -> tuple[
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    NDArray[np.floating[Any]],
+    float,
+    str,
+]:
     """
     Read reticle calibration data from an Excel file.
 
@@ -330,11 +357,13 @@ def read_manual_reticle_calibration(
 
 
 def read_parallax_calibration_dir(
-    parallax_points_dir,
-    sn_filename_regexp=re.compile(r"(?i)points_SN\d+(?:_.*)?.csv$"),
-    *args,
-    **kwargs,
-):
+    parallax_points_dir: str,
+    sn_filename_regexp: re.Pattern[str] = re.compile(
+        r"(?i)points_SN\d+(?:_.*)?.csv$"
+    ),
+    *args: Any,
+    **kwargs: Any,
+) -> dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]]:
     """
     Read parallax calibration data from a directory of CSV files.
 
@@ -355,7 +384,15 @@ def read_parallax_calibration_dir(
         Keys are controller numbers, values are tuples of arrays (global_pts,
         manipulator_pts).
     """
-    pairs_by_controller = {}
+    pairs_by_controller: dict[
+        int,
+        list[
+            tuple[
+                NDArray[np.floating[Any]],
+                NDArray[np.floating[Any]],
+            ]
+        ],
+    ] = {}
     p_path = Path(parallax_points_dir)
     for filename in p_path.iterdir():
         if filename.is_file() and re.search(sn_filename_regexp, filename.name):
@@ -368,7 +405,9 @@ def read_parallax_calibration_dir(
     return mats_by_controller
 
 
-def read_parallax_calibration_file(parallax_points_filename, *args, **kwargs):
+def read_parallax_calibration_file(
+    parallax_points_filename: str, *args: Any, **kwargs: Any
+) -> dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]]:
     """
     Read parallax calibration data from a single CSV file.
 
@@ -387,23 +426,35 @@ def read_parallax_calibration_file(parallax_points_filename, *args, **kwargs):
         Keys are controller numbers, values are tuples of arrays (global_pts,
         manipulator_pts).
     """
-    pairs_by_controller = {}
+    pairs_by_controller: dict[
+        int,
+        list[
+            tuple[
+                NDArray[np.floating[Any]],
+                NDArray[np.floating[Any]],
+            ]
+        ],
+    ] = {}
     _append_parallax_calibration_file(
         pairs_by_controller, parallax_points_filename, *args, **kwargs
     )
-    mats_by_controller = {
-        k: _combine_pairs(v) for k, v in pairs_by_controller.items()
-    }
+    mats_by_controller: dict[
+        int,
+        tuple[
+            NDArray[np.floating[Any]],
+            NDArray[np.floating[Any]],
+        ],
+    ] = {k: _combine_pairs(v) for k, v in pairs_by_controller.items()}
     return mats_by_controller
 
 
 def read_parallax_calibration_dir_and_correct(
-    parallax_calibration_dir,
-    reticle_offset,
-    reticle_rotation,
-    local_scale_factor=1 / 1000,
-    global_scale_factor=1 / 1000,
-):
+    parallax_calibration_dir: str,
+    reticle_offset: NDArray[np.floating[Any]],
+    reticle_rotation: float,
+    local_scale_factor: float = 1 / 1000,
+    global_scale_factor: float = 1 / 1000,
+) -> dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]]:
     """
     Read and correct parallax calibration data from a directory of CSV files.
 
@@ -441,11 +492,15 @@ def read_parallax_calibration_dir_and_correct(
 
 
 def _append_parallax_calibration_file(
-    pairs_by_controller,
-    parallax_points_filename,
-    sn_colname="sn",
-    sn_regexp=re.compile(r"(\d+)$"),
-):
+    pairs_by_controller: dict[
+        int, list[tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]]
+    ],
+    parallax_points_filename: str | Path,
+    sn_colname: str = "sn",
+    sn_regexp: re.Pattern[str] = re.compile(r"(\d+)$"),
+) -> dict[
+    int, list[tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]]
+]:
     """
     Read parallax calibration data from a CSV file and organize by controller
     number.
@@ -476,7 +531,7 @@ def _append_parallax_calibration_file(
     dims = ["x", "y", "z"]
     reticle_colnames = [f"global_{dim}" for dim in dims]
     manipulator_colnames = [f"local_{dim}" for dim in dims]
-    with open(parallax_points_filename, "r", newline="") as f:
+    with open(parallax_points_filename, newline="") as f:
         reader = csv.reader(f)
         header = next(reader)
         # Map each column name to its first index
@@ -490,7 +545,13 @@ def _append_parallax_calibration_file(
         manip_pt_ndxs = [index_map[col] for col in manipulator_colnames]
         # Read the data
         for row in reader:
-            controller_no = int(re.search(sn_regexp, row[sn_col_ndx]).group(1))
+            res = re.search(sn_regexp, row[sn_col_ndx])
+            if res is None:
+                raise ValueError(
+                    f"Could not extract controller number from "
+                    f"{row[sn_col_ndx]} using regexp {sn_regexp.pattern}"
+                )
+            controller_no = int(res.group(1))
             ret_pt = np.array([float(row[ndx]) for ndx in reticle_pt_ndxs])
             manip_pt = np.array([float(row[ndx]) for ndx in manip_pt_ndxs])
             # Append to this manipulator's list of pairs, creating a new list
@@ -502,9 +563,14 @@ def _append_parallax_calibration_file(
 
 
 def fit_rotation_params_interpretable(
-    bregma_pts,
-    probe_pts,
-):
+    bregma_pts: NDArray[np.floating[Any]],
+    probe_pts: NDArray[np.floating[Any]],
+) -> tuple[
+    NDArray[np.floating[Any]],
+    NDArray[np.floating[Any]],
+    NDArray[np.floating[Any]],
+    int,
+]:
     """
     Fit rotation parameters to align bregma points with probe points using
     least squares optimization. The rotation matrix and translation vector
@@ -546,7 +612,11 @@ def fit_rotation_params_interpretable(
     return F, R, t, rank
 
 
-def fit_rotation_params(bregma_pts, probe_pts, **kwargs):
+def fit_rotation_params(
+    bregma_pts: NDArray[np.floating[Any]],
+    probe_pts: NDArray[np.floating[Any]],
+    **kwargs: Any,
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Fit rotation parameters to align bregma points with probe points using
     least squares optimization. The rotation matrix and translation vector
@@ -584,7 +654,13 @@ def fit_rotation_params(bregma_pts, probe_pts, **kwargs):
     return R_comb, t
 
 
-def _fit_by_probe(pairs_by_probe, *args, **kwargs):
+def _fit_by_probe(
+    pairs_by_probe: dict[
+        int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]
+    ],
+    *args: Any,
+    **kwargs: Any,
+) -> dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]]:
     """
     Fit rotation parameters for each probe.
 
@@ -610,7 +686,13 @@ def _fit_by_probe(pairs_by_probe, *args, **kwargs):
     return cal_by_probe
 
 
-def fit_rotation_params_from_manual_calibration(filename, *args, **kwargs):
+def fit_rotation_params_from_manual_calibration(
+    filename: str, *args: Any, **kwargs: Any
+) -> tuple[
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    NDArray[np.floating[Any]],
+    NDArray[np.floating[Any]],
+]:
     """
     Fit rotation parameters from manual calibration data.
 
@@ -644,14 +726,17 @@ def fit_rotation_params_from_manual_calibration(filename, *args, **kwargs):
 
 
 def fit_rotation_params_from_parallax(
-    parallax_calibration_dir,
-    reticle_offset,
-    reticle_rotation,
-    local_scale_factor=1 / 1000,
-    global_scale_factor=1 / 1000,
-    *args,
-    **kwargs,
-):
+    parallax_calibration_dir: str,
+    reticle_offset: NDArray[np.floating[Any]],
+    reticle_rotation: float,
+    local_scale_factor: float = 1 / 1000,
+    global_scale_factor: float = 1 / 1000,
+    *args: Any,
+    **kwargs: Any,
+) -> tuple[
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    NDArray[np.floating[Any]],
+]:
     """
     Fit rotation parameters from parallax calibration data.
 
@@ -701,7 +786,13 @@ def fit_rotation_params_from_parallax(
     return cal_by_probe, R_reticle_to_bregma
 
 
-def _debug_print_pt_err(reticle, probe, predicted_probe, err, decimals=3):
+def _debug_print_pt_err(
+    reticle: NDArray[np.floating[Any]],
+    probe: NDArray[np.floating[Any]],
+    predicted_probe: NDArray[np.floating[Any]],
+    err: float,
+    decimals: int = 3,
+) -> None:
     """
     Print the error for a single point.
 
@@ -728,7 +819,7 @@ def _debug_print_pt_err(reticle, probe, predicted_probe, err, decimals=3):
     )
 
 
-def _debug_print_err_stats(errs):
+def _debug_print_err_stats(errs: NDArray[np.floating[Any]]) -> None:
     """
     Print error statistics for a probe.
 
@@ -743,11 +834,15 @@ def _debug_print_err_stats(errs):
 
 
 def _debug_fits(
-    cal_by_probe,
-    R_reticle_to_bregma,
-    t_reticle_to_bregma,
-    adjusted_pairs_by_probe,
-):
+    cal_by_probe: dict[
+        int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]
+    ],
+    R_reticle_to_bregma: NDArray[np.floating[Any]],
+    t_reticle_to_bregma: NDArray[np.floating[Any]],
+    adjusted_pairs_by_probe: dict[
+        int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]
+    ],
+) -> dict[int, NDArray[np.floating[Any]]]:
     """
     Debug the fits for each probe.
 
@@ -793,7 +888,15 @@ def _debug_fits(
     return errs_by_probe
 
 
-def debug_manual_calibration(filename, *args, **kwargs):
+def debug_manual_calibration(
+    filename: str, *args: Any, **kwargs: Any
+) -> tuple[
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    NDArray[np.floating[Any]],
+    NDArray[np.floating[Any]],
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    dict[int, NDArray[np.floating[Any]]],
+]:
     """
     Debugs the manual calibration process by fitting rotation parameters and
     reading manual reticle calibration data.
@@ -845,14 +948,19 @@ def debug_manual_calibration(filename, *args, **kwargs):
 
 
 def debug_parallax_calibration(
-    parallax_calibration_dir,
-    reticle_offset,
-    reticle_rotation,
-    local_scale_factor=1 / 1000,
-    global_scale_factor=1 / 1000,
-    *args,
-    **kwargs,
-):
+    parallax_calibration_dir: str,
+    reticle_offset: NDArray[np.floating[Any]],
+    reticle_rotation: float,
+    local_scale_factor: float = 1 / 1000,
+    global_scale_factor: float = 1 / 1000,
+    *args: Any,
+    **kwargs: Any,
+) -> tuple[
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    NDArray[np.floating[Any]],
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    dict[int, NDArray[np.floating[Any]]],
+]:
     """
     Debugs the parallax calibration process by reading calibration data,
     applying corrections, fitting the data, and calculating errors.
@@ -879,7 +987,7 @@ def debug_parallax_calibration(
     cal_by_probe : dict
         Calibration data organized by probe.
     R_reticle_to_bregma : numpy.ndarray
-        Transformation matrix from reticle coordinates to bregma coordinates.
+        Transformation matrix from reticle to bregma.
     adjusted_pairs_by_probe : dict
         Adjusted calibration pairs organized by probe.
     errs_by_probe : dict
@@ -908,7 +1016,11 @@ def debug_parallax_calibration(
     )
 
 
-def transform_bregma_to_probe(bregma_pts, R, translation):
+def transform_bregma_to_probe(
+    bregma_pts: NDArray[np.floating[Any]],
+    R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Transform bregma points to probe points using rotation and translation.
 
@@ -933,7 +1045,11 @@ def transform_bregma_to_probe(bregma_pts, R, translation):
     return apply_affine(bregma_pts, R, translation)
 
 
-def transform_probe_to_bregma(probe_pts, R, translation):
+def transform_probe_to_bregma(
+    probe_pts: NDArray[np.floating[Any]],
+    R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Transform probe points to bregma points using rotation and translation.
 
@@ -958,7 +1074,11 @@ def transform_probe_to_bregma(probe_pts, R, translation):
     return apply_inverse_affine(probe_pts, R, translation)
 
 
-def transform_bregma_to_reticle(bregma_pts, R, translation):
+def transform_bregma_to_reticle(
+    bregma_pts: NDArray[np.floating[Any]],
+    R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Transform bregma points to reticle points using rotation and translation.
 
@@ -979,7 +1099,11 @@ def transform_bregma_to_reticle(bregma_pts, R, translation):
     return apply_inverse_affine(bregma_pts, R, translation)
 
 
-def transform_reticle_to_bregma(reticle_pts, R, translation):
+def transform_reticle_to_bregma(
+    reticle_pts: NDArray[np.floating[Any]],
+    R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Transform reticle points to bregma points using rotation and translation.
 
@@ -1001,11 +1125,11 @@ def transform_reticle_to_bregma(reticle_pts, R, translation):
 
 
 def combine_reticle_to_probe_transforms(
-    R_bregma_to_probe,
-    t_bregma_to_probe,
-    R_reticle_to_bregma,
-    t_reticle_to_bregma,
-):
+    R_bregma_to_probe: NDArray[np.floating[Any]],
+    t_bregma_to_probe: NDArray[np.floating[Any]],
+    R_reticle_to_bregma: NDArray[np.floating[Any]],
+    t_reticle_to_bregma: NDArray[np.floating[Any]],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Combine transformation matrices and translation vectors from reticle to
     bregma and bregma to probe.
@@ -1035,12 +1159,12 @@ def combine_reticle_to_probe_transforms(
 
 
 def transform_reticle_to_probe(
-    reticle_pts,
-    R_bregma_to_probe,
-    t_bregma_to_probe,
-    R_reticle_to_bregma,
-    t_reticle_to_bregma,
-):
+    reticle_pts: NDArray[np.floating[Any]],
+    R_bregma_to_probe: NDArray[np.floating[Any]],
+    t_bregma_to_probe: NDArray[np.floating[Any]],
+    R_reticle_to_bregma: NDArray[np.floating[Any]],
+    t_reticle_to_bregma: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Transform reticle points to probe points using rotation and translation.
 
@@ -1074,12 +1198,12 @@ def transform_reticle_to_probe(
 
 
 def transform_probe_to_reticle(
-    probe_pts,
-    R_bregma_to_probe,
-    t_bregma_to_probe,
-    R_reticle_to_bregma,
-    t_reticle_to_bregma,
-):
+    probe_pts: NDArray[np.floating[Any]],
+    R_bregma_to_probe: NDArray[np.floating[Any]],
+    t_bregma_to_probe: NDArray[np.floating[Any]],
+    R_reticle_to_bregma: NDArray[np.floating[Any]],
+    t_reticle_to_bregma: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Transform probe points to reticle coordinates.
 
@@ -1114,7 +1238,10 @@ def transform_probe_to_reticle(
     )
 
 
-def find_probe_insertion_vector(R, newscale_z_down=None):
+def find_probe_insertion_vector(
+    R: NDArray[np.floating[Any]],
+    newscale_z_down: NDArray[np.floating[Any]] | None = None,
+) -> NDArray[np.floating[Any]]:
     """
     Find the probe insertion vector from the rotation matrix.
 
@@ -1138,7 +1265,11 @@ def find_probe_insertion_vector(R, newscale_z_down=None):
     return z_axis
 
 
-def find_probe_angle(R, newscale_z_down=None, **kwargs):
+def find_probe_angle(
+    R: NDArray[np.floating[Any]],
+    newscale_z_down: NDArray[np.floating[Any]] | None = None,
+    **kwargs: Any,
+) -> tuple[float, float] | None:
     """
     Find the probe angle from the calibration rotation matrix.
 
@@ -1167,8 +1298,9 @@ def find_probe_angle(R, newscale_z_down=None, **kwargs):
 
 
 def _validate_combined_calibration_inputs(
-    manual_calibration_files, parallax_directories
-):
+    manual_calibration_files: str | list[str],
+    parallax_directories: str | list[str],
+) -> tuple[list[str], list[str]]:
     """
     Validate and normalize input lists for combined calibration.
 
@@ -1195,12 +1327,16 @@ def _validate_combined_calibration_inputs(
 
 
 def combine_parallax_and_manual_calibrations(
-    manual_calibration_files,
-    parallax_directories,
-    probes_to_ignore_manual=[],
-    *args,
-    **kwargs,
-):
+    manual_calibration_files: list[str] | str,
+    parallax_directories: list[str] | str,
+    probes_to_ignore_manual: list[str] | None = None,
+    *args: Any,
+    **kwargs: Any,
+) -> tuple[
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    NDArray[np.floating[Any]],
+    NDArray[np.floating[Any]],
+]:
     """
     Combine parallax and manual calibration data.
 
@@ -1257,9 +1393,9 @@ def combine_parallax_and_manual_calibrations(
             manual_calibration_file, *args, **kwargs
         )
         cal_by_probe_manual.update(cal_by_probe)
-
-    # Fit the parallax calibrations
-    cal_by_probe_combined = {}
+    cal_by_probe_combined: dict[
+        int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]
+    ] = {}
     for parallax_dir in parallax_directories:
         cal_by_probe, _ = fit_rotation_params_from_parallax(
             parallax_dir,
@@ -1271,8 +1407,10 @@ def combine_parallax_and_manual_calibrations(
         cal_by_probe_combined.update(cal_by_probe)
 
     # Drop any probes from exclusion list from the manual calibrations
+    if probes_to_ignore_manual is None:
+        probes_to_ignore_manual = []
     for probe_name in probes_to_ignore_manual:
-        cal_by_probe_manual.pop(probe_name, None)
+        cal_by_probe_manual.pop(probe_name, None)  # type: ignore
     # Add the first manual calibration to the combined calibrations
     # Because they are added last, these manual calibrations take priority
     cal_by_probe_combined.update(cal_by_probe_manual)
@@ -1281,14 +1419,20 @@ def combine_parallax_and_manual_calibrations(
 
 
 def debug_parallax_and_manual_calibrations(
-    manual_calibration_files,
-    parallax_directories,
-    probes_to_ignore_manual=[],
-    local_scale_factor=1 / 1000,
-    global_scale_factor=1 / 1000,
-    *args,
-    **kwargs,
-):
+    manual_calibration_files: list[str] | str,
+    parallax_directories: list[str] | str,
+    probes_to_ignore_manual: list[str] | None = None,
+    local_scale_factor: float = 1 / 1000,
+    global_scale_factor: float = 1 / 1000,
+    *args: Any,
+    **kwargs: Any,
+) -> tuple[
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    NDArray[np.floating[Any]],
+    NDArray[np.floating[Any]],
+    dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
+    dict[int, NDArray[np.floating[Any]]],
+]:
     """
     Debug combined parallax and manual calibrations.
 
@@ -1328,6 +1472,8 @@ def debug_parallax_and_manual_calibrations(
     errs_by_probe : dict
         Errors by probe from the debug fits.
     """
+    if probes_to_ignore_manual is None:
+        probes_to_ignore_manual = []
     manual_calibration_files, parallax_directories = (
         _validate_combined_calibration_inputs(
             manual_calibration_files, parallax_directories
@@ -1354,8 +1500,12 @@ def debug_parallax_and_manual_calibrations(
         ) = read_manual_reticle_calibration(filename)
         manual_pairs_by_probe.update(adjusted_pairs_by_probe)
 
-    combined_cal_by_probe = {}
-    combined_pairs_by_probe = {}
+    combined_cal_by_probe: dict[
+        int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]
+    ] = {}
+    combined_pairs_by_probe: dict[
+        int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]
+    ] = {}
     for parallax_dir in parallax_directories:
         adjusted_pairs_by_probe = read_parallax_calibration_dir_and_correct(
             parallax_dir,
@@ -1369,8 +1519,8 @@ def debug_parallax_and_manual_calibrations(
         )
         combined_pairs_by_probe.update(adjusted_pairs_by_probe)
     for probe_name in probes_to_ignore_manual:
-        manual_cal_by_probe.pop(probe_name, None)
-        manual_pairs_by_probe.pop(probe_name, None)
+        manual_cal_by_probe.pop(probe_name, None)  # type: ignore
+        manual_pairs_by_probe.pop(probe_name, None)  # type: ignore
     combined_cal_by_probe.update(manual_cal_by_probe)
     combined_pairs_by_probe.update(manual_pairs_by_probe)
     errs_by_probe = _debug_fits(

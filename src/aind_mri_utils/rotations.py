@@ -2,14 +2,23 @@
 Code for rotations of points
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 import SimpleITK as sitk
 from scipy.spatial.transform import Rotation
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
 from . import utils as ut
 
 
-def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
+def define_euler_rotation(
+    rx: float, ry: float, rz: float, degrees: bool = True, order: str = "xyz"
+) -> Rotation:
     """
     Wrapper of scipy.spatial.transform.Rotation.from_euler
 
@@ -35,7 +44,12 @@ def define_euler_rotation(rx, ry, rz, degrees=True, order="xyz"):
     return Rotation.from_euler(order, [rx, ry, rz], degrees=True)
 
 
-def rotate_about_and_translate(points, rotation, pivot, translation):
+def rotate_about_and_translate(
+    points: NDArray[np.floating[Any]],
+    rotation: Rotation,
+    pivot: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Rotates points about a pivot point, then apply translation.
 
@@ -58,7 +72,11 @@ def rotate_about_and_translate(points, rotation, pivot, translation):
     return rotate_about(points, rotation, pivot) + translation
 
 
-def rotate_about(points, rotation, pivot):
+def rotate_about(
+    points: NDArray[np.floating[Any]],
+    rotation: Rotation,
+    pivot: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Rotates points about a pivot point.
 
@@ -81,8 +99,10 @@ def rotate_about(points, rotation, pivot):
 
 
 def rotation_matrix_to_sitk(
-    rotation, center=np.array((0, 0, 0)), translation=np.array((0, 0, 0))
-):
+    rotation: NDArray[np.floating[Any]],
+    center: NDArray[np.floating[Any]] = np.array((0, 0, 0)),
+    translation: NDArray[np.floating[Any]] = np.array((0, 0, 0)),
+) -> sitk.AffineTransform:
     """
     Convert numpy array rotation matrix to sitk affine.
 
@@ -108,7 +128,13 @@ def rotation_matrix_to_sitk(
     return S
 
 
-def sitk_to_rotation_matrix(S):
+def sitk_to_rotation_matrix(
+    S: sitk.AffineTransform,
+) -> tuple[
+    NDArray[np.floating[Any]],
+    NDArray[np.floating[Any]],
+    NDArray[np.floating[Any]],
+]:
     """
     Convert sitk affine transform to numpy array rotation matrix.
 
@@ -133,8 +159,10 @@ def sitk_to_rotation_matrix(S):
 
 
 def scipy_rotation_to_sitk(
-    rotation, center=np.array((0, 0, 0)), translation=np.array((0, 0, 0))
-):
+    rotation: Rotation,
+    center: NDArray[np.floating[Any]] = np.array((0, 0, 0)),
+    translation: NDArray[np.floating[Any]] = np.array((0, 0, 0)),
+) -> sitk.AffineTransform:
     """
     Convert Scipy 'Rotation' object to equivalent sitk.
 
@@ -156,7 +184,9 @@ def scipy_rotation_to_sitk(
     return S
 
 
-def rotation_matrix_from_vectors(a, b):
+def rotation_matrix_from_vectors(
+    a: NDArray[np.floating[Any]], b: NDArray[np.floating[Any]]
+) -> NDArray[np.floating[Any]]:
     """
     Find rotation matrix to align a with b.
 
@@ -189,13 +219,17 @@ def rotation_matrix_from_vectors(a, b):
     return rotation_matrix
 
 
-def _rotate_mat_by_single_euler(mat, axis, angle):
+def _rotate_mat_by_single_euler(
+    mat: NDArray[np.floating[Any]], axis: str, angle: float
+) -> NDArray[np.floating[Any]]:
     "Helper function that rotates a matrix by a single Euler angle"
     rotation_matrix = Rotation.from_euler(axis, angle).as_matrix().squeeze()
     return mat @ rotation_matrix
 
 
-def roll(input_mat, angle):
+def roll(
+    input_mat: NDArray[np.floating[Any]], angle: float
+) -> NDArray[np.floating[Any]]:
     """
     Apply a rotation around the x-axis (roll/bank angle) to the input matrix.
 
@@ -214,7 +248,9 @@ def roll(input_mat, angle):
     return _rotate_mat_by_single_euler(input_mat, "x", angle)
 
 
-def pitch(input_mat, angle):
+def pitch(
+    input_mat: NDArray[np.floating[Any]], angle: float
+) -> NDArray[np.floating[Any]]:
     """
     Apply a rotation around the y-axis (pitch/elevation angle) to the input
     matrix.
@@ -234,7 +270,9 @@ def pitch(input_mat, angle):
     return _rotate_mat_by_single_euler(input_mat, "y", angle)
 
 
-def yaw(input_mat, angle):
+def yaw(
+    input_mat: NDArray[np.floating[Any]], angle: float
+) -> NDArray[np.floating[Any]]:
     """
     Apply a rotation around the z-axis (yaw/heading angle) to the input matrix.
 
@@ -253,7 +291,9 @@ def yaw(input_mat, angle):
     return _rotate_mat_by_single_euler(input_mat, "z", angle)
 
 
-def extract_angles(mat):
+def extract_angles(
+    mat: NDArray[np.floating[Any]],
+) -> tuple[float, float, float]:
     """
     Extract the Euler angles (roll, pitch, yaw) from a rotation matrix.
 
@@ -270,7 +310,7 @@ def extract_angles(mat):
     return tuple(Rotation.from_matrix(mat).as_euler("xyz"))
 
 
-def combine_angles(x, y, z):
+def combine_angles(x: float, y: float, z: float) -> NDArray[np.floating[Any]]:
     """
     Combine Euler angles (roll, pitch, yaw) into a rotation matrix.
 
@@ -291,7 +331,11 @@ def combine_angles(x, y, z):
     return Rotation.from_euler("xyz", [x, y, z]).as_matrix().squeeze()
 
 
-def make_homogeneous_transform(R, translation, scaling=None):
+def make_homogeneous_transform(
+    R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]],
+    scaling: NDArray[np.floating[Any]] | None = None,
+) -> NDArray[np.floating[Any]]:
     """
     Combines a rotation matrix and translation into a homogeneous transform.
 
@@ -327,7 +371,9 @@ def make_homogeneous_transform(R, translation, scaling=None):
     return R_homog
 
 
-def affine_and_translation_from_homogeneous(R_homog):
+def affine_and_translation_from_homogeneous(
+    R_homog: NDArray[np.floating[Any]],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Extract rotation and translation from a homogeneous transform.
 
@@ -351,7 +397,9 @@ def affine_and_translation_from_homogeneous(R_homog):
     return R, translation
 
 
-def prepare_data_for_homogeneous_transform(pts):
+def prepare_data_for_homogeneous_transform(
+    pts: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Prepare points for homogeneous transformation.
 
@@ -379,7 +427,9 @@ def prepare_data_for_homogeneous_transform(pts):
     return pts_homog
 
 
-def extract_data_for_homogeneous_transform(pts_homog):
+def extract_data_for_homogeneous_transform(
+    pts_homog: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Extract points formatted for homogeneous transformation.
 
@@ -405,13 +455,19 @@ def extract_data_for_homogeneous_transform(pts_homog):
     return pts
 
 
-def _apply_homogeneous_transform_to_transposed_pts(pts, R_homog):
+def _apply_homogeneous_transform_to_transposed_pts(
+    pts: NDArray[np.floating[Any]], R_homog: NDArray[np.floating[Any]]
+) -> NDArray[np.floating[Any]]:
     pts_homog = prepare_data_for_homogeneous_transform(pts)
     transformed_pts_homog = pts_homog @ R_homog.T
     return extract_data_for_homogeneous_transform(transformed_pts_homog)
 
 
-def apply_affine(pts, affine_R, translation):
+def apply_affine(
+    pts: NDArray[np.floating[Any]],
+    affine_R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Apply an affine transformation to a set of points.
 
@@ -433,7 +489,9 @@ def apply_affine(pts, affine_R, translation):
     return _apply_homogeneous_transform_to_transposed_pts(pts, R_homog)
 
 
-def invert_affine(affine_R, translation):
+def invert_affine(
+    affine_R: NDArray[np.floating[Any]], translation: NDArray[np.floating[Any]]
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Invert an affine transformation.
 
@@ -456,7 +514,11 @@ def invert_affine(affine_R, translation):
     return R_inv, t_inv
 
 
-def apply_inverse_affine(pts, affine_R, translation):
+def apply_inverse_affine(
+    pts: NDArray[np.floating[Any]],
+    affine_R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Apply the inverse of an affine transformation to a set of points.
 
@@ -478,7 +540,11 @@ def apply_inverse_affine(pts, affine_R, translation):
     return apply_affine(pts, R_inv, t_inv)
 
 
-def apply_rotate_translate(pts, R, translation):
+def apply_rotate_translate(
+    pts: NDArray[np.floating[Any]],
+    R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """
     Apply rotation and translation to a set of points.
 
@@ -499,7 +565,9 @@ def apply_rotate_translate(pts, R, translation):
     return apply_affine(pts, R, translation)
 
 
-def invert_rotate_translate(R, translation):
+def invert_rotate_translate(
+    R: NDArray[np.floating[Any]], translation: NDArray[np.floating[Any]]
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Compute the inverse rotation and translation.
 
@@ -528,7 +596,9 @@ def invert_rotate_translate(R, translation):
     return R_inv, t_inv
 
 
-def create_homogeneous_from_euler_and_translation(rx, ry, rz, tx, ty, tz):
+def create_homogeneous_from_euler_and_translation(
+    rx: float, ry: float, rz: float, tx: float, ty: float, tz: float
+) -> NDArray[np.floating[Any]]:
     """
     Create a homogeneous transformation matrix from Euler angles and
     translation.
@@ -558,7 +628,10 @@ def create_homogeneous_from_euler_and_translation(rx, ry, rz, tx, ty, tz):
     return make_homogeneous_transform(R, t)
 
 
-def ras_to_lps_transform(R, translation=None):
+def ras_to_lps_transform(
+    R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]] | None = None,
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Transforms a rotation matrix and translation vector from RAS to LPS
     coordinate system, or vice-versa.
@@ -595,7 +668,11 @@ def ras_to_lps_transform(R, translation=None):
     return R_out, translation_out
 
 
-def compose_transforms(R_1, translation_1, *args):
+def compose_transforms(
+    R_1: NDArray[np.floating[Any]],
+    translation_1: NDArray[np.floating[Any]],
+    *args: NDArray[np.floating[Any]],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Compose a series of rotation matrices and translation vectors.
 
@@ -641,7 +718,9 @@ def compose_transforms(R_1, translation_1, *args):
         raise ValueError("Invalid number of arguments")
 
 
-def itk_to_slicer_transform(itk_transform):
+def itk_to_slicer_transform(
+    itk_transform: NDArray[np.floating[Any]],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Converts an ITK transform to a Slicer transform.
 

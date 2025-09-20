@@ -6,20 +6,26 @@ https://github.com/SimpleITK/TUTORIAL/blob/main/LICENSE
 
 """
 
+from __future__ import annotations
+
 import itertools as itr
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import SimpleITK as sitk
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
 
 def resample(
-    image,
-    transform=None,
-    output_spacing=None,
-    output_origin=None,
-    output_size=None,
-    interpolator=sitk.sitkLinear,
-):
+    image: sitk.Image,
+    transform: sitk.Transform | None = None,
+    output_spacing: NDArray[np.floating[Any]] | None = None,
+    output_origin: NDArray[np.floating[Any]] | None = None,
+    output_size: NDArray[np.integer[Any]] | None = None,
+    interpolator: int = sitk.sitkLinear,
+) -> sitk.Image:
     """Resample a SimpleITK image with an optional transform.
 
     Wrapper to generically handle SimpleITK resampling on different image
@@ -69,13 +75,13 @@ def resample(
 
 
 def resample3D(
-    image,
-    transform=None,
-    output_spacing=None,
-    output_origin=None,
-    output_size=None,
-    interpolator=sitk.sitkLinear,
-):
+    image: sitk.Image,
+    transform: sitk.Transform | None = None,
+    output_spacing: NDArray[np.floating[Any]] | None = None,
+    output_origin: NDArray[np.floating[Any]] | None = None,
+    output_size: NDArray[np.integer[Any]] | None = None,
+    interpolator: int = sitk.sitkLinear,
+) -> sitk.Image:
     """
     Resample a 3D sitk image, with the option to apply a transform
 

@@ -2,15 +2,25 @@
 Tools specific to computing arc angles
 """
 
+from __future__ import annotations
+
 import math
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
 from aind_mri_utils.rotations import ras_to_lps_transform
 
 
-def vector_to_arc_angles(vec, degrees=True, invert_AP=True):
+def vector_to_arc_angles(
+    vec: NDArray[np.floating[Any]],
+    degrees: bool = True,
+    invert_AP: bool = True,
+) -> tuple[float, float] | None:
     """
     Calculate the arc angles for a given vector.
 
@@ -45,8 +55,12 @@ def vector_to_arc_angles(vec, degrees=True, invert_AP=True):
 
 
 def arc_angles_to_vector(
-    rx, ry, degrees=True, invert_AP=True, invert_rotation=True
-):
+    rx: float,
+    ry: float,
+    degrees: bool = True,
+    invert_AP: bool = True,
+    invert_rotation: bool = True,
+) -> NDArray[np.floating[Any]]:
     """
     Calculate a vector from arc angles.
 
@@ -85,7 +99,11 @@ def arc_angles_to_vector(
     return vec / np.linalg.norm(vec)
 
 
-def vector_to_stereotax_angles(vec, degrees=True, zero_rz_to_left=False):
+def vector_to_stereotax_angles(
+    vec: NDArray[np.floating[Any]],
+    degrees: bool = True,
+    zero_rz_to_left: bool = False,
+) -> tuple[float, float] | None:
     """
     Calculate the stereotaxic angles for a given vector.
 
@@ -128,7 +146,9 @@ def vector_to_stereotax_angles(vec, degrees=True, zero_rz_to_left=False):
     return ry, rz
 
 
-def stereotax_angles_to_vector(ry, rz, degrees=True, zero_rz_to_left=False):
+def stereotax_angles_to_vector(
+    ry: float, rz: float, degrees: bool = True, zero_rz_to_left: bool = False
+) -> NDArray[np.floating[Any]]:
     """Calculate a vector from stereotaxic angles.
 
     Used for Kopf 1500 off-plane insertion tool.
@@ -168,8 +188,12 @@ def stereotax_angles_to_vector(ry, rz, degrees=True, zero_rz_to_left=False):
 
 
 def arc_angles_to_affine(
-    AP, ML, rotation=0.0, invert_AP=True, invert_rotation=True
-):
+    AP: float,
+    ML: float,
+    rotation: float = 0.0,
+    invert_AP: bool = True,
+    invert_rotation: bool = True,
+) -> NDArray[np.floating[Any]]:
     """
     Create a transform from arc angles.
 
