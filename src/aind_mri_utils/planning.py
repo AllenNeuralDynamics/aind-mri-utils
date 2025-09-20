@@ -384,9 +384,9 @@ def make_final_insertion_scene(
         apply_transform_and_add_mesh(
             scene,
             mesh_copy,
-            df.ap[insertion_idx],
-            -df.ml[insertion_idx],
-            df.target_loc[insertion_idx],
+            df.at[insertion_idx, "ap"],  # type: ignore[arg-type]
+            -df.at[insertion_idx, "ml"],  # type: ignore
+            df.at[insertion_idx, "target_loc"],
             working_angle=working_angle[idx],
         )
 
@@ -437,9 +437,9 @@ def make_scene_for_insertion(
         apply_transform_and_add_mesh(
             scene,
             mesh_copy,
-            df.ap[insertion_idx],
-            -df.ml[insertion_idx],
-            df.target_loc[insertion_idx],
+            df.at[insertion_idx, "ap"],  # type: ignore[arg-type]
+            -df.at[insertion_idx, "ml"],  # type: ignore
+            df.at[insertion_idx, "target_loc"],
         )
 
     return scene
@@ -515,9 +515,9 @@ def _add_meshes_to_collision_manager(
         transformed_mesh = _apply_rotation_and_transform(
             probe_mesh.copy(),
             angles[idx],
-            df.ap[insertion_idx],
-            -df.ml[insertion_idx],
-            df.target_loc[insertion_idx],
+            df.at[insertion_idx, "ap"],  # type: ignore[arg-type]
+            -df.at[insertion_idx, "ml"],  # type: ignore[arg-type,operator]
+            df.at[insertion_idx, "target_loc"],
         )
         CM.add_object(f"mesh{insertion_idx}", transformed_mesh)
 

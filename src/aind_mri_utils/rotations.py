@@ -4,7 +4,8 @@ Code for rotations of points
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 import SimpleITK as sitk
@@ -14,6 +15,15 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 from . import utils as ut
+
+# Tell mypy the signature; bind the real function at runtime.
+if TYPE_CHECKING:
+
+    def _from_euler(
+        order: str, angles: Sequence[float], *, degrees: bool
+    ) -> Rotation: ...
+else:
+    _from_euler: Callable[..., Rotation] = Rotation.from_euler
 
 
 def define_euler_rotation(
@@ -41,7 +51,7 @@ def define_euler_rotation(
     scipy.spatial.transform.Rotation
         Scipy 3D rotation object.
     """
-    return Rotation.from_euler(order, [rx, ry, rz], degrees=True)
+    return _from_euler(order, [rx, ry, rz], degrees=True)
 
 
 def rotate_about_and_translate(
