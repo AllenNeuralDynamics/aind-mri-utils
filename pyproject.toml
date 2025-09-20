@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "aind_mri_utils"
 description = "MRI utilities library for aind teams."
 license = "MIT"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
   { name = "Allen Institute for Neural Dynamics" },
   { name = "Galen Lynch", email = "galen@galenlynch.com" },
@@ -37,7 +37,9 @@ Changelog = "https://github.com/AllenNeuralDynamics/aind-mri-utils/blob/main/CHA
 [dependency-groups]
 typing = [
   'mypy',
-  'types-openpyxl',  # OpenPyXL type stubs
+  'types-openpyxl',
+  'scipy-stubs',
+  'pandas-stubs',
 ]
 dev = [{ include-group = 'typing'}, 'codespell', 'pytest', 'pytest-cov', 'ruff', 'interrogate']
 jupyter = [{include-group = 'dev'}, 'ipykernel', 'pip']
@@ -162,7 +164,5 @@ disallow_incomplete_defs = false
 module = [
   "pywavefront.*",
   "mpl_toolkits.*",
-  "scipy.*",  # scipy-stubs requires Python >=3.10, project supports >=3.9
-  "pandas.*",  # pandas-stubs may have similar requirements
 ]
 ignore_missing_imports = true
