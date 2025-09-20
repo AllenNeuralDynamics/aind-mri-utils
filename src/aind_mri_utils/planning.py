@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 from itertools import product
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 import trimesh
 from aind_anatomical_utils.sitk_volume import find_points_equal_to
 from aind_anatomical_utils.slicer import get_segmented_labels
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from aind_mri_utils.arc_angles import (
     arc_angles_to_affine,
@@ -13,7 +19,11 @@ from aind_mri_utils.arc_angles import (
 from aind_mri_utils.meshes import apply_transform_to_trimesh, create_uv_spheres
 
 
-def _generate_circle_points(center, radius=0.3, num_points=360):
+def _generate_circle_points(
+    center: NDArray[np.floating[Any]],
+    radius: float = 0.3,
+    num_points: int = 360,
+) -> NDArray[np.floating[Any]]:
     """Generate points on a circle around a given center."""
     theta = np.deg2rad(np.arange(0, 360, 360 // num_points))
     x = center[0] + radius * np.cos(theta)
@@ -22,7 +32,10 @@ def _generate_circle_points(center, radius=0.3, num_points=360):
     return np.column_stack([x, y, z])
 
 
-def _calculate_angle_ranges(target_point, circle_points):
+def _calculate_angle_ranges(
+    target_point: NDArray[np.floating[Any]],
+    circle_points: NDArray[np.floating[Any]],
+) -> tuple[float, float]:
     """Calculate the ranges of AP and ML angles for points on a circle."""
     angles = np.array(
         [vector_to_arc_angles(target_point, point) for point in circle_points]
@@ -33,8 +46,11 @@ def _calculate_angle_ranges(target_point, circle_points):
 
 
 def candidate_insertions(
-    transformed_annotation, transformed_implant, target_names, implant_names
-):
+    transformed_annotation: NDArray[np.floating[Any]],
+    transformed_implant: NDArray[np.floating[Any]],
+    target_names: list[str],
+    implant_names: list[str],
+) -> pd.DataFrame:
     """
     Generate candidate insertions for targets and implant holes by calculating
     arc angles.
@@ -73,9 +89,11 @@ def candidate_insertions(
         for implant_idx, implant_point in enumerate(transformed_implant):
             implant_name = implant_names[implant_idx]
 
-            ap, ml = vector_to_arc_angles(
-                target_point, implant_point, ap_offset=0
-            )
+            vector = target_point - implant_point
+            angles = vector_to_arc_angles(vector)
+            if angles is None:
+                continue
+            ap, ml = angles
             rig_ap = ap + 14
 
             circle_points = _generate_circle_points(implant_point)
@@ -98,7 +116,13 @@ def candidate_insertions(
     return pd.DataFrame(results)
 
 
-def _are_insertions_compatible(row1, row2, ap_wiggle, ap_min, ml_min):
+def _are_insertions_compatible(
+    row1: pd.Series,
+    row2: pd.Series,
+    ap_wiggle: float,
+    ap_min: float,
+    ml_min: float,
+) -> bool:
     """
     Determine if two insertion pairs are compatible based on given criteria.
 
@@ -131,7 +155,12 @@ def _are_insertions_compatible(row1, row2, ap_wiggle, ap_min, ml_min):
     return True
 
 
-def compatible_insertion_pairs(df, ap_wiggle=1, ap_min=16, ml_min=16):
+def compatible_insertion_pairs(
+    df: pd.DataFrame,
+    ap_wiggle: float = 1,
+    ap_min: float = 16,
+    ml_min: float = 16,
+) -> NDArray[np.bool_]:
     """
     Generate a boolean matrix indicating valid insertion pairs based on AP and
     ML criteria.
@@ -170,19 +199,23 @@ def compatible_insertion_pairs(df, ap_wiggle=1, ap_min=16, ml_min=16):
     return compat_matrix
 
 
-def is_insertion_valid(compatibility_mat, insertion_ndxs):
+def is_insertion_valid(
+    compatibility_mat: NDArray[np.bool_], insertion_ndxs: list[int]
+) -> bool:
     if len(set(insertion_ndxs)) != len(insertion_ndxs):
         # Duplicate insertions are invalid
         return False
     mask = np.full(compatibility_mat.shape[0], True)
     for ndx in insertion_ndxs:
         mask = mask & compatibility_mat[ndx, :]
-    return np.all(mask[insertion_ndxs])
+    return bool(np.all(mask[insertion_ndxs]))
 
 
 def find_other_compatible_insertions(
-    compatibility_mat, seed_ndxs, considered_ndxs=None
-):
+    compatibility_mat: NDArray[np.bool_],
+    seed_ndxs: list[int],
+    considered_ndxs: NDArray[np.integer[Any]] | None = None,
+) -> NDArray[np.integer[Any]]:
     if considered_ndxs is None:
         considered_ndxs = np.arange(compatibility_mat.shape[0])
     mask = np.full(compatibility_mat.shape[0], False)
@@ -193,7 +226,9 @@ def find_other_compatible_insertions(
     return np.nonzero(mask)[0]
 
 
-def get_implant_targets(implant_vol):
+def get_implant_targets(
+    implant_vol: Any,
+) -> tuple[NDArray[np.floating[Any]], list[int]]:
     """
     Extract target positions and indices from an implant volume.
 
@@ -233,8 +268,13 @@ def get_implant_targets(implant_vol):
 
 
 def apply_transform_and_add_mesh(
-    scene, mesh, ap_angle, ml_angle, target_loc, working_angle=None
-):
+    scene: trimesh.Scene,
+    mesh: trimesh.Trimesh,
+    ap_angle: float,
+    ml_angle: float,
+    target_loc: NDArray[np.floating[Any]],
+    working_angle: float | None = None,
+) -> None:
     """
     Apply transformation to a mesh and add it to the scene.
 
@@ -264,7 +304,11 @@ def apply_transform_and_add_mesh(
     scene.add_geometry(mesh)
 
 
-def _add_spheres_to_scene(scene, transformed_implant, transformed_annotation):
+def _add_spheres_to_scene(
+    scene: trimesh.Scene,
+    transformed_implant: NDArray[np.floating[Any]],
+    transformed_annotation: NDArray[np.floating[Any]],
+) -> None:
     """
     Add spheres for transformed implants and annotations to the scene.
 
@@ -287,16 +331,16 @@ def _add_spheres_to_scene(scene, transformed_implant, transformed_annotation):
 
 
 def make_final_insertion_scene(
-    working_angle,
-    headframe_mesh,
-    probe_mesh,
-    cone,
-    transformed_implant,
-    transformed_annotation,
-    insert_list,
-    df,
-    cm,
-):
+    working_angle: list[float],
+    headframe_mesh: trimesh.Trimesh,
+    probe_mesh: trimesh.Trimesh,
+    cone: trimesh.Trimesh,
+    transformed_implant: NDArray[np.floating[Any]],
+    transformed_annotation: NDArray[np.floating[Any]],
+    insert_list: list[int],
+    df: pd.DataFrame,
+    cm: Any,
+) -> trimesh.Scene:
     """
     Create the final insertion scene with the given parameters.
 
@@ -350,14 +394,14 @@ def make_final_insertion_scene(
 
 
 def make_scene_for_insertion(
-    headframe_mesh,
-    cone,
-    transformed_implant,
-    transformed_annotation,
-    match_insertions,
-    df,
-    probe_mesh,
-):
+    headframe_mesh: trimesh.Trimesh,
+    cone: trimesh.Trimesh,
+    transformed_implant: NDArray[np.floating[Any]],
+    transformed_annotation: NDArray[np.floating[Any]],
+    match_insertions: list[int],
+    df: pd.DataFrame,
+    probe_mesh: trimesh.Trimesh,
+) -> trimesh.Scene:
     """
     Create a scene for the given insertions.
 
@@ -401,7 +445,13 @@ def make_scene_for_insertion(
     return scene
 
 
-def _apply_rotation_and_transform(mesh, angle, ap, ml, target_loc):
+def _apply_rotation_and_transform(
+    mesh: trimesh.Trimesh,
+    angle: float,
+    ap: float,
+    ml: float,
+    target_loc: NDArray[np.floating[Any]],
+) -> trimesh.Trimesh:
     """
     Apply rotation and transformation to a mesh based on the provided angle,
     AP, ML, and target location.
@@ -433,7 +483,13 @@ def _apply_rotation_and_transform(mesh, angle, ap, ml, target_loc):
     return mesh
 
 
-def _add_meshes_to_collision_manager(CM, insert_list, probe_mesh, df, angles):
+def _add_meshes_to_collision_manager(
+    CM: Any,
+    insert_list: list[int],
+    probe_mesh: trimesh.Trimesh,
+    df: pd.DataFrame,
+    angles: list[float],
+) -> None:
     """
     Add transformed probe meshes to the collision manager for a given set of
     angles.
@@ -466,7 +522,9 @@ def _add_meshes_to_collision_manager(CM, insert_list, probe_mesh, df, angles):
         CM.add_object(f"mesh{insertion_idx}", transformed_mesh)
 
 
-def _remove_meshes_from_collision_manager(CM, insert_list):
+def _remove_meshes_from_collision_manager(
+    CM: Any, insert_list: list[int]
+) -> None:
     """
     Remove probe meshes from the collision manager.
 
@@ -485,7 +543,12 @@ def _remove_meshes_from_collision_manager(CM, insert_list):
         CM.remove_object(f"mesh{idx}")
 
 
-def test_for_collisions(insert_list, probe_mesh, df, rotations_to_test):
+def test_for_collisions(
+    insert_list: list[int],
+    probe_mesh: trimesh.Trimesh,
+    df: pd.DataFrame,
+    rotations_to_test: list[list[float]],
+) -> tuple[float, ...] | None:
     """
     Test for collisions among different probe insertion angles.
 
@@ -511,7 +574,7 @@ def test_for_collisions(insert_list, probe_mesh, df, rotations_to_test):
 
     for angle_set in angle_sets:
         _add_meshes_to_collision_manager(
-            CM, insert_list, probe_mesh, df, angle_set
+            CM, insert_list, probe_mesh, df, list(angle_set)
         )
 
         if not CM.in_collision_internal(return_names=False, return_data=False):

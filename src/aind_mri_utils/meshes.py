@@ -1,10 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Functions for Loading and manipulating meshes during insertion planning.
 """
 
+from __future__ import annotations
+
 import logging
 import warnings
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -17,12 +19,17 @@ from aind_anatomical_utils.sitk_volume import (
 )
 from skimage.measure import marching_cubes
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
 from aind_mri_utils.rotations import make_homogeneous_transform
 
 logger = logging.getLogger(__name__)
 
 
-def as_mesh(scene_or_mesh):
+def as_mesh(
+    scene_or_mesh: trimesh.Scene | trimesh.Trimesh,
+) -> trimesh.Trimesh | None:
     """
     Convert a possible scene to a mesh.
 
@@ -48,11 +55,11 @@ def as_mesh(scene_or_mesh):
 
 
 def load_newscale_trimesh(
-    filename,
-    move_down=0,
-    src_coordinate_system="LSA",
-    dst_coordinate_system="LPS",
-):
+    filename: str,
+    move_down: float = 0,
+    src_coordinate_system: str = "LSA",
+    dst_coordinate_system: str = "LPS",
+) -> trimesh.Trimesh:
     """Load a newscale model mesh.
 
     Parameters
@@ -72,8 +79,10 @@ def load_newscale_trimesh(
     trimesh.Trimesh
         The loaded and transformed mesh.
     """
-    mesh = trimesh.load_mesh(filename)
-    mesh = as_mesh(mesh)
+    loaded_mesh = trimesh.load_mesh(filename)
+    mesh = as_mesh(loaded_mesh)
+    if mesh is None:
+        raise ValueError("Failed to load mesh from file")
     new_vertices = convert_coordinate_system(
         mesh.vertices, src_coordinate_system, dst_coordinate_system
     )
@@ -92,7 +101,11 @@ def load_newscale_trimesh(
     return mesh
 
 
-def apply_transform_to_trimesh(mesh, R, translation=None):
+def apply_transform_to_trimesh(
+    mesh: trimesh.Trimesh,
+    R: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]] | None = None,
+) -> trimesh.Trimesh:
     """
     Apply a transform to a trimesh Mesh object
     """
@@ -103,7 +116,11 @@ def apply_transform_to_trimesh(mesh, R, translation=None):
     return mesh
 
 
-def create_uv_spheres(positions, radius=0.25, color=[255, 0, 255, 255]):
+def create_uv_spheres(
+    positions: NDArray[np.floating[Any]],
+    radius: float = 0.25,
+    color: list[int] = [255, 0, 255, 255],
+) -> list[trimesh.Trimesh]:
     """
     Create UV spheres at specified positions with a given radius and color.
 
@@ -131,7 +148,9 @@ def create_uv_spheres(positions, radius=0.25, color=[255, 0, 255, 255]):
     return meshes
 
 
-def distances_to_triangle(points, triangle):
+def distances_to_triangle(
+    points: NDArray[np.floating[Any]], triangle: NDArray[np.floating[Any]]
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Calculate the distance from a set of points to a triangle.
 
@@ -158,7 +177,11 @@ def distances_to_triangle(points, triangle):
     return distances, nearest_points
 
 
-def distance_to_all_triangles_in_mesh(mesh, points, normalize=True):
+def distance_to_all_triangles_in_mesh(
+    mesh: trimesh.Trimesh,
+    points: NDArray[np.floating[Any]],
+    normalize: bool = True,
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.integer[Any]]]:
     """Calculate the distances from points to all triangles in a mesh.
 
     This function computes the minimum distance between a set of points and
@@ -204,8 +227,10 @@ def distance_to_all_triangles_in_mesh(mesh, points, normalize=True):
 
 
 def distance_to_closest_point_for_each_triangle_in_mesh(
-    mesh, points, normalize=True
-):
+    mesh: trimesh.Trimesh,
+    points: NDArray[np.floating[Any]],
+    normalize: bool = True,
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.integer[Any]]]:
     """
     Calculate the distance to the closest point for each triangle in a mesh.
 
@@ -249,7 +274,9 @@ def distance_to_closest_point_for_each_triangle_in_mesh(
     return distances, nearest_points
 
 
-def ensure_normals_outward(mesh, verbose=True):
+def ensure_normals_outward(
+    mesh: trimesh.Trimesh, verbose: bool = True
+) -> trimesh.Trimesh:
     """
     Ensure normals point outward.
 
@@ -272,7 +299,9 @@ def ensure_normals_outward(mesh, verbose=True):
     return mesh
 
 
-def mask_to_trimesh(sitk_mask, level=0.5, smooth_iters=0):
+def mask_to_trimesh(
+    sitk_mask: sitk.Image, level: float = 0.5, smooth_iters: int = 0
+) -> trimesh.Trimesh:
     """
     Converts a SimpleITK binary mask into a 3D mesh in the same physical space.
 

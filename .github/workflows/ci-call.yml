@@ -33,6 +33,7 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       package-name: aind_mri_utils
+      run-mypy: true
       smoke-test-paths: "tests test-data"
     secrets:
       repo-token: ${{ secrets.GITHUB_TOKEN }}
