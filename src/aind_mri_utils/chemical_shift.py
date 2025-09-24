@@ -2,18 +2,25 @@
 Functions for correcting for chemical shift in MRI images
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 import numpy as np
 
+if TYPE_CHECKING:
+    import SimpleITK as sitk
+    from numpy.typing import NDArray
+
 
 def compute_chemical_shift(
-    image_or_spacing,
-    ppm=(3.7 + 4.1) / 2,
-    mag_freq=599.0,
-    pixel_bandwidth=500.0,
-    frequency_encoding_direction="AP",
-):
+    image_or_spacing: sitk.Image | float,
+    ppm: float = (3.7 + 4.1) / 2,
+    mag_freq: float = 599.0,
+    pixel_bandwidth: float = 500.0,
+    frequency_encoding_direction: str = "AP",
+) -> NDArray[np.floating[Any]]:
     """Calculate the chemical shift for an MRI image or spacing.
 
     The chemical shift is calculated based on the parts per million (ppm),
@@ -53,6 +60,9 @@ def compute_chemical_shift(
     # Check if image_or_spacing is a simpleitk image:
     if hasattr(image_or_spacing, "GetSpacing"):
         # If it is, use the spacing from the image
+        assert not isinstance(
+            image_or_spacing, float
+        )  # Help mypy understand type
         spacing_tuple = image_or_spacing.GetSpacing()
         dir_mat = np.array(image_or_spacing.GetDirection()).reshape(3, 3)
         readout_axes = {
@@ -63,10 +73,8 @@ def compute_chemical_shift(
         direction = readout_axes.get(frequency_encoding_direction, None)
         if direction is None:
             warn(
-                ValueError(
-                    "Invalid frequency encoding direction "
-                    f"{frequency_encoding_direction}"
-                )
+                "Invalid frequency encoding direction "
+                f"{frequency_encoding_direction}"
             )
         dot_products = np.abs(dir_mat @ direction)
         index_axis = np.argmax(dot_products)
@@ -78,7 +86,9 @@ def compute_chemical_shift(
     return shift
 
 
-def chemical_shift_transform(shift, readout="AP"):
+def chemical_shift_transform(
+    shift: NDArray[np.floating[Any]], readout: str = "AP"
+) -> NDArray[np.floating[Any]]:
     """Create chemical shift transformation matrix.
 
     Creates a transformation matrix that accounts for the chemical

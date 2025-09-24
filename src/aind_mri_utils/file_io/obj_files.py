@@ -1,12 +1,20 @@
 """Functions for working with obj files"""
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pywavefront
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
-def get_vertices_and_faces(scene):
+
+def get_vertices_and_faces(
+    scene: Any,
+) -> tuple[NDArray[np.floating[Any]], list[NDArray[np.integer[Any]]]]:
     """
     Collect vertices and faces for a pywavefront object
 
@@ -30,7 +38,7 @@ def get_vertices_and_faces(scene):
     return vertices, faces
 
 
-def load_obj_wavefront(filename):
+def load_obj_wavefront(filename: str | Path) -> Any:
     """
     Wrapper for loading a pywavefront scene
 

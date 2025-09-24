@@ -1,13 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Functions for optimizing volume fits.
 
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from scipy import optimize as opt
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from . import rotations as rot
 from .measurement import dist_point_to_line, dist_point_to_plane
@@ -42,15 +47,22 @@ for version in headframe_hole_locations:
     )
 
 
-def _unpack_theta_apply_transform(theta, moving):
+def _unpack_theta_apply_transform(
+    theta: NDArray[np.floating[Any]], moving: NDArray[np.floating[Any]]
+) -> NDArray[np.floating[Any]]:
     """Helper function to apply a transform to a set of points."""
     R = rot.combine_angles(*theta[0:3])
     return rot.apply_rotate_translate(moving, R, theta[3:])
 
 
 def revised_error_rotate_compare_weighted_lines(
-    theta, pts1, pts2, moving, weights, group_err_funs=None
-):
+    theta: NDArray[np.floating[Any]],
+    pts1: list[NDArray[np.floating[Any]]],
+    pts2: list[NDArray[np.floating[Any]]],
+    moving: list[NDArray[np.floating[Any]]],
+    weights: list[NDArray[np.floating[Any]]],
+    group_err_funs: list[Any] | None = None,
+) -> float:
     """
     Calculate the error of rotating and translating the `moving` points to
     align with `pts1` and `pts2`, taking into account the weights assigned to
@@ -110,8 +122,13 @@ def revised_error_rotate_compare_weighted_lines(
 
 
 def cost_function_weighted_labeled_lines(
-    T, pts1, pts2, moving, labels, weights
-):
+    T: NDArray[np.floating[Any]],
+    pts1: NDArray[np.floating[Any]],
+    pts2: NDArray[np.floating[Any]],
+    moving: NDArray[np.floating[Any]],
+    labels: NDArray[np.integer[Any]],
+    weights: NDArray[np.floating[Any]],
+) -> float:
     """
     Cost function for optimizing a rigid transform on weighted points.
 
@@ -155,8 +172,14 @@ def cost_function_weighted_labeled_lines(
 
 
 def cost_function_weighted_labeled_lines_with_plane(
-    T, pts1, pts2, pts_for_line, moving, labels, weights
-):
+    T: NDArray[np.floating[Any]],
+    pts1: NDArray[np.floating[Any]],
+    pts2: NDArray[np.floating[Any]],
+    pts_for_line: NDArray[np.bool_],
+    moving: NDArray[np.floating[Any]],
+    labels: NDArray[np.integer[Any]],
+    weights: NDArray[np.floating[Any]],
+) -> float:
     """
     Cost function for optimizing a rigid transform on weighted points;
     includes labeled lines and labeled planes.
@@ -209,7 +232,12 @@ def cost_function_weighted_labeled_lines_with_plane(
     return np.sum(D)
 
 
-def _preprocess_weights(weights, positions, normalize, gamma):
+def _preprocess_weights(
+    weights: NDArray[np.floating[Any]] | None,
+    positions: NDArray[np.floating[Any]],
+    normalize: bool,
+    gamma: float | None,
+) -> NDArray[np.floating[Any]]:
     """
     Preprocess weights for use in optimization functions
     """
@@ -219,7 +247,7 @@ def _preprocess_weights(weights, positions, normalize, gamma):
         # Gamma correct
         # Taken from skimage.exposure.adjust_gamma.
         # Implementing here to avoid importing skimage.
-        scale = np.max(weights) - np.min(weights)
+        scale: float = np.max(weights) - np.min(weights)
         if abs(scale) > 1e-6:
             if gamma is not None:
                 if abs(scale) > 1e-6:
@@ -230,32 +258,36 @@ def _preprocess_weights(weights, positions, normalize, gamma):
     return weights
 
 
-def unpack_theta(T):
+def unpack_theta(
+    T: NDArray[np.floating[Any]],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """Helper function to unpack theta to a rigid transform."""
     R = rot.combine_angles(*T[0:3])
     translation = T[3:]
     return R, translation
 
 
-def unpack_theta_to_homogeneous(T):
+def unpack_theta_to_homogeneous(
+    T: NDArray[np.floating[Any]],
+) -> NDArray[np.floating[Any]]:
     """Helper function to unpack theta to a homogeneous transform."""
     R_homog = rot.make_homogeneous_transform(*unpack_theta(T))
     return R_homog
 
 
 def optimize_transform_labeled_lines(
-    init,
-    pts1,
-    pts2,
-    positions,
-    labels,
-    weights=None,
-    xtol=1e-12,
-    maxfun=10000,
-    normalize=False,
-    gamma=None,
-    disp=0,
-):
+    init: NDArray[np.floating[Any]],
+    pts1: NDArray[np.floating[Any]],
+    pts2: NDArray[np.floating[Any]],
+    positions: NDArray[np.floating[Any]],
+    labels: NDArray[np.integer[Any]],
+    weights: NDArray[np.floating[Any]] | None = None,
+    xtol: float = 1e-12,
+    maxfun: int = 10000,
+    normalize: bool = False,
+    gamma: float | None = None,
+    disp: int = 0,
+) -> Any:
     """
     Function for optimizing a rigid transform on
     weighted points by minimizing distance
@@ -323,19 +355,19 @@ def optimize_transform_labeled_lines(
 
 
 def optimize_transform_labeled_lines_with_plane(
-    init,
-    pts1,
-    pts2,
-    pts_for_line,
-    positions,
-    labels,
-    weights=None,
-    xtol=1e-12,
-    maxfun=10000,
-    normalize=False,
-    gamma=None,
-    disp=0,
-):
+    init: NDArray[np.floating[Any]],
+    pts1: NDArray[np.floating[Any]],
+    pts2: NDArray[np.floating[Any]],
+    pts_for_line: NDArray[np.bool_],
+    positions: NDArray[np.floating[Any]],
+    labels: NDArray[np.integer[Any]],
+    weights: NDArray[np.floating[Any]] | None = None,
+    xtol: float = 1e-12,
+    maxfun: int = 10000,
+    normalize: bool = False,
+    gamma: float | None = None,
+    disp: int = 0,
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Function for optimizing a rigid transform on
     weighted points by minimizing distance
@@ -409,11 +441,11 @@ def optimize_transform_labeled_lines_with_plane(
 
 
 def get_headframe_hole_lines(
-    version="0.1",
-    insert_underscores=False,
-    coordinate_system="LPS",
-    return_plane=False,
-):
+    version: str = "0.1",
+    insert_underscores: bool = False,
+    coordinate_system: str = "LPS",
+    return_plane: bool = False,
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]], list[str]]:
     """
     Return the lines for the headframe holes,
     in a format that can be used by the cost function.

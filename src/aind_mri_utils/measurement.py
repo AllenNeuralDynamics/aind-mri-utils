@@ -35,10 +35,19 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
-def find_circle(x, y):
+
+def find_circle(
+    x: NDArray[np.floating[Any]], y: NDArray[np.floating[Any]]
+) -> tuple[float, float, float]:
     """Fit a circle to a set of points
 
     Fit a circle to a set of points using a linearized least-squares
@@ -99,10 +108,12 @@ def find_circle(x, y):
     Ri_1 = np.sqrt((x - xc_1) ** 2 + (y - yc_1) ** 2)
     radius = np.mean(Ri_1)
 
-    return xc_1, yc_1, radius
+    return float(xc_1), float(yc_1), float(radius)
 
 
-def find_line_eig(points):
+def find_line_eig(
+    points: NDArray[np.floating[Any]],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Returns first normalized eigenvector of data, for use in line fitting.
 
@@ -124,7 +135,12 @@ def find_line_eig(points):
     return b[:, 0], points_mean
 
 
-def closet_points_on_two_lines(P1, V1, P2, V2):
+def closet_points_on_two_lines(
+    P1: NDArray[np.floating[Any]],
+    V1: NDArray[np.floating[Any]],
+    P2: NDArray[np.floating[Any]],
+    V2: NDArray[np.floating[Any]],
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """Calculate the closest points on two lines in 3D space.
 
     Parameters
@@ -170,7 +186,9 @@ def closet_points_on_two_lines(P1, V1, P2, V2):
     return p_a, p_b
 
 
-def angle(v1, v2):
+def angle(
+    v1: NDArray[np.floating[Any]], v2: NDArray[np.floating[Any]]
+) -> float:
     """
     Angle (in degrees) between two vectors
 
@@ -186,10 +204,14 @@ def angle(v1, v2):
     Angle between vectors
     """
     rad = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
-    return np.rad2deg(rad)
+    return float(np.rad2deg(rad))
 
 
-def dist_point_to_line(pt_1, pt_2, query_pt):
+def dist_point_to_line(
+    pt_1: NDArray[np.floating[Any]],
+    pt_2: NDArray[np.floating[Any]],
+    query_pt: NDArray[np.floating[Any]],
+) -> float:
     """Distance between line defined by two points and a query point
 
     inspiration from:
@@ -212,12 +234,17 @@ def dist_point_to_line(pt_1, pt_2, query_pt):
     ln_pt = pt_1
     ln_norm = pt_1 - pt_2
     ln_norm = ln_norm / np.linalg.norm(ln_norm)
-    return np.abs(
-        np.linalg.norm(np.cross(ln_norm, ln_pt - query_pt))
-    ) / np.linalg.norm(ln_norm)
+    return float(
+        np.abs(np.linalg.norm(np.cross(ln_norm, ln_pt - query_pt)))
+        / np.linalg.norm(ln_norm)
+    )
 
 
-def dist_point_to_plane(pt_0, normal, query_pt):
+def dist_point_to_plane(
+    pt_0: NDArray[np.floating[Any]],
+    normal: NDArray[np.floating[Any]],
+    query_pt: NDArray[np.floating[Any]],
+) -> float:
     """
     Distance between plane defined by point and normal and a query point
 
@@ -242,4 +269,4 @@ def dist_point_to_plane(pt_0, normal, query_pt):
         + D
     )
     denom = np.sqrt(np.sum(normal**2))
-    return num / denom
+    return float(num / denom)

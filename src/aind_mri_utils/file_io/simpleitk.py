@@ -2,17 +2,24 @@
 Functions for saving and loading transforms using SimpleITK.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 import SimpleITK as sitk
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from .. import rotations as rot
 
 
 def save_sitk_transform(
-    filename,
-    rotation_matrix,
-    translation=None,
-):
+    filename: str,
+    rotation_matrix: NDArray[np.floating[Any]],
+    translation: NDArray[np.floating[Any]] | None = None,
+) -> None:
     """Save a rigid transform to a SimpleITK (sitk) transform file
 
     The current implementation assumes that rotations are applied as: y = Rx +
@@ -75,7 +82,12 @@ def save_sitk_transform(
     sitk.WriteTransform(A, filename)
 
 
-def load_sitk_transform(filename, homogeneous=False, invert=False):
+def load_sitk_transform(
+    filename: str, homogeneous: bool = False, invert: bool = False
+) -> (
+    NDArray[np.floating[Any]]
+    | tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]
+):
     """
     Convert a sitk transform file to a 4x3 numpy array.
 
