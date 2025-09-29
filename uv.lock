@@ -2588,15 +2588,15 @@ wheels = [
 
 [[package]]
 name = "trimesh"
-version = "4.8.2"
+version = "4.8.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d2/91/915e5affdfcc06ef4523b2b5645ef319d165cf4618110ba2893a5fb99a35/trimesh-4.8.2.tar.gz", hash = "sha256:1b9e50feb77dac820428b7408f6cea707577342cd37a493e4491765bd5a67da3", size = 824364, upload-time = "2025-09-17T21:44:22.355Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/17/9799bd734de0aa75332727b10ecf56e2c93efa70dfc7a2966bed33539ef5/trimesh-4.8.3.tar.gz", hash = "sha256:d2a1974efccb0737a1faac14d69740c644bb6738a99c790c1df752fe72c2a759", size = 831222, upload-time = "2025-09-26T20:07:59.595Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/70/d4376ceb7fe7ab8f9bf70b4f24f5bb7d436f51dc50cf21432401bc8233b2/trimesh-4.8.2-py3-none-any.whl", hash = "sha256:666f93c143576d0cbe6e1f6a44bde1d864367f274e9ae3917cabd363394a58a1", size = 729114, upload-time = "2025-09-17T21:44:19.3Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/bc/f36afd1ad03d09cd0d311be5951f2dd705a824f34dd871779d42c277d741/trimesh-4.8.3-py3-none-any.whl", hash = "sha256:f9f1622ecac5f3bed5b65d3a748bb536481f52cd4e4e120e0b637cabe6cf1542", size = 735464, upload-time = "2025-09-26T20:07:56.512Z" },
 ]
 
 [[package]]
