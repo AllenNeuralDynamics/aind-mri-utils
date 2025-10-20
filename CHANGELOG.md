@@ -1,3 +1,9 @@
+## v0.11.2 (2025-10-20)
+
+### Fix
+
+- update compat range for aind-anatomical-utils
+
 ## v0.11.1 (2025-08-27)
 
 ### Fix
