@@ -90,10 +90,10 @@ class TestArcAnglesToVector(unittest.TestCase):
         )
         self.assertTrue(_vec_close(v_deg, v_rad))
 
-    def test_invert_ap_flag(self):
-        """Flipping invert_AP changes the AP component sign."""
-        v_default = aa.arc_angles_to_vector(20, 0)  # invert_AP=True
-        v_no_flip = aa.arc_angles_to_vector(20, 0, invert_AP=False)
+    def test_invert_rx_flag(self):
+        """Flipping invert_rx changes the AP component sign."""
+        v_default = aa.arc_angles_to_vector(20, 0)  # invert_rx=True
+        v_no_flip = aa.arc_angles_to_vector(20, 0, invert_rx=False)
         # Only the AP (y) component should differ in sign
         self.assertAlmostEqual(v_default[0], v_no_flip[0], places=7)
         self.assertAlmostEqual(v_default[2], v_no_flip[2], places=7)
@@ -170,7 +170,7 @@ class TestArcAnglesToAffine(unittest.TestCase):
     def test_affine_matrix_contents(self):
         """
         Verify the XYZ Euler rotation sequence and the default
-        invert_AP / invert_rotation logic.
+        invert_rx / invert_rz logic.
         """
         AP, ML, ROT = 20, 30, 10
 
