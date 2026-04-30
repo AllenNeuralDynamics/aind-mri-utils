@@ -1,6 +1,4 @@
-"""
-IO functions for SITK
-"""
+"""IO functions for SITK."""
 
 from __future__ import annotations
 
@@ -11,8 +9,8 @@ import SimpleITK as sitk
 
 
 def read_image(filename: str) -> Any:
-    """
-    Reads generic image files/folders in SITK using
+    """Read generic image files/folders in SITK.
+
     Currently explicitly supported: .dcm, .nii, .tiff
     Folders/stacks will be read for .dcm and .tiff files
     Other formats work only if supported they work with sitk.ReadImage()
@@ -57,7 +55,7 @@ def read_image(filename: str) -> Any:
 
 
 def read_dicom(filename: str) -> Any:
-    """Reader to import Dicom file and convert to sitk image
+    """Import a Dicom file and convert to sitk image.
 
     See
     https://simpleitk.readthedocs.io/en/master/link_DicomSeriesReader_docs.html#lbl-dicom-series-reader
@@ -88,10 +86,10 @@ def read_dicom(filename: str) -> Any:
 
 
 def read_dcm(filename: str) -> Any:
-    """
-    Reader to import Dicom file and convert to sitk image.
+    """Import a Dicom file and convert to sitk image.
+
     This function is a wrapper on read_dicom to handle multiple naming
-    conventions
+    conventions.
 
     Parameters
     ----------
@@ -109,8 +107,8 @@ def read_dcm(filename: str) -> Any:
 
 
 def read_nii(filename: str) -> Any:
-    """
-    Reader to import nifti file and convert to sitk image
+    """Import a nifti file and convert to sitk image.
+
     This function is just a wrapper to match convention.
 
     Parameters
@@ -128,8 +126,8 @@ def read_nii(filename: str) -> Any:
 
 
 def read_nifti(filename: str) -> Any:
-    """
-    Reader to import nifti file and convert to sitk image
+    """Import a nifti file and convert to sitk image.
+
     This function is a wrapper on read_nii to handle multiple naming
     conventions, which is in turn just an sitk wrapper.
 
@@ -148,8 +146,8 @@ def read_nifti(filename: str) -> Any:
 
 
 def read_tiff_stack(folder: str) -> Any:
-    """
-    Code to read a tiff stack
+    """Read a tiff stack.
+
     THIS CODE IS INCOMPLETE: needs metadata handling (resolution, etc.) and
     some thought about how to deal with large images.
 
@@ -178,9 +176,7 @@ def read_tiff_stack(folder: str) -> Any:
 
 
 def write_nii(image: Any, filename: str) -> None:
-    """
-
-    Write an sitk image to .nii file
+    """Write an sitk image to .nii file.
 
     Parameters
     ----------
@@ -200,8 +196,8 @@ def write_nii(image: Any, filename: str) -> None:
 
 
 def write_dicom(image: Any, foldername: str) -> None:
-    """
-    Save SITK image as dicom stack.
+    """Save SITK image as dicom stack.
+
     Heavily borrowed from
     https://simpleitk.readthedocs.io/en/master/link_DicomSeriesReadModifyWrite_docs.html
 

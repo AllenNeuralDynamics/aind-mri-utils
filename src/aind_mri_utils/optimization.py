@@ -1,7 +1,4 @@
-"""
-Functions for optimizing volume fits.
-
-"""
+"""Functions for optimizing volume fits."""
 
 from __future__ import annotations
 
@@ -44,7 +41,7 @@ for version in headframe_hole_locations:
 def _unpack_theta_apply_transform(
     theta: NDArray[np.floating[Any]], moving: NDArray[np.floating[Any]]
 ) -> NDArray[np.floating[Any]]:
-    """Helper function to apply a transform to a set of points."""
+    """Apply a transform to a set of points."""
     R = rot.combine_angles(*theta[0:3])
     return rot.apply_rotate_translate(moving, R, theta[3:])
 
@@ -57,10 +54,9 @@ def revised_error_rotate_compare_weighted_lines(
     weights: list[NDArray[np.floating[Any]]],
     group_err_funs: list[Any] | None = None,
 ) -> float:
-    """
-    Calculate the error of rotating and translating the `moving` points to
-    align with `pts1` and `pts2`, taking into account the weights assigned to
-    each point.
+    """Calculate the error of rotating and translating the `moving` points to align with `pts1` and `pts2`.
+
+    Takes into account the weights assigned to each point.
 
     Parameters
     ----------
@@ -169,9 +165,7 @@ def cost_function_weighted_labeled_lines_with_plane(
     labels: NDArray[np.integer[Any]],
     weights: NDArray[np.floating[Any]],
 ) -> float:
-    """
-    Cost function for optimizing a rigid transform on weighted points;
-    includes labeled lines and labeled planes.
+    """Cost function for optimizing a rigid transform on weighted points; includes labeled lines and labeled planes.
 
     Parameters
     ----------
@@ -217,9 +211,7 @@ def _preprocess_weights(
     normalize: bool,
     gamma: float | None,
 ) -> NDArray[np.floating[Any]]:
-    """
-    Preprocess weights for use in optimization functions
-    """
+    """Preprocess weights for use in optimization functions."""
     if weights is None:
         weights = np.ones((positions.shape[0], 1))
     else:
@@ -240,7 +232,7 @@ def _preprocess_weights(
 def unpack_theta(
     T: NDArray[np.floating[Any]],
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """Helper function to unpack theta to a rigid transform."""
+    """Unpack theta to a rigid transform."""
     R = rot.combine_angles(*T[0:3])
     translation = T[3:]
     return R, translation
@@ -249,7 +241,7 @@ def unpack_theta(
 def unpack_theta_to_homogeneous(
     T: NDArray[np.floating[Any]],
 ) -> NDArray[np.floating[Any]]:
-    """Helper function to unpack theta to a homogeneous transform."""
+    """Unpack theta to a homogeneous transform."""
     R_homog = rot.make_homogeneous_transform(*unpack_theta(T))
     return R_homog
 
@@ -267,10 +259,8 @@ def optimize_transform_labeled_lines(
     gamma: float | None = None,
     disp: int = 0,
 ) -> Any:
-    """
-    Function for optimizing a rigid transform on
-    weighted points by minimizing distance
-    from each point to a specified line.
+    """Optimize a rigid transform on weighted points by minimizing distance from each point to a specified line.
+
     Multiple lines can be specified by using labels.
 
     Parameters
@@ -346,10 +336,8 @@ def optimize_transform_labeled_lines_with_plane(
     gamma: float | None = None,
     disp: int = 0,
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Function for optimizing a rigid transform on
-    weighted points by minimizing distance
-    between each point and a specified line or plane.
+    """Optimize a rigid transform on weighted points by minimizing distance to a specified line or plane.
+
     Multiple lines/planes can be specified by using labels.
 
     Parameters
@@ -424,9 +412,7 @@ def get_headframe_hole_lines(
     coordinate_system: str = "LPS",
     return_plane: bool = False,
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]], list[str]]:
-    """
-    Return the lines for the headframe holes,
-    in a format that can be used by the cost function.
+    """Return the lines for the headframe holes in a format that can be used by the cost function.
 
     Parameters
     ----------

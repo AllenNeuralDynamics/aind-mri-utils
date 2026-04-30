@@ -1,6 +1,4 @@
-"""
-Functions for Loading and manipulating meshes during insertion planning.
-"""
+"""Functions for Loading and manipulating meshes during insertion planning."""
 
 from __future__ import annotations
 
@@ -101,9 +99,7 @@ def apply_transform_to_trimesh(
     R: NDArray[np.floating[Any]],
     translation: NDArray[np.floating[Any]] | None = None,
 ) -> trimesh.Trimesh:
-    """
-    Apply a transform to a trimesh Mesh object
-    """
+    """Apply a transform to a trimesh Mesh object."""
     if translation is None:
         translation = np.zeros(3)
     T = make_homogeneous_transform(R, translation)
@@ -282,8 +278,7 @@ def ensure_normals_outward(mesh: trimesh.Trimesh, verbose: bool = True) -> trime
 
 
 def mask_to_trimesh(sitk_mask: sitk.Image, level: float = 0.5, smooth_iters: int = 0) -> trimesh.Trimesh:
-    """
-    Converts a SimpleITK binary mask into a 3D mesh in the same physical space.
+    """Convert a SimpleITK binary mask into a 3D mesh in the same physical space.
 
     Parameters
     ----------

@@ -1,6 +1,4 @@
-"""
-Tools for computing arc angles, stereotaxic angles, and the conversions
-between them.
+"""Tools for computing arc angles, stereotaxic angles, and the conversions between them.
 
 Angle naming
 ------------
@@ -287,8 +285,7 @@ def arc_angles_to_stereotax_angles(
     earbar_roll: float = 0.0,
     headframe_rx_in_arc_system: float | None = None,
 ) -> tuple[float, float]:
-    """Convert ephys-rig arc angles to Kopf 1500 off-plane stereotaxic
-    angles for a matched insertion.
+    """Convert ephys-rig arc angles to Kopf 1500 off-plane stereotaxic angles for a matched insertion.
 
     Use case
     --------

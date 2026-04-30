@@ -57,8 +57,7 @@ else:
 
 
 def define_euler_rotation(rx: float, ry: float, rz: float, degrees: bool = True, order: str = "xyz") -> Rotation:
-    """
-    Wrapper of scipy.spatial.transform.Rotation.from_euler
+    """Wrap scipy.spatial.transform.Rotation.from_euler.
 
     Parameters
     ----------
@@ -258,15 +257,13 @@ def rotation_matrix_from_vectors(
 
 
 def _rotate_mat_by_single_euler(mat: NDArray[np.floating[Any]], axis: str, angle: float) -> NDArray[np.floating[Any]]:
-    """Helper function that rotates a matrix by a single Euler angle"""
+    """Rotate a matrix by a single Euler angle."""
     rotation_matrix = Rotation.from_euler(axis, angle).as_matrix().squeeze()
     return mat @ rotation_matrix
 
 
 def roll(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floating[Any]]:
-    """
-    Apply a rotation around the x-axis (pilot-convention roll/bank) to the
-    input matrix.
+    """Apply a rotation around the x-axis (pilot-convention roll/bank) to the input matrix.
 
     For mouse-RAS data, the x-axis is ML — so this rotation is a
     physical *pitch* of the mouse (nose up/down), not a roll. See module
@@ -288,9 +285,7 @@ def roll(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.float
 
 
 def pitch(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floating[Any]]:
-    """
-    Apply a rotation around the y-axis (pilot-convention pitch/elevation)
-    to the input matrix.
+    """Apply a rotation around the y-axis (pilot-convention pitch/elevation) to the input matrix.
 
     For mouse-RAS data, the y-axis is AP — so this rotation is a physical
     *roll* of the mouse (left/right ear up), not a pitch. See module
@@ -312,9 +307,7 @@ def pitch(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floa
 
 
 def yaw(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floating[Any]]:
-    """
-    Apply a rotation around the z-axis (pilot-convention yaw/heading) to
-    the input matrix.
+    """Apply a rotation around the z-axis (pilot-convention yaw/heading) to the input matrix.
 
     For mouse-RAS data the z-axis is DV — yaw lines up between the two
     conventions, so this is also a physical yaw (turning left/right) of
@@ -381,8 +374,7 @@ def make_homogeneous_transform(
     translation: NDArray[np.floating[Any]],
     scaling: NDArray[np.floating[Any]] | None = None,
 ) -> NDArray[np.floating[Any]]:
-    """
-    Combines a rotation matrix and translation into a homogeneous transform.
+    """Combine a rotation matrix and translation into a homogeneous transform.
 
     Parameters
     ----------
@@ -645,9 +637,7 @@ def invert_rotate_translate(
 def create_homogeneous_from_euler_and_translation(
     rx: float, ry: float, rz: float, tx: float, ty: float, tz: float
 ) -> NDArray[np.floating[Any]]:
-    """
-    Create a homogeneous transformation matrix from Euler angles and
-    translation.
+    """Create a homogeneous transformation matrix from Euler angles and translation.
 
     Parameters
     ----------
@@ -678,9 +668,7 @@ def ras_to_lps_transform(
     R: NDArray[np.floating[Any]],
     translation: NDArray[np.floating[Any]] | None = None,
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Transforms a rotation matrix and translation vector from RAS to LPS
-    coordinate system, or vice-versa.
+    """Transform a rotation matrix and translation vector from RAS to LPS coordinate system, or vice-versa.
 
     Parameters
     ----------
@@ -767,8 +755,7 @@ def compose_transforms(
 def itk_to_slicer_transform(
     itk_transform: NDArray[np.floating[Any]],
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Converts an ITK transform to a Slicer transform.
+    """Convert an ITK transform to a Slicer transform.
 
     This function converts a given ITK transform, which uses the LPS coordinate
     system, to a Slicer transform, which uses the RAS coordinate system. The

@@ -51,9 +51,7 @@ def candidate_insertions(
     target_names: list[str],
     implant_names: list[str],
 ) -> pd.DataFrame:
-    """
-    Generate candidate insertions for targets and implant holes by calculating
-    arc angles.
+    """Generate candidate insertions for targets and implant holes by calculating arc angles.
 
     Parameters
     ----------
@@ -159,9 +157,7 @@ def compatible_insertion_pairs(
     ap_min: float = 16,
     ml_min: float = 16,
 ) -> NDArray[np.bool_]:
-    """
-    Generate a boolean matrix indicating valid insertion pairs based on AP and
-    ML criteria.
+    """Generate a boolean matrix indicating valid insertion pairs based on AP and ML criteria.
 
     Parameters
     ----------
@@ -443,9 +439,7 @@ def _apply_rotation_and_transform(
     ml: float,
     target_loc: NDArray[np.floating[Any]],
 ) -> trimesh.Trimesh:
-    """
-    Apply rotation and transformation to a mesh based on the provided angle,
-    AP, ML, and target location.
+    """Apply rotation and transformation to a mesh based on the provided angle, AP, ML, and target location.
 
     Parameters
     ----------
@@ -481,9 +475,7 @@ def _add_meshes_to_collision_manager(
     df: pd.DataFrame,
     angles: list[float],
 ) -> None:
-    """
-    Add transformed probe meshes to the collision manager for a given set of
-    angles.
+    """Add transformed probe meshes to the collision manager for a given set of angles.
 
     Parameters
     ----------

@@ -1,6 +1,4 @@
-"""
-Functions for correcting for chemical shift in MRI images
-"""
+"""Functions for correcting for chemical shift in MRI images."""
 
 from __future__ import annotations
 

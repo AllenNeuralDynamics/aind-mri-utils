@@ -1,4 +1,4 @@
-"""Plotting functions"""
+"""Plotting functions."""
 
 from __future__ import annotations
 
@@ -21,8 +21,7 @@ def plot_tri_mesh(
     *plot_args: Any,
     **plot_kwargs: Any,
 ) -> tuple[Any, Any]:
-    """
-    Adds a mesh to a 3d plot
+    """Add a mesh to a 3d plot.
 
     Parameters
     ----------
@@ -43,8 +42,7 @@ def plot_tri_mesh(
 
 # Function from @Mateen Ulhaq and @karlo
 def _set_axes_radius(ax: Any, origin: NDArray[np.floating[Any]], radius: float) -> None:
-    """
-    Set all three axes to have the same distance around the origin
+    """Set all three axes to have the same distance around the origin.
 
     Parameters
     ----------
@@ -79,9 +77,7 @@ def set_axes_equal(ax: Axes3D) -> None:
 
 
 def make_3d_ax_look_normal(ax: Axes3D) -> None:
-    """
-    Changes the aspect ratio of a 3d plot so that dimensions are approximately
-    the same size
+    """Change the aspect ratio of a 3d plot so that dimensions are approximately the same size.
 
     Parameters
     ----------
@@ -92,15 +88,13 @@ def make_3d_ax_look_normal(ax: Axes3D) -> None:
 
 
 def get_prop_cycle() -> Any:
-    """
-    Returns the colors in the current prop cycle
-    """
+    """Return the colors in the current prop cycle."""
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     return prop_cycle.by_key()["color"]
 
 
 def plot_point_cloud_3d(a: Any, pts: NDArray[np.floating[Any]], *args: Any, **kwargs: Any) -> Any:
-    """Scatter plots a Nx3 array as N 3D points"""
+    """Scatter plot a Nx3 array as N 3D points."""
     return a.scatter(pts[:, 0], pts[:, 1], pts[:, 2], *args, **kwargs)
 
 
@@ -154,13 +148,13 @@ def create_single_colormap(
 
 
 def plot_vector(a: Any, pt: NDArray[np.floating[Any]], *args: Any, **kwargs: Any) -> Any:
-    """Plots a 3D point as a vector from the origin"""
+    """Plot a 3D point as a vector from the origin."""
     plt_pts = np.vstack([np.array([0, 0, 0]), pt])
     return a.plot(plt_pts[:, 0], plt_pts[:, 1], plt_pts[:, 2], *args, **kwargs)
 
 
 def rgb_to_int(r: int, g: int, b: int, a: int | None = None) -> int:
-    """Converts an RGB color to an integer.
+    """Convert an RGB color to an integer.
 
     Parameters
     ----------
@@ -205,7 +199,7 @@ def rgb_to_int(r: int, g: int, b: int, a: int | None = None) -> int:
 
 
 def int_to_rgb(color_int: int, has_alpha: bool | None = None) -> tuple[int, int, int] | tuple[int, int, int, int]:
-    """Converts an integer color representation to an RGB color.
+    """Convert an integer color representation to an RGB color.
 
     Parameters
     ----------
@@ -247,7 +241,7 @@ def int_to_rgb(color_int: int, has_alpha: bool | None = None) -> tuple[int, int,
 
 
 def rgb_to_hex_string(r: int, g: int, b: int, a: int | None = None) -> str:
-    """Converts an RGB color to a hex string.
+    """Convert an RGB color to a hex string.
 
     Parameters
     ----------
@@ -282,7 +276,7 @@ def rgb_to_hex_string(r: int, g: int, b: int, a: int | None = None) -> str:
 
 
 def hex_string_to_int(hx: str) -> int:
-    """Converts a hex color string to an integer.
+    """Convert a hex color string to an integer.
 
     Parameters
     ----------
@@ -310,7 +304,7 @@ def hex_string_to_int(hx: str) -> int:
 def hex_string_to_rgb(
     hx: str,
 ) -> tuple[int, int, int] | tuple[int, int, int, int]:
-    """Converts a hex color string to an RGB or RGBA color.
+    """Convert a hex color string to an RGB or RGBA color.
 
     Parameters
     ----------

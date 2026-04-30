@@ -1,5 +1,4 @@
-"""
-Code to handle sitk volume loading and rotating
+"""Code to handle sitk volume loading and rotating.
 
 SimpleITK example code is under Apache License, see:
 https://github.com/SimpleITK/TUTORIAL/blob/main/LICENSE
@@ -80,8 +79,7 @@ def resample3D(
     output_size: NDArray[np.integer[Any]] | None = None,
     interpolator: int = sitk.sitkLinear,
 ) -> sitk.Image:
-    """
-    Resample a 3D sitk image, with the option to apply a transform
+    """Resample a 3D sitk image, with the option to apply a transform.
 
     Parameters
     ----------

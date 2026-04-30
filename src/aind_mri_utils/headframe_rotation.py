@@ -1,6 +1,4 @@
-"""
-Code to find the rotation matrix to align a headframe to a set of holes.
-"""
+"""Code to find the rotation matrix to align a headframe to a set of holes."""
 
 from __future__ import annotations
 
@@ -75,7 +73,7 @@ def_hole_order = dict(
 
 
 def get_segmentation_pca(seg_img: Any, seg_vals: list[int]) -> NDArray[np.floating[Any]]:
-    """Finds first pca axis of segmentation for segments in set seg_vals
+    """Find first pca axis of segmentation for segments in set seg_vals.
 
     For each value in seg_vals, this will find the indices of seg_arr equal to
     that value and de-mean it. The first PC will then be found of the
@@ -109,7 +107,7 @@ def slices_centers_of_mass(
     seg_val: int,
     slice_seg_thresh: int = 1,
 ) -> NDArray[np.floating[Any]]:
-    """Finds the center of mass of image slices along array dimension
+    """Find the center of mass of image slices along array dimension.
 
     Iterates through `img` along dimension `axis_dim`, finds how many elements
     of `seg_img` are equal to `seg_val`, and if that number is greater than
@@ -160,10 +158,10 @@ def slices_centers_of_mass(
 
 
 def find_hole(img: Any, seg_img: Any, seg_val: int, sel_ndxs: list[int]) -> NDArray[np.floating[Any]] | None:
-    """Find the center of a hole based on its segmentation value
+    """Find the center of a hole based on its segmentation value.
 
     sel_ndxs is in sitk axis order!
-    Returns sitk axis order
+    Returns sitk axis order.
     """
     if seg_img.GetSize() != img.GetSize():
         raise ValueError("Image and segmentation must have the same shape")
@@ -195,9 +193,7 @@ def find_holes_by_orientation(
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
 ) -> dict[str, dict[str, NDArray[np.floating[Any]]]]:
-    """
-    Find holes in an image by different orientations and anterior-posterior
-    names.
+    """Find holes in an image by different orientations and anterior-posterior names.
 
     Parameters
     ----------
@@ -789,9 +785,7 @@ def make_segment_dict(
     orient_names: tuple[str, str] = def_orient_names,
     ignore_list: list[str] = [],
 ) -> dict[str, dict[str, int]]:
-    """
-    Create a dictionary of segment values based on the provided segment
-    information.
+    """Create a dictionary of segment values based on the provided segment information.
 
     Parameters
     ----------
@@ -922,9 +916,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
     NDArray[np.floating[Any]],
     NDArray[np.floating[Any]],
 ]:
-    """
-    Calculate the headframe rotation and translation from segmentation data and
-    a lower plane.
+    """Calculate the headframe rotation and translation from segmentation data and a lower plane.
 
     Parameters
     ----------

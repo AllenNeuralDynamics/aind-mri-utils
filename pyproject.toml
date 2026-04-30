@@ -49,10 +49,7 @@ extend-exclude = ["scratch"]
 
 [tool.ruff.lint]
 extend-select = ["Q", "RUF100", "C90", "I", "F", "E", "W", "D", "UP", "ANN", "PYI"]
-# TODO: clear the docstring backlog (rewordings, trailing periods, summary
-# layout) and drop these transitional ignores enabled during the copier
-# template migration.
-extend-ignore = ["ANN401", "D200", "D205", "D400", "D401"]
+extend-ignore = ["ANN401"]
 per-file-ignores = { "tests/*.py" = ["ANN", "D"] }
 mccabe = { max-complexity = 14 }
 pydocstyle = { convention = "numpy" }

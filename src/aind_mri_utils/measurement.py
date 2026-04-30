@@ -45,10 +45,9 @@ if TYPE_CHECKING:
 
 
 def find_circle(x: NDArray[np.floating[Any]], y: NDArray[np.floating[Any]]) -> tuple[float, float, float]:
-    """Fit a circle to a set of points
+    """Fit a circle to a set of points.
 
-    Fit a circle to a set of points using a linearized least-squares
-    algorithm
+    Uses a linearized least-squares algorithm.
 
     Borrowed, with modification, from:
     https://scipy-cookbook.readthedocs.io/items/Least_Squares_Circle.html
@@ -111,8 +110,7 @@ def find_circle(x: NDArray[np.floating[Any]], y: NDArray[np.floating[Any]]) -> t
 def find_line_eig(
     points: NDArray[np.floating[Any]],
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Returns first normalized eigenvector of data, for use in line fitting.
+    """Return first normalized eigenvector of data, for use in line fitting.
 
     Parameters
     ----------
@@ -184,8 +182,7 @@ def closet_points_on_two_lines(
 
 
 def angle(v1: NDArray[np.floating[Any]], v2: NDArray[np.floating[Any]]) -> float:
-    """
-    Angle (in degrees) between two vectors
+    """Angle (in degrees) between two vectors.
 
     Parameters
     ----------
@@ -207,9 +204,9 @@ def dist_point_to_line(
     pt_2: NDArray[np.floating[Any]],
     query_pt: NDArray[np.floating[Any]],
 ) -> float:
-    """Distance between line defined by two points and a query point
+    """Distance between line defined by two points and a query point.
 
-    inspiration from:
+    Inspiration from:
         https://stackoverflow.com/questions/39840030/...
         distance-between-point-and-a-line-from-two-points
 
@@ -237,8 +234,7 @@ def dist_point_to_plane(
     normal: NDArray[np.floating[Any]],
     query_pt: NDArray[np.floating[Any]],
 ) -> float:
-    """
-    Distance between plane defined by point and normal and a query point
+    """Distance between plane defined by point and normal and a query point.
 
     Parameters
     ----------

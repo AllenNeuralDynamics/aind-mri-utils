@@ -56,9 +56,7 @@ def _implant_cost_fun(
     hole_seg_dict: dict[int, NDArray[np.floating[Any]]],
     run_parallel: bool = True,
 ) -> float:
-    """
-    Computes the total distance cost for implant alignment based on the
-    provided transformation parameters.
+    """Compute the total distance cost for implant alignment based on the provided transformation parameters.
 
     Parameters
     ----------
@@ -113,9 +111,7 @@ def fit_implant_to_mri(
     initialization_hole: int = 4,
     other_init_holes: list[int] = [3, 9],
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Fits an implant model to MRI data by optimizing the alignment of hole
-    segments.
+    """Fit an implant model to MRI data by optimizing the alignment of hole segments.
 
     Parameters
     ----------
@@ -185,8 +181,7 @@ def fit_implant_to_mri(
 
 
 def make_hole_seg_dict(implant_annotations: Any, fun: Any = lambda x: x) -> dict[int, NDArray[np.floating[Any]]]:
-    """
-    Creates a dictionary mapping hole names to their segmented positions.
+    """Create a dictionary mapping hole names to their segmented positions.
 
     Parameters
     ----------

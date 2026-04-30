@@ -1,6 +1,4 @@
-"""
-Functions for saving and loading transforms using SimpleITK.
-"""
+"""Functions for saving and loading transforms using SimpleITK."""
 
 from __future__ import annotations
 
@@ -20,7 +18,7 @@ def save_sitk_transform(
     rotation_matrix: NDArray[np.floating[Any]],
     translation: NDArray[np.floating[Any]] | None = None,
 ) -> None:
-    """Save a rigid transform to a SimpleITK (sitk) transform file
+    """Save a rigid transform to a SimpleITK (sitk) transform file.
 
     The current implementation assumes that rotations are applied as: y = Rx +
     t, where R is the rotation matrix, x is the input point, and t is the
@@ -84,8 +82,7 @@ def save_sitk_transform(
 def load_sitk_transform(
     filename: str, homogeneous: bool = False, invert: bool = False
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Convert a sitk transform file to a 4x3 numpy array.
+    """Convert a sitk transform file to a 4x3 numpy array.
 
     Parameters
     ----------

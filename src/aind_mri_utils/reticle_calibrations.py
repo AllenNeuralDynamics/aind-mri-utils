@@ -1,7 +1,4 @@
-"""
-Functions to read reticle calibration data, find a transformation between
-coordinate frames, and apply the transformation.
-"""
+"""Functions to read reticle calibration data, find a transformation between coordinate frames, and apply it."""
 
 from __future__ import annotations
 
@@ -475,9 +472,7 @@ def _append_parallax_calibration_file(
     sn_colname: str = "sn",
     sn_regexp: re.Pattern[str] = re.compile(r"(\d+)$"),
 ) -> dict[int, list[tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]]]:
-    """
-    Read parallax calibration data from a CSV file and organize by controller
-    number.
+    """Read parallax calibration data from a CSV file and organize by controller number.
 
     Parameters
     ----------
@@ -542,10 +537,9 @@ def fit_rotation_params_interpretable(
     NDArray[np.floating[Any]],
     int,
 ]:
-    """
-    Fit rotation parameters to align bregma points with probe points using
-    least squares optimization. The rotation matrix and translation vector
-    are the solution for the equation
+    """Fit rotation parameters to align bregma points with probe points using least squares optimization.
+
+    The rotation matrix and translation vector are the solution for the equation
 
     probe_pts = R @ bregma_pts + translation
 
@@ -588,10 +582,9 @@ def fit_rotation_params(
     probe_pts: NDArray[np.floating[Any]],
     **kwargs: Any,
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Fit rotation parameters to align bregma points with probe points using
-    least squares optimization. The rotation matrix and translation vector
-    are the solution for the equation
+    """Fit rotation parameters to align bregma points with probe points using least squares optimization.
+
+    The rotation matrix and translation vector are the solution for the equation
 
     probe_pts = R @ bregma_pts + translation
 
@@ -847,9 +840,7 @@ def debug_manual_calibration(
     dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
     dict[int, NDArray[np.floating[Any]]],
 ]:
-    """
-    Debugs the manual calibration process by fitting rotation parameters and
-    reading manual reticle calibration data.
+    """Debug the manual calibration process by fitting rotation parameters and reading manual reticle calibration data.
 
     Parameters
     ----------
@@ -911,9 +902,7 @@ def debug_parallax_calibration(
     dict[int, tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]],
     dict[int, NDArray[np.floating[Any]]],
 ]:
-    """
-    Debugs the parallax calibration process by reading calibration data,
-    applying corrections, fitting the data, and calculating errors.
+    """Debug the parallax calibration process by reading calibration data, applying corrections, and fitting.
 
     Parameters
     ----------
@@ -1080,9 +1069,7 @@ def combine_reticle_to_probe_transforms(
     R_reticle_to_bregma: NDArray[np.floating[Any]],
     t_reticle_to_bregma: NDArray[np.floating[Any]],
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Combine transformation matrices and translation vectors from reticle to
-    bregma and bregma to probe.
+    """Combine transformation matrices and translation vectors from reticle to bregma and bregma to probe.
 
     Parameters
     ----------
