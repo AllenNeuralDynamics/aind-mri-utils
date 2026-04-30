@@ -1,3 +1,5 @@
+"""Probe-insertion planning: compatibility checks and collision detection."""
+
 from __future__ import annotations
 
 from itertools import product
@@ -194,6 +196,7 @@ def compatible_insertion_pairs(
 
 
 def is_insertion_valid(compatibility_mat: NDArray[np.bool_], insertion_ndxs: list[int]) -> bool:
+    """Return True iff `insertion_ndxs` are pairwise compatible under `compatibility_mat`."""
     if len(set(insertion_ndxs)) != len(insertion_ndxs):
         # Duplicate insertions are invalid
         return False
@@ -208,6 +211,7 @@ def find_other_compatible_insertions(
     seed_ndxs: list[int],
     considered_ndxs: NDArray[np.integer[Any]] | None = None,
 ) -> NDArray[np.integer[Any]]:
+    """Return indices in `considered_ndxs` that are compatible with every index in `seed_ndxs`."""
     if considered_ndxs is None:
         considered_ndxs = np.arange(compatibility_mat.shape[0])
     mask = np.full(compatibility_mat.shape[0], False)

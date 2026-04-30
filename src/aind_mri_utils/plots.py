@@ -112,8 +112,7 @@ def create_single_colormap(
     is_transparent: bool = True,
     is_reverse: bool = False,
 ) -> ListedColormap:
-    """ "
-    Creates a colormap with a single color
+    """Create a colormap with a single color.
 
     Parameters
     ----------
