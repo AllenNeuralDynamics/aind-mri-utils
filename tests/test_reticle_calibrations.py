@@ -35,9 +35,17 @@ logger.addHandler(logging.NullHandler())
 
 
 class CalibrationTest(unittest.TestCase):
+    # test-data lives at the repo root, not inside the package, so it is not
+    # shipped with the installed wheel. Skip when it isn't available (e.g. the
+    # smoke-test job that copies tests/ next to an installed wheel).
     test_data_dir = Path(__file__).parent / "../test-data/"
     reticle_data_path = test_data_dir / "reticle"
     manual_calibration_file = reticle_data_path / "calibration_info_np2_2025_03_11T13_42_00.xlsx"
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        if not cls.test_data_dir.exists():
+            raise unittest.SkipTest(f"Test data not found at {cls.test_data_dir.resolve()}")
     parallax_calibration_path = reticle_data_path / "log_20250311_110408"
     parallax_example_file = parallax_calibration_path / "points_SN46105_20250311_111453.csv"
     man_calibration_pts = {
