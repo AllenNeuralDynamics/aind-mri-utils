@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import itertools as itr
 import logging
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 

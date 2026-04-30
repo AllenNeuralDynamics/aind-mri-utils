@@ -60,28 +60,7 @@ where = ["src"]
 
 [tool.ruff]
 line-length = 79
-target-version = 'py39'
-
-[tool.black]
-line-length = 79
-target-version = ['py39']
-exclude = '''
-
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | build
-    | dist
-  )/
-  | .gitignore
-)
-'''
+target-version = 'py310'
 
 [tool.ruff.lint]
 extend-select = ["Q", "RUF100", "C90", "I", "F", "E", "W", "UP", "ANN", "PYI"]
@@ -109,10 +88,6 @@ source = ["src"]
 exclude_lines = ["if __name__ == .__main__.:", "# pragma: no cover"]
 fail_under = 30
 
-[tool.isort]
-line_length = 79
-profile = "black"
-
 [tool.interrogate]
 ignore-init-method = true
 ignore-magic = true
@@ -123,6 +98,7 @@ exclude = [
   "tests",
   "docs",
   "build",
+  "dist",
   "setup.py",
   "examples",
   "site",
@@ -138,6 +114,8 @@ major_version_zero = true
 
 [tool.mypy]
 files = ["src/aind_mri_utils"]
+# Pinned to 3.9 to suppress numpy/scipy-stubs return-Any noise that surfaces
+# at 3.10+. Bump and fix the resulting errors as a separate cleanup.
 python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true

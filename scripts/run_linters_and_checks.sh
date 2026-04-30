@@ -53,9 +53,9 @@ main() {
     run interrogate -v
     echo "+ codespell --check-filenames"
     run codespell --check-filenames
-    echo "+ pytest --cov aind_anatomical_utils$([ -n "$PYTEST_ARGS" ] && printf ' -- %s' "$PYTEST_ARGS")"
+    echo "+ pytest$([ -n "$PYTEST_ARGS" ] && printf ' -- %s' "$PYTEST_ARGS")"
     # shellcheck disable=SC2086
-    run pytest --cov aind_anatomical_utils $PYTEST_ARGS
+    run pytest $PYTEST_ARGS
   else
     echo "(checks skipped; pass -c or --checks to enable)"
   fi
