@@ -258,7 +258,7 @@ def rotation_matrix_from_vectors(
 
 
 def _rotate_mat_by_single_euler(mat: NDArray[np.floating[Any]], axis: str, angle: float) -> NDArray[np.floating[Any]]:
-    "Helper function that rotates a matrix by a single Euler angle"
+    """Helper function that rotates a matrix by a single Euler angle"""
     rotation_matrix = Rotation.from_euler(axis, angle).as_matrix().squeeze()
     return mat @ rotation_matrix
 

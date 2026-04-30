@@ -28,7 +28,6 @@ def read_image(filename: str) -> Any:
         SITK image from loaded dicom files.
 
     """
-
     if os.path.isdir(filename):
         # Look for .tifs
         tiff_list = [
@@ -75,7 +74,6 @@ def read_dicom(filename: str) -> Any:
         SITK image from loaded dicom files.
 
     """
-
     if os.path.isdir(filename):
         dirname = filename
     else:
@@ -183,7 +181,6 @@ def write_nii(image: Any, filename: str) -> None:
     """
 
     Write an sitk image to .nii file
-
 
     Parameters
     ----------

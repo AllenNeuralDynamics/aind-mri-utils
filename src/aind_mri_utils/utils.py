@@ -63,7 +63,6 @@ def mask_arr_by_annotations(
     masked_vol : numpy.ndarray
         Copy of `arr` masked by whether `anno_arr` is one of `seg_vals`
     """
-
     masked_arr = np.zeros_like(arr)
     masked_arr.fill(default_val)
     mask = np.isin(anno_arr, seg_vals)
@@ -85,7 +84,7 @@ def signed_angle_rh(
     b: NDArray[np.floating[Any]],
     n: NDArray[np.floating[Any]],
 ) -> float:
-    """find right-handed angle between two vectors
+    """Find right-handed angle between two vectors
     Find the right-handled angle between a and b in the plane normal to n,
     by rotating a to b
     """
@@ -120,7 +119,7 @@ def signed_angle_lh(
     b: NDArray[np.floating[Any]],
     n: NDArray[np.floating[Any]],
 ) -> float:
-    """find left-handed angle between two vectors
+    """Find left-handed angle between two vectors
 
     See `signed_angle_rh`
     """

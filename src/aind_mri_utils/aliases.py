@@ -24,7 +24,6 @@ def save_sitk_transform(filename: str, T: NDArray[np.floating[Any]], transpose_m
     This is an alias for `sitk_io.save_sitk_transform` that has the same
     interface as the original function that Yoni wrote.
     """
-
     sitk_io.save_sitk_transform(
         filename,
         rotation_matrix=T,

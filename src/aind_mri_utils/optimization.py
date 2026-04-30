@@ -314,7 +314,6 @@ def optimize_transform_labeled_lines(
         (see retol in scipy.optimize.fmin documentation)
 
     """
-
     weights = _preprocess_weights(weights, positions, normalize, gamma)
 
     T_frame = opt.fmin(

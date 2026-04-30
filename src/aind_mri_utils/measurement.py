@@ -1,6 +1,5 @@
 """Measurement code.
 
-
 This applies to find_circle_center, which is borrowed from scipy-cookbooks:
 
 Copyright (c) 2001, 2002 Enthought, Inc.

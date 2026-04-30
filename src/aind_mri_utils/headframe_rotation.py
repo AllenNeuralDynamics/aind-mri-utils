@@ -82,7 +82,7 @@ def get_segmentation_pca(seg_img: Any, seg_vals: list[int]) -> NDArray[np.floati
     concatenated centered groups of indices.
 
     Parameters
-    ---------
+    ----------
     seg_arr : SimpleITK.Image
         Array with annotation values in each index
     seg_vals : iterable
@@ -743,7 +743,6 @@ def estimate_rotation_and_coms_from_image_and_segmentation(
     translation : ndarray
         Offsets for each hole.
     """
-
     coms = estimate_coms_from_image_and_segmentation(
         img,
         seg_img,

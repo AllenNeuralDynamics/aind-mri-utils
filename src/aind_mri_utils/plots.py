@@ -25,7 +25,7 @@ def plot_tri_mesh(
     Adds a mesh to a 3d plot
 
     Parameters
-    ==========
+    ----------
     ax - 3d axis to plot on
     vertices - N x 3 ndarray of coordinates for N vertices
     faces - N x 3 ndarray of vertex indices defining triangular faces
@@ -33,7 +33,7 @@ def plot_tri_mesh(
     **plot_kwargs - keyword args passed to plot call
 
     Returns
-    =======
+    -------
     handles, tri - handles to plot polygons, and triangulation
     """
     tri = mpt.Triangulation(vertices[:, 0], vertices[:, 1], triangles=faces)
@@ -47,12 +47,11 @@ def _set_axes_radius(ax: Any, origin: NDArray[np.floating[Any]], radius: float) 
     Set all three axes to have the same distance around the origin
 
     Parameters
-    ==========
+    ----------
     ax - matplotlib axis handle
     origin - np.ndarray (3) specifying origin point
     radius - scalar radius around origin used to set axis limits
     """
-
     x, y, z = origin
     ax.set_xlim3d([x - radius, x + radius])
     ax.set_ylim3d([y - radius, y + radius])
@@ -85,7 +84,7 @@ def make_3d_ax_look_normal(ax: Axes3D) -> None:
     the same size
 
     Parameters
-    ==========
+    ----------
     ax - matplotlib 3d axis
     """
     ax.set_box_aspect([1, 1, 1])
@@ -117,15 +116,16 @@ def create_single_colormap(
     Creates a colormap with a single color
 
     Parameters
-    ==========
+    ----------
     color_name - string name of color
     N - number of colors in colormap
     saturation - number of colors to add to the colormap
     start_color - color to start the colormap with
     is_transparent - whether to make the start color transparent
     is_reverse - whether to reverse the colormap
+
     Returns
-    =======
+    -------
     cmap - matplotlib colormap
 
     """
@@ -233,7 +233,6 @@ def int_to_rgb(color_int: int, has_alpha: bool | None = None) -> tuple[int, int,
     >>> int_to_rgb(255)
     (0, 0, 255)
     """
-
     r = (color_int >> 16) & 0xFF
     g = (color_int >> 8) & 0xFF
     b = color_int & 0xFF

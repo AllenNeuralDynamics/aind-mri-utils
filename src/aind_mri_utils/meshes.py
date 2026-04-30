@@ -284,13 +284,15 @@ def mask_to_trimesh(sitk_mask: sitk.Image, level: float = 0.5, smooth_iters: int
     """
     Converts a SimpleITK binary mask into a 3D mesh in the same physical space.
 
-    Parameters:
+    Parameters
+    ----------
         sitk_mask (sitk.Image): A 3D SimpleITK binary mask image.
         level (float): The threshold value for the marching cubes algorithm.
         smooth_iters (int): Number of iterations for mesh smoothing. If zero,
             no smoothing is applied.
 
-    Returns:
+    Returns
+    -------
         trimesh.Trimesh:
             A 3D mesh in the same physical space as the input image.
     """

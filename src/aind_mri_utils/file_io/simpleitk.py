@@ -61,7 +61,6 @@ def save_sitk_transform(
     Translation defaults to a zero vector.
 
     """
-
     if len(rotation_matrix) == 6:
         R = rot.combine_angles(*rotation_matrix[:3])
         found_translation = rotation_matrix[3:]
