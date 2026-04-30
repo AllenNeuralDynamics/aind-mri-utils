@@ -1,11 +1,43 @@
 """
-Code for rotations of points
+Code for rotations of points.
+
+Coordinate-frame conventions
+----------------------------
+The pilot-style names ``roll`` / ``pitch`` / ``yaw`` defined here follow the
+classical aerospace convention, where:
+
+    x = forward, y = left, z = up
+    roll  = rotation about x (forward axis)
+    pitch = rotation about y (lateral axis)
+    yaw   = rotation about z (vertical axis)
+
+The rest of this package treats the mouse in **RAS** coordinates, where the
+axis identities differ:
+
+    x = ML (right), y = AP (anterior), z = DV (superior/dorsal)
+
+Because the mouse's *forward* direction is +y (not +x), the pilot-named
+motions of the mouse map to **different axes** than the function names here
+suggest:
+
+* mouse "pitch" (nose up/down, about its lateral/ML axis) → rotation about
+  **x** → use :func:`roll`
+* mouse "roll" (left/right ear up, about its forward/AP axis) → rotation
+  about **y** → use :func:`pitch`
+* mouse "yaw" (turn left/right, about its vertical/DV axis) → rotation
+  about **z** → :func:`yaw` (the only one that lines up)
+
+In short: the functions here give you a rotation about the *named axis*,
+not the pilot-named motion when the data are mouse-RAS. If you want
+mouse-physical roll/pitch/yaw, pick by axis (ML/AP/DV), not by function
+name. See ``arc_angles.py`` for module that names parameters by axis
+(``rx``, ``ry``, ``rz``) for exactly this reason.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -241,7 +273,12 @@ def roll(
     input_mat: NDArray[np.floating[Any]], angle: float
 ) -> NDArray[np.floating[Any]]:
     """
-    Apply a rotation around the x-axis (roll/bank angle) to the input matrix.
+    Apply a rotation around the x-axis (pilot-convention roll/bank) to the
+    input matrix.
+
+    For mouse-RAS data, the x-axis is ML — so this rotation is a
+    physical *pitch* of the mouse (nose up/down), not a roll. See module
+    docstring.
 
     Parameters
     ----------
@@ -262,8 +299,12 @@ def pitch(
     input_mat: NDArray[np.floating[Any]], angle: float
 ) -> NDArray[np.floating[Any]]:
     """
-    Apply a rotation around the y-axis (pitch/elevation angle) to the input
-    matrix.
+    Apply a rotation around the y-axis (pilot-convention pitch/elevation)
+    to the input matrix.
+
+    For mouse-RAS data, the y-axis is AP — so this rotation is a physical
+    *roll* of the mouse (left/right ear up), not a pitch. See module
+    docstring.
 
     Parameters
     ----------
@@ -284,7 +325,12 @@ def yaw(
     input_mat: NDArray[np.floating[Any]], angle: float
 ) -> NDArray[np.floating[Any]]:
     """
-    Apply a rotation around the z-axis (yaw/heading angle) to the input matrix.
+    Apply a rotation around the z-axis (pilot-convention yaw/heading) to
+    the input matrix.
+
+    For mouse-RAS data the z-axis is DV — yaw lines up between the two
+    conventions, so this is also a physical yaw (turning left/right) of
+    the mouse.
 
     Parameters
     ----------
