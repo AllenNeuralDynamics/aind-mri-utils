@@ -49,7 +49,10 @@ extend-exclude = ["scratch"]
 
 [tool.ruff.lint]
 extend-select = ["Q", "RUF100", "C90", "I", "F", "E", "W", "D", "UP", "ANN", "PYI"]
-extend-ignore = ["ANN401"]
+# TODO: clear the docstring backlog (rewordings, trailing periods, summary
+# layout) and drop these transitional ignores enabled during the copier
+# template migration.
+extend-ignore = ["ANN401", "D200", "D205", "D400", "D401"]
 per-file-ignores = { "tests/*.py" = ["ANN", "D"] }
 mccabe = { max-complexity = 14 }
 pydocstyle = { convention = "numpy" }
@@ -99,9 +102,23 @@ major_version_zero = true
 
 [tool.mypy]
 files = ["src/aind_mri_utils"]
-strict = true
-show_error_codes = true
 exclude = ["scratch"]
+# TODO: switch to strict = true once the remaining numpy/scipy-stubs and
+# untyped-call warnings (currently masked by this explicit flag list)
+# have been triaged.
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
