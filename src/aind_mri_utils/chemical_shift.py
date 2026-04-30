@@ -60,9 +60,7 @@ def compute_chemical_shift(
     # Check if image_or_spacing is a simpleitk image:
     if hasattr(image_or_spacing, "GetSpacing"):
         # If it is, use the spacing from the image
-        assert not isinstance(
-            image_or_spacing, float
-        )  # Help mypy understand type
+        assert not isinstance(image_or_spacing, float)  # Help mypy understand type
         spacing_tuple = image_or_spacing.GetSpacing()
         dir_mat = np.array(image_or_spacing.GetDirection()).reshape(3, 3)
         readout_axes = {
@@ -72,10 +70,7 @@ def compute_chemical_shift(
         }
         direction = readout_axes.get(frequency_encoding_direction, None)
         if direction is None:
-            warn(
-                "Invalid frequency encoding direction "
-                f"{frequency_encoding_direction}"
-            )
+            warn(f"Invalid frequency encoding direction {frequency_encoding_direction}")
         dot_products = np.abs(dir_mat @ direction)
         index_axis = np.argmax(dot_products)
         spacing = spacing_tuple[index_axis]
@@ -86,9 +81,7 @@ def compute_chemical_shift(
     return shift
 
 
-def chemical_shift_transform(
-    shift: NDArray[np.floating[Any]], readout: str = "AP"
-) -> NDArray[np.floating[Any]]:
+def chemical_shift_transform(shift: NDArray[np.floating[Any]], readout: str = "AP") -> NDArray[np.floating[Any]]:
     """Create chemical shift transformation matrix.
 
     Creates a transformation matrix that accounts for the chemical
@@ -120,11 +113,7 @@ def chemical_shift_transform(
     # raise deprecation warning if readout direction is HF
     if readout == "HF":
         readout = "AP"
-        raise (
-            DeprecationWarning(
-                "HF readout direction is deprecated, using AP instead."
-            )
-        )
+        raise (DeprecationWarning("HF readout direction is deprecated, using AP instead."))
 
     if readout == "LR":
         translation = np.array([shift, 0, 0])

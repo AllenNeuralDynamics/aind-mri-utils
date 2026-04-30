@@ -86,9 +86,7 @@ def _implant_cost_fun(
             continue
         mesh = hole_mesh_dict[hole_id].copy()
         pts = hole_seg_dict[hole_id]
-        mesh.vertices = apply_rotate_translate(
-            mesh.vertices, rotation_matrix, translation
-        )
+        mesh.vertices = apply_rotate_translate(mesh.vertices, rotation_matrix, translation)
         args = (mesh, pts)
         if hole_id == -1:
             func = distance_to_closest_point_for_each_triangle_in_mesh
@@ -145,25 +143,16 @@ def fit_implant_to_mri(
     initialize_translation = initialization_hole in hole_seg_dict
     if initialize_translation:
         annotation_mean = np.mean(hole_seg_dict[initialization_hole], axis=0)
-        model_mean = np.mean(
-            hole_mesh_dict[initialization_hole].vertices, axis=0
-        )
+        model_mean = np.mean(hole_mesh_dict[initialization_hole].vertices, axis=0)
         init_translation = annotation_mean - model_mean
         T[3:] = init_translation
     else:
-        warnings.warn(
-            f"Could not find hole {initialization_hole} "
-            "in MRI data for initialization"
-        )
+        warnings.warn(f"Could not find hole {initialization_hole} in MRI data for initialization")
 
     # Initial guess of rotation
     initialize_rotation = initialize_translation and len(other_init_holes) >= 2
     for other_hole in other_init_holes:
-        initialize_rotation = (
-            initialize_rotation
-            and other_hole in hole_seg_dict
-            and other_hole != initialization_hole
-        )
+        initialize_rotation = initialize_rotation and other_hole in hole_seg_dict and other_hole != initialization_hole
         if not initialize_rotation:
             break
 
@@ -176,13 +165,9 @@ def fit_implant_to_mri(
         R_init = np.eye(3)
         for other_hole in other_init_holes:
             other_anno_mean = np.mean(hole_seg_dict[other_hole], axis=0)
-            other_model_mean = np.mean(
-                hole_mesh_dict[other_hole].vertices, axis=0
-            )
+            other_model_mean = np.mean(hole_mesh_dict[other_hole].vertices, axis=0)
             model_diff_rotated = R_init @ (other_model_mean - model_mean)
-            R_update = rotation_matrix_from_vectors(
-                model_diff_rotated, other_anno_mean - annotation_mean
-            )
+            R_update = rotation_matrix_from_vectors(model_diff_rotated, other_anno_mean - annotation_mean)
             R_init = R_update @ R_init
         T[:3] = Rotation.from_matrix(R_init).as_euler("xyz")
     else:
@@ -199,9 +184,7 @@ def fit_implant_to_mri(
     return rotation_matrix, translation
 
 
-def make_hole_seg_dict(
-    implant_annotations: Any, fun: Any = lambda x: x
-) -> dict[int, NDArray[np.floating[Any]]]:
+def make_hole_seg_dict(implant_annotations: Any, fun: Any = lambda x: x) -> dict[int, NDArray[np.floating[Any]]]:
     """
     Creates a dictionary mapping hole names to their segmented positions.
 

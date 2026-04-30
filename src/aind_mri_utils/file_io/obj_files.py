@@ -50,7 +50,5 @@ def load_obj_wavefront(filename: str | Path) -> Any:
     =======
     scene - scene with default params so I don't need to remember to type them
     """
-    scene = pywavefront.Wavefront(
-        filename, strict=False, create_materials=True, collect_faces=True
-    )
+    scene = pywavefront.Wavefront(filename, strict=False, create_materials=True, collect_faces=True)
     return scene

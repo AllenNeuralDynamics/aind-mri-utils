@@ -22,13 +22,9 @@ logger = logging.getLogger(__name__)
 headframe_hole_locations = {
     "0.1": {
         "RAS": {
-            "anterior_horizontal": np.array(
-                [[6.34, 0, 2.5], [6.34, -6.5, 2.5]]
-            ),
+            "anterior_horizontal": np.array([[6.34, 0, 2.5], [6.34, -6.5, 2.5]]),
             "anterior_vertical": np.array([[5.1, -3.2, -1], [5.1, -3.2, 4]]),
-            "posterior_horizontal": np.array(
-                [[5.04, -6.5, 1], [5.04, -12, 1]]
-            ),
+            "posterior_horizontal": np.array([[5.04, -6.5, 1], [5.04, -12, 1]]),
             "posterior_vertical": np.array([[6.85, -9.9, 0], [6.85, -9.9, 5]]),
         }
     }
@@ -42,9 +38,7 @@ for version in headframe_hole_locations:
     for key, val in headframe_hole_locations[version]["RAS"].items():
         lps_dict[key] = val * RAS_LPS_conversion_factor
     headframe_hole_locations[version]["LPS"] = lps_dict
-    headframe_plane_location[version]["LPS"] = (
-        RAS_LPS_conversion_factor * headframe_plane_location[version]["RAS"]
-    )
+    headframe_plane_location[version]["LPS"] = RAS_LPS_conversion_factor * headframe_plane_location[version]["RAS"]
 
 
 def _unpack_theta_apply_transform(
@@ -106,9 +100,7 @@ def revised_error_rotate_compare_weighted_lines(
         group_err_funs = np.full(n_group, dist_point_to_line)
     else:
         if len(group_err_funs) != n_group:
-            raise ValueError(
-                "group_err_fun must have the same number of groups as pts1"
-            )
+            raise ValueError("group_err_fun must have the same number of groups as pts1")
 
     R = rot.combine_angles(*theta[0:3])
     translation = theta[3:]
@@ -161,12 +153,7 @@ def cost_function_weighted_labeled_lines(
     for ii in range(pts1.shape[0]):
         lst = np.nonzero(labels == ii)[0]
         for jj in range(len(lst)):
-            D[lst[jj]] = (
-                dist_point_to_line(
-                    pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]
-                )
-                * weights[lst[jj]]
-            )
+            D[lst[jj]] = dist_point_to_line(pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]) * weights[lst[jj]]
 
     return np.sum(D)
 
@@ -214,20 +201,10 @@ def cost_function_weighted_labeled_lines_with_plane(
         lst = np.where(labels == ii)[0]
         if pts_for_line[ii]:
             for jj in range(len(lst)):
-                D[lst[jj]] = (
-                    dist_point_to_line(
-                        pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]
-                    )
-                    * weights[lst[jj]]
-                )
+                D[lst[jj]] = dist_point_to_line(pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]) * weights[lst[jj]]
         else:
             for jj in range(len(lst)):
-                D[lst[jj]] = (
-                    dist_point_to_plane(
-                        pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]
-                    )
-                    * weights[lst[jj]]
-                )
+                D[lst[jj]] = dist_point_to_plane(pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]) * weights[lst[jj]]
 
     return np.sum(D)
 

@@ -37,16 +37,12 @@ class UtilsTest(unittest.TestCase):
 
     def test_skew_symmetric_cross_product_matrix(self) -> None:
         for a, b, c in self.cross_product_sets:
-            self.assertTrue(
-                np.allclose(ut.skew_symmetric_cross_product_matrix(a) @ b, c)
-            )
+            self.assertTrue(np.allclose(ut.skew_symmetric_cross_product_matrix(a) @ b, c))
 
     def test_norm_vec(self) -> None:
         with self.assertRaises(ValueError):
             ut.norm_vec(np.array([0, 0, 0]))
-        self.assertTrue(
-            np.allclose(ut.norm_vec(np.array([2, 0, 0])), np.array([1, 0, 0]))
-        )
+        self.assertTrue(np.allclose(ut.norm_vec(np.array([2, 0, 0])), np.array([1, 0, 0])))
 
     def test_vector_rejection(self) -> None:
         for i in range(0, 3):
@@ -62,13 +58,9 @@ class UtilsTest(unittest.TestCase):
             )
 
     def test_mask_arr_by_annotation(self) -> None:
-        result = ut.mask_arr_by_annotations(
-            self.test_match_arr, self.test_match_arr, [9]
-        )
+        result = ut.mask_arr_by_annotations(self.test_match_arr, self.test_match_arr, [9])
         self.assertTrue(np.allclose(result, np.zeros((3, 3))))
-        result = ut.mask_arr_by_annotations(
-            self.test_match_arr, self.test_match_arr, [1]
-        )
+        result = ut.mask_arr_by_annotations(self.test_match_arr, self.test_match_arr, [1])
         self.assertTrue(np.isclose(self.test_match_arr[0, 1], result[0, 1]))
         modified_result = np.copy(result)
         modified_result[0, 1] = 0

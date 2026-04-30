@@ -48,9 +48,7 @@ def read_image(filename: str) -> Any:
     else:
         if (".nii" in filename) or (".nifti" in filename):
             return read_nii(filename)
-        elif (".dcm" in filename) or (
-            os.path.splitext(filename)[0] == filename
-        ):
+        elif (".dcm" in filename) or (os.path.splitext(filename)[0] == filename):
             return read_dicom(filename)
         else:
             # If none of the conditions above are reached, try to
@@ -84,9 +82,7 @@ def read_dicom(filename: str) -> Any:
         dirname = os.path.dirname(filename)
 
     reader = sitk.ImageSeriesReader()
-    dicom_names = reader.GetGDCMSeriesFileNames(
-        dirname, useSeriesDetails=True, loadSequences=True
-    )
+    dicom_names = reader.GetGDCMSeriesFileNames(dirname, useSeriesDetails=True, loadSequences=True)
     reader.SetFileNames(dicom_names)
     reader.MetaDataDictionaryArrayUpdateOn()
     reader.LoadPrivateTagsOn()
@@ -222,6 +218,4 @@ def write_dicom(image: Any, foldername: str) -> None:
 
     """
     # Need to figure out options to copy metadata
-    raise NotImplementedError(
-        "Dicom file writer still needs to be implemented"
-    )
+    raise NotImplementedError("Dicom file writer still needs to be implemented")

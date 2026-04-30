@@ -84,10 +84,7 @@ def save_sitk_transform(
 
 def load_sitk_transform(
     filename: str, homogeneous: bool = False, invert: bool = False
-) -> (
-    NDArray[np.floating[Any]]
-    | tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]
-):
+) -> NDArray[np.floating[Any]] | tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Convert a sitk transform file to a 4x3 numpy array.
 
@@ -114,8 +111,6 @@ def load_sitk_transform(
     R, translation, center = rot.sitk_to_rotation_matrix(A)
     if homogeneous:
         if not np.allclose(center, 0):
-            raise NotImplementedError(
-                "homogeneous only valid for transforms with center at 0"
-            )
+            raise NotImplementedError("homogeneous only valid for transforms with center at 0")
         R = rot.make_homogeneous_transform(R, translation)
     return R, translation, center

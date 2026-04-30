@@ -50,17 +50,12 @@ from aind_mri_utils.utils import (
 
 logger = logging.getLogger(__name__)
 
-lps_axes = dict(
-    ap=np.array([0, 1, 0]), dv=np.array([0, 0, 1]), ml=np.array([1, 0, 0])
-)
+lps_axes = dict(ap=np.array([0, 1, 0]), dv=np.array([0, 0, 1]), ml=np.array([1, 0, 0]))
 def_orient_names = ("vertical", "horizontal")
 def_ap_names = ("anterior", "posterior")
-def_orient_comparison_axes = dict(
-    horizontal=lps_axes["dv"], vertical=lps_axes["ap"]
-)
+def_orient_comparison_axes = dict(horizontal=lps_axes["dv"], vertical=lps_axes["ap"])
 def_orient_axes_dict = {
-    orient: lps_axes[direction]
-    for orient, direction in dict(horizontal="ap", vertical="dv").items()
+    orient: lps_axes[direction] for orient, direction in dict(horizontal="ap", vertical="dv").items()
 }
 def_design_centers = dict(
     horizontal=dict(
@@ -79,9 +74,7 @@ def_hole_order = dict(
 )
 
 
-def get_segmentation_pca(
-    seg_img: Any, seg_vals: list[int]
-) -> NDArray[np.floating[Any]]:
+def get_segmentation_pca(seg_img: Any, seg_vals: list[int]) -> NDArray[np.floating[Any]]:
     """Finds first pca axis of segmentation for segments in set seg_vals
 
     For each value in seg_vals, this will find the indices of seg_arr equal to
@@ -154,9 +147,7 @@ def slices_centers_of_mass(
     ndxs = find_indices_equal_to(seg_arr, seg_val)
     ndxs_sitk = ndxs[:, ::-1]
     slice_ndxs = np.unique(ndxs_sitk[:, axis_dim])
-    nmask_in_slice = np.array(
-        [np.count_nonzero(ndxs_sitk[:, axis_dim] == x) for x in slice_ndxs]
-    )
+    nmask_in_slice = np.array([np.count_nonzero(ndxs_sitk[:, axis_dim] == x) for x in slice_ndxs])
     sel_slice_ndxs = slice_ndxs[nmask_in_slice >= slice_seg_thresh]
     ndx_points = transform_sitk_indices_to_physical_points(seg_img, ndxs_sitk)
     com = np.zeros((sel_slice_ndxs.size, 3))
@@ -164,15 +155,11 @@ def slices_centers_of_mass(
         mask = ndxs_sitk[:, axis_dim] == slice_ndx
         np_ndx = tuple(ndxs[mask, :].T)
         sel_v = arr[np_ndx]
-        com[i, :] = np.sum(
-            sel_v[:, np.newaxis] * ndx_points[mask, :], axis=0
-        ) / np.sum(sel_v)
+        com[i, :] = np.sum(sel_v[:, np.newaxis] * ndx_points[mask, :], axis=0) / np.sum(sel_v)
     return com
 
 
-def find_hole(
-    img: Any, seg_img: Any, seg_val: int, sel_ndxs: list[int]
-) -> NDArray[np.floating[Any]] | None:
+def find_hole(img: Any, seg_img: Any, seg_val: int, sel_ndxs: list[int]) -> NDArray[np.floating[Any]] | None:
     """Find the center of a hole based on its segmentation value
 
     sel_ndxs is in sitk axis order!
@@ -194,9 +181,7 @@ def find_hole(
     sum_sel: float = np.sum(sel_v)
     if sum_sel > 0:
         found_center = np.nan * np.ones(3)
-        found_center[sel_ndxs] = (
-            np.sum(sel_v[:, np.newaxis] * ndx_points, axis=0) / sum_sel
-        )[sel_ndxs]
+        found_center[sel_ndxs] = (np.sum(sel_v[:, np.newaxis] * ndx_points, axis=0) / sum_sel)[sel_ndxs]
     else:
         return None
     return found_center
@@ -246,9 +231,7 @@ def find_holes_by_orientation(
     names to find the holes in the image using the `find_hole` function. The
     centers of the found holes are returned in a nested dictionary structure.
     """
-    found_centers: dict[str, dict[str, NDArray[np.floating[Any]]]] = {
-        orient: dict() for orient in orient_names
-    }
+    found_centers: dict[str, dict[str, NDArray[np.floating[Any]]]] = {orient: dict() for orient in orient_names}
     for orient in orient_names:
         for ap in ap_names:
             if ap in seg_vals_dict[orient]:
@@ -266,12 +249,8 @@ def find_holes_by_orientation(
 def find_hole_angles(
     centers_dict: dict[str, dict[str, NDArray[np.floating[Any]]]],
     hole_order: dict[str, list[str]] = def_hole_order,
-    orient_comparison_axis: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_comparison_axes,
-    orient_axis_dict: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_axes_dict,
+    orient_comparison_axis: dict[str, NDArray[np.floating[Any]]] = def_orient_comparison_axes,
+    orient_axis_dict: dict[str, NDArray[np.floating[Any]]] = def_orient_axes_dict,
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
 ) -> dict[str, float]:
@@ -305,10 +284,7 @@ def find_hole_angles(
     centers_ang = dict()
     for orient in orient_names:
         if set(centers_dict[orient].keys()) == set(ap_names):
-            centers_diff = (
-                centers_dict[orient][hole_order[orient][0]]
-                - centers_dict[orient][hole_order[orient][1]]
-            )
+            centers_diff = centers_dict[orient][hole_order[orient][0]] - centers_dict[orient][hole_order[orient][1]]
             cd_nnan = centers_diff.copy()
             cd_nnan[np.isnan(cd_nnan)] = 0
             centers_ang[orient] = signed_angle_rh(
@@ -352,9 +328,7 @@ def estimate_hole_axis_from_segmentation(
 def estimate_hole_axes_from_segmentation_by_orientation(
     seg_img: sitk.Image,
     seg_val_dict: dict[str, dict[str, int]],
-    orient_axes_dict: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_axes_dict,
+    orient_axes_dict: dict[str, NDArray[np.floating[Any]]] = def_orient_axes_dict,
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
 ) -> dict[str, NDArray[np.floating[Any]]]:
@@ -381,14 +355,8 @@ def estimate_hole_axes_from_segmentation_by_orientation(
     """
     initial_axes = dict()
     for orient in orient_names:
-        seg_vals = [
-            seg_val_dict[orient][ap]
-            for ap in ap_names
-            if ap in seg_val_dict[orient]
-        ]
-        initial_axes[orient] = estimate_hole_axis_from_segmentation(
-            seg_img, seg_vals, orient_axes_dict[orient]
-        )
+        seg_vals = [seg_val_dict[orient][ap] for ap in ap_names if ap in seg_val_dict[orient]]
+        initial_axes[orient] = estimate_hole_axis_from_segmentation(seg_img, seg_vals, orient_axes_dict[orient])
     return initial_axes
 
 
@@ -397,9 +365,7 @@ def calculate_centers_of_mass_for_image_and_segmentation(
     seg_img: sitk.Image,
     initial_axes: dict[str, NDArray[np.floating[Any]]],
     seg_vals_dict: dict[str, dict[str, int]],
-    orient_axes_dict: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_axes_dict,
+    orient_axes_dict: dict[str, NDArray[np.floating[Any]]] = def_orient_axes_dict,
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
     slice_seg_thresh: int = 1,
@@ -438,14 +404,10 @@ def calculate_centers_of_mass_for_image_and_segmentation(
     for orient in orient_names:
         coms[orient] = dict()
         axis_dim = np.nonzero(orient_axes_dict[orient])[0][0]
-        r = rotation_matrix_from_vectors(
-            initial_axes[orient], orient_axes_dict[orient]
-        )
+        r = rotation_matrix_from_vectors(initial_axes[orient], orient_axes_dict[orient])
         s = rotation_matrix_to_sitk(r)
         sinv = s.GetInverse()
-        seg_img_rs = resample3D(
-            seg_img, sinv, interpolator=sitk.sitkNearestNeighbor
-        )
+        seg_img_rs = resample3D(seg_img, sinv, interpolator=sitk.sitkNearestNeighbor)
         img_rs = resample3D(img, sinv, interpolator=sitk.sitkNearestNeighbor)
         for ap in ap_names:
             if ap in seg_vals_dict[orient]:
@@ -456,17 +418,13 @@ def calculate_centers_of_mass_for_image_and_segmentation(
                     seg_vals_dict[orient][ap],
                     slice_seg_thresh=slice_seg_thresh,
                 )
-                coms[orient][ap] = (
-                    r.T @ com.T
-                ).T  # rotate com to original location
+                coms[orient][ap] = (r.T @ com.T).T  # rotate com to original location
     return coms
 
 
 def estimate_axis_rotations_from_centers_of_mass(
     coms: dict[str, dict[str, NDArray[np.floating[Any]]]],
-    orient_axes_dict: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_axes_dict,
+    orient_axes_dict: dict[str, NDArray[np.floating[Any]]] = def_orient_axes_dict,
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
 ) -> tuple[dict[str, dict[Any, Any]], dict[str, NDArray[np.floating[Any]]]]:
@@ -492,9 +450,7 @@ def estimate_axis_rotations_from_centers_of_mass(
     axes : dict
         Dictionary of 3 element vector axes for each orientation.
     """
-    orient_rotation_matrices: dict[str, dict[Any, Any]] = {
-        orient: dict() for orient in orient_names
-    }
+    orient_rotation_matrices: dict[str, dict[Any, Any]] = {orient: dict() for orient in orient_names}
     axes = dict()
     for orient in orient_names:
         # center the coms for each segment separately
@@ -534,19 +490,13 @@ def find_rotation_to_match_hole_angles(
     initial_orient_rotation_matrices: dict[str, dict[Any, Any]],
     axes: dict[str, NDArray[np.floating[Any]]],
     seg_vals_dict: dict[str, dict[str, int]],
-    design_centers: dict[
-        str, dict[str, NDArray[np.floating[Any]]]
-    ] = def_design_centers,
-    orient_axes_dict: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_axes_dict,
+    design_centers: dict[str, dict[str, NDArray[np.floating[Any]]]] = def_design_centers,
+    orient_axes_dict: dict[str, NDArray[np.floating[Any]]] = def_orient_axes_dict,
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
     orient_indices: dict[str, list[int]] = def_orient_indices,
     hole_order: dict[str, list[str]] = def_hole_order,
-    orient_comparison_axis: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_comparison_axes,
+    orient_comparison_axis: dict[str, NDArray[np.floating[Any]]] = def_orient_comparison_axes,
     n_iter: int = 10,
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
@@ -600,14 +550,10 @@ def find_rotation_to_match_hole_angles(
     # axes
     bases = np.zeros((3, 3))
     bases[:, 1] = axes["horizontal"]  # P
-    bases[:, 2] = norm_vec(
-        vector_rejection(axes["vertical"], bases[:, 1])
-    )  # S
+    bases[:, 2] = norm_vec(vector_rejection(axes["vertical"], bases[:, 1]))  # S
     bases[:, 0] = np.cross(bases[:, 1], bases[:, 2])  # L
 
-    s_rot = (
-        initial_orient_rotation_matrices["horizontal"] @ bases[:, 2]
-    )  # rotated Superior axis
+    s_rot = initial_orient_rotation_matrices["horizontal"] @ bases[:, 2]  # rotated Superior axis
     rad = signed_angle_rh(
         s_rot,
         lps_axes["dv"],
@@ -620,12 +566,8 @@ def find_rotation_to_match_hole_angles(
     S_init = rotation_matrix_to_sitk(R)
     S_init_inv = S_init.GetInverse()
 
-    seg_img_current = resample3D(
-        seg_img, S_init_inv, interpolator=sitk.sitkNearestNeighbor
-    )
-    img_current = resample3D(
-        img, S_init_inv, interpolator=sitk.sitkNearestNeighbor
-    )
+    seg_img_current = resample3D(seg_img, S_init_inv, interpolator=sitk.sitkNearestNeighbor)
+    img_current = resample3D(img, S_init_inv, interpolator=sitk.sitkNearestNeighbor)
 
     found_centers = find_holes_by_orientation(
         img_current,
@@ -648,9 +590,7 @@ def find_rotation_to_match_hole_angles(
     hole_diffs = np.full((4, 3), np.nan)
     for i, (orient, ap) in enumerate(itr.product(orient_names, ap_names)):
         if ap in found_centers[orient]:
-            hole_diffs[i, :] = (
-                design_centers[orient][ap] - found_centers[orient][ap]
-            )
+            hole_diffs[i, :] = design_centers[orient][ap] - found_centers[orient][ap]
     translation = np.nanmean(hole_diffs, axis=0)
 
     usable_orients = list(found_centers_ang.keys())
@@ -658,22 +598,14 @@ def find_rotation_to_match_hole_angles(
     found_centers_ang_curr = found_centers_ang
     for iter_no in range(n_iter):
         for orient in usable_orients:
-            ang_err = (
-                design_centers_ang[orient] - found_centers_ang_curr[orient]
-            )
-            Rot_update = Rotation.from_rotvec(
-                ang_err * orient_axes_dict[orient]
-            )
+            ang_err = design_centers_ang[orient] - found_centers_ang_curr[orient]
+            Rot_update = Rotation.from_rotvec(ang_err * orient_axes_dict[orient])
             R_update = Rot_update.as_matrix()
             R = R_update @ R
             S = rotation_matrix_to_sitk(R)
             S_inv = S.GetInverse()
-            seg_img_current = resample3D(
-                seg_img, S_inv, interpolator=sitk.sitkNearestNeighbor
-            )
-            img_current = resample3D(
-                img, S_inv, interpolator=sitk.sitkNearestNeighbor
-            )
+            seg_img_current = resample3D(seg_img, S_inv, interpolator=sitk.sitkNearestNeighbor)
+            img_current = resample3D(img, S_inv, interpolator=sitk.sitkNearestNeighbor)
             found_centers_curr = find_holes_by_orientation(
                 img_current,
                 seg_img_current,
@@ -690,14 +622,9 @@ def find_rotation_to_match_hole_angles(
                 orient_names,
             )
             hole_diffs = np.full((4, 3), np.nan)
-            for i, (orient, ap) in enumerate(
-                itr.product(orient_names, ap_names)
-            ):
+            for i, (orient, ap) in enumerate(itr.product(orient_names, ap_names)):
                 if ap in found_centers_curr[orient]:
-                    hole_diffs[i, :] = (
-                        design_centers[orient][ap]
-                        - found_centers_curr[orient][ap]
-                    )
+                    hole_diffs[i, :] = design_centers[orient][ap] - found_centers_curr[orient][ap]
             translation = np.nanmean(hole_diffs, axis=0)
     return R, translation
 
@@ -708,9 +635,7 @@ def estimate_coms_from_image_and_segmentation(
     seg_vals_dict: dict[str, dict[str, int]],
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
-    orient_axes_dict: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_axes_dict,
+    orient_axes_dict: dict[str, NDArray[np.floating[Any]]] = def_orient_axes_dict,
 ) -> dict[str, dict[str, NDArray[np.floating[Any]]]]:
     """
     Estimate centers of mass (COMs) from image and segmentation.
@@ -764,17 +689,11 @@ def estimate_rotation_and_coms_from_image_and_segmentation(
     seg_vals_dict: dict[str, dict[str, int]],
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
-    orient_comparison_axis: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_comparison_axes,
-    design_centers: dict[
-        str, dict[str, NDArray[np.floating[Any]]]
-    ] = def_design_centers,
+    orient_comparison_axis: dict[str, NDArray[np.floating[Any]]] = def_orient_comparison_axes,
+    design_centers: dict[str, dict[str, NDArray[np.floating[Any]]]] = def_design_centers,
     orient_indices: dict[str, list[int]] = def_orient_indices,
     hole_order: dict[str, list[str]] = def_hole_order,
-    orient_axes_dict: dict[
-        str, NDArray[np.floating[Any]]
-    ] = def_orient_axes_dict,
+    orient_axes_dict: dict[str, NDArray[np.floating[Any]]] = def_orient_axes_dict,
     n_iter: int = 10,
 ) -> tuple[
     dict[str, dict[str, NDArray[np.floating[Any]]]],
@@ -912,10 +831,7 @@ def make_segment_dict(
                 seg_vals[orient][ap] = segment_info[key_name]
     if not all(used_ignores.values()):
         unused_ignores = [k for k, v in used_ignores.items() if not v]
-        logger.warning(
-            "Not all ignore segments were used. "
-            f"Unused ignores: {unused_ignores}"
-        )
+        logger.warning(f"Not all ignore segments were used. Unused ignores: {unused_ignores}")
     logger.debug(f"Found segments: {seg_vals}")
     return seg_vals
 
@@ -953,13 +869,9 @@ def segment_dict_from_seg_odict(
         If no segments are found in the segmentation ordered dictionary.
     """
     segment_info = find_seg_nrrd_header_segment_info(seg_odict)
-    segment_dict = make_segment_dict(
-        segment_info, segment_format, ap_names, orient_names, ignore_list
-    )
+    segment_dict = make_segment_dict(segment_info, segment_format, ap_names, orient_names, ignore_list)
     if all([len(d) == 0 for d in segment_dict.values()]):
-        raise ValueError(
-            "No segments found. Is the key format {key_format} correct?"
-        )
+        raise ValueError("No segments found. Is the key format {key_format} correct?")
     return segment_dict
 
 
@@ -1065,23 +977,17 @@ def find_hf_rotation_from_seg_and_lowerplane(
     5. Optimizes the transformation considering only the headframe holes.
     6. Refines the optimization by including the lower plane.
     """
-    segment_dict = segment_dict_from_seg_odict(
-        seg_odict, segment_format, ap_names, orient_names, ignore_list
-    )
+    segment_dict = segment_dict_from_seg_odict(seg_odict, segment_format, ap_names, orient_names, ignore_list)
 
     # Get centers of mass and initial guess at rotation and translation
-    coms, R, translation = (
-        estimate_rotation_and_coms_from_image_and_segmentation(
-            img, seg_img, segment_dict, n_iter=niter_rot
-        )
+    coms, R, translation = estimate_rotation_and_coms_from_image_and_segmentation(
+        img, seg_img, segment_dict, n_iter=niter_rot
     )
     euler0 = Rotation.from_matrix(R).as_euler("xyz")
     theta0 = np.concatenate((euler0, translation))
 
     # Get design centers and hole locations
-    pts1, pts2, names = get_headframe_hole_lines(
-        insert_underscores=True, return_plane=True
-    )
+    pts1, pts2, names = get_headframe_hole_lines(insert_underscores=True, return_plane=True)
 
     # slice and dice data for optimization
     moving = []
@@ -1121,9 +1027,7 @@ def find_hf_rotation_from_seg_and_lowerplane(
                     weights.append(np.full(npt, 1 / npt))
                     hole_mask.append(True)
                     group_err_funs.append(dist_point_to_line)
-    hole_only_list_of_lists = _compress_each(
-        hole_mask, pts1l, pts2l, moving, weights
-    )
+    hole_only_list_of_lists = _compress_each(hole_mask, pts1l, pts2l, moving, weights)
 
     # Optimize transform only considering holes in the headframe
     output_holes_only = opt.fmin(

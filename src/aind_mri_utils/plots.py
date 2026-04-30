@@ -42,9 +42,7 @@ def plot_tri_mesh(
 
 
 # Function from @Mateen Ulhaq and @karlo
-def _set_axes_radius(
-    ax: Any, origin: NDArray[np.floating[Any]], radius: float
-) -> None:
+def _set_axes_radius(ax: Any, origin: NDArray[np.floating[Any]], radius: float) -> None:
     """
     Set all three axes to have the same distance around the origin
 
@@ -102,9 +100,7 @@ def get_prop_cycle() -> Any:
     return prop_cycle.by_key()["color"]
 
 
-def plot_point_cloud_3d(
-    a: Any, pts: NDArray[np.floating[Any]], *args: Any, **kwargs: Any
-) -> Any:
+def plot_point_cloud_3d(a: Any, pts: NDArray[np.floating[Any]], *args: Any, **kwargs: Any) -> Any:
     """Scatter plots a Nx3 array as N 3D points"""
     return a.scatter(pts[:, 0], pts[:, 1], pts[:, 2], *args, **kwargs)
 
@@ -158,9 +154,7 @@ def create_single_colormap(
     return cmap
 
 
-def plot_vector(
-    a: Any, pt: NDArray[np.floating[Any]], *args: Any, **kwargs: Any
-) -> Any:
+def plot_vector(a: Any, pt: NDArray[np.floating[Any]], *args: Any, **kwargs: Any) -> Any:
     """Plots a 3D point as a vector from the origin"""
     plt_pts = np.vstack([np.array([0, 0, 0]), pt])
     return a.plot(plt_pts[:, 0], plt_pts[:, 1], plt_pts[:, 2], *args, **kwargs)
@@ -206,16 +200,12 @@ def rgb_to_int(r: int, g: int, b: int, a: int | None = None) -> int:
 
     for i, v in enumerate(comps):
         if v < 0 or v > 255:
-            raise ValueError(
-                f"RGB values must be in the range [0, 255], got {v}"
-            )
+            raise ValueError(f"RGB values must be in the range [0, 255], got {v}")
         out |= v << (8 * i)
     return out
 
 
-def int_to_rgb(
-    color_int: int, has_alpha: bool | None = None
-) -> tuple[int, int, int] | tuple[int, int, int, int]:
+def int_to_rgb(color_int: int, has_alpha: bool | None = None) -> tuple[int, int, int] | tuple[int, int, int, int]:
     """Converts an integer color representation to an RGB color.
 
     Parameters

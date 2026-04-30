@@ -43,10 +43,7 @@ def as_mesh(
         else:
             # we lose texture information here
             mesh = trimesh.util.concatenate(
-                tuple(
-                    trimesh.Trimesh(vertices=g.vertices, faces=g.faces)
-                    for g in scene_or_mesh.geometry.values()
-                )
+                tuple(trimesh.Trimesh(vertices=g.vertices, faces=g.faces) for g in scene_or_mesh.geometry.values())
             )
     else:
         assert isinstance(scene_or_mesh, trimesh.Trimesh)
@@ -83,9 +80,7 @@ def load_newscale_trimesh(
     mesh = as_mesh(loaded_mesh)
     if mesh is None:
         raise ValueError("Failed to load mesh from file")
-    new_vertices = convert_coordinate_system(
-        mesh.vertices, src_coordinate_system, dst_coordinate_system
-    )
+    new_vertices = convert_coordinate_system(mesh.vertices, src_coordinate_system, dst_coordinate_system)
     if move_down != 0:
         warnings.warn(
             "move_down is deprecated, use apply_transform_to_trimesh instead",
@@ -138,10 +133,7 @@ def create_uv_spheres(
     list
         List of trimesh objects representing the spheres.
     """
-    meshes = [
-        trimesh.creation.uv_sphere(radius=radius)
-        for _ in range(len(positions))
-    ]
+    meshes = [trimesh.creation.uv_sphere(radius=radius) for _ in range(len(positions))]
     for i, mesh in enumerate(meshes):
         mesh.apply_translation(positions[i, :])
         mesh.visual.vertex_colors = color
@@ -171,9 +163,7 @@ def distances_to_triangle(
         The nearest points on the triangle for each input point.
     """
     tri_mesh = trimesh.Trimesh(vertices=triangle, faces=[[0, 1, 2]])
-    nearest_points, distances, _ = trimesh.proximity.closest_point(
-        tri_mesh, points
-    )
+    nearest_points, distances, _ = trimesh.proximity.closest_point(tri_mesh, points)
     return distances, nearest_points
 
 
@@ -215,9 +205,7 @@ def distance_to_all_triangles_in_mesh(
     distances = []
     nearest_points = []
     for triangle in mesh.triangles:
-        this_distance, this_nearest_points = distances_to_triangle(
-            points, triangle
-        )
+        this_distance, this_nearest_points = distances_to_triangle(points, triangle)
         distances.append(this_distance)
         nearest_points.append(this_nearest_points)
     distances = np.array(distances)
@@ -262,9 +250,7 @@ def distance_to_closest_point_for_each_triangle_in_mesh(
     distances = []
     nearest_points = []
     for triangle in triangles:
-        distances_to_tri, nearest_points_tri = distances_to_triangle(
-            points, triangle
-        )
+        distances_to_tri, nearest_points_tri = distances_to_triangle(points, triangle)
         min_ndx = np.argmin(distances_to_tri)
         distances.append(distances_to_tri[min_ndx])
         nearest_points.append(nearest_points_tri[min_ndx, :])
@@ -274,9 +260,7 @@ def distance_to_closest_point_for_each_triangle_in_mesh(
     return distances, nearest_points
 
 
-def ensure_normals_outward(
-    mesh: trimesh.Trimesh, verbose: bool = True
-) -> trimesh.Trimesh:
+def ensure_normals_outward(mesh: trimesh.Trimesh, verbose: bool = True) -> trimesh.Trimesh:
     """
     Ensure normals point outward.
 
@@ -291,17 +275,12 @@ def ensure_normals_outward(
         Mesh with outward-pointing normals.
     """
     if not mesh.is_watertight and verbose:
-        logger.warning(
-            "Warning: Mesh is not watertight. "
-            "Normal orientation may not be reliable."
-        )
+        logger.warning("Warning: Mesh is not watertight. Normal orientation may not be reliable.")
     mesh.fix_normals()
     return mesh
 
 
-def mask_to_trimesh(
-    sitk_mask: sitk.Image, level: float = 0.5, smooth_iters: int = 0
-) -> trimesh.Trimesh:
+def mask_to_trimesh(sitk_mask: sitk.Image, level: float = 0.5, smooth_iters: int = 0) -> trimesh.Trimesh:
     """
     Converts a SimpleITK binary mask into a 3D mesh in the same physical space.
 
@@ -326,13 +305,9 @@ def mask_to_trimesh(
     vertices = transform_sitk_indices_to_physical_points(sitk_mask, ndxs_sitk)
 
     # Create a trimesh object
-    mesh = trimesh.Trimesh(
-        vertices=vertices, faces=faces, vertex_normals=normals
-    )
+    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
 
     if smooth_iters > 0:
-        mesh = trimesh.smoothing.filter_mut_dif_laplacian(
-            mesh, iterations=smooth_iters
-        )
+        mesh = trimesh.smoothing.filter_mut_dif_laplacian(mesh, iterations=smooth_iters)
 
     return mesh

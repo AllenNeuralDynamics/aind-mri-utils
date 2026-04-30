@@ -45,9 +45,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-def find_circle(
-    x: NDArray[np.floating[Any]], y: NDArray[np.floating[Any]]
-) -> tuple[float, float, float]:
+def find_circle(x: NDArray[np.floating[Any]], y: NDArray[np.floating[Any]]) -> tuple[float, float, float]:
     """Fit a circle to a set of points
 
     Fit a circle to a set of points using a linearized least-squares
@@ -186,9 +184,7 @@ def closet_points_on_two_lines(
     return p_a, p_b
 
 
-def angle(
-    v1: NDArray[np.floating[Any]], v2: NDArray[np.floating[Any]]
-) -> float:
+def angle(v1: NDArray[np.floating[Any]], v2: NDArray[np.floating[Any]]) -> float:
     """
     Angle (in degrees) between two vectors
 
@@ -234,10 +230,7 @@ def dist_point_to_line(
     ln_pt = pt_1
     ln_norm = pt_1 - pt_2
     ln_norm = ln_norm / np.linalg.norm(ln_norm)
-    return float(
-        np.abs(np.linalg.norm(np.cross(ln_norm, ln_pt - query_pt)))
-        / np.linalg.norm(ln_norm)
-    )
+    return float(np.abs(np.linalg.norm(np.cross(ln_norm, ln_pt - query_pt))) / np.linalg.norm(ln_norm))
 
 
 def dist_point_to_plane(
@@ -262,11 +255,6 @@ def dist_point_to_plane(
     Distance
     """
     D = -normal[0] * pt_0[0] - normal[1] * pt_0[1] - normal[2] * pt_0[2]
-    num = np.abs(
-        normal[0] * query_pt[0]
-        + normal[1] * query_pt[1]
-        + normal[2] * query_pt[2]
-        + D
-    )
+    num = np.abs(normal[0] * query_pt[0] + normal[1] * query_pt[1] + normal[2] * query_pt[2] + D)
     denom = np.sqrt(np.sum(normal**2))
     return float(num / denom)

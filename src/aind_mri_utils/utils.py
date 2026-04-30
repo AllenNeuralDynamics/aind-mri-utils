@@ -27,9 +27,7 @@ def norm_vec(vec: NDArray[np.floating[Any]]) -> NDArray[np.floating[Any]]:
     return vec / n
 
 
-def vector_rejection(
-    v: NDArray[np.floating[Any]], n: NDArray[np.floating[Any]]
-) -> NDArray[np.floating[Any]]:
+def vector_rejection(v: NDArray[np.floating[Any]], n: NDArray[np.floating[Any]]) -> NDArray[np.floating[Any]]:
     """Find the component of v orthogonal to n"""
     ndim = n.size
     nn = norm_vec(n)
@@ -129,9 +127,7 @@ def signed_angle_lh(
     return signed_angle_rh(b, a, n)
 
 
-def unsigned_angle(
-    a: NDArray[np.floating[Any]], b: NDArray[np.floating[Any]]
-) -> float:
+def unsigned_angle(a: NDArray[np.floating[Any]], b: NDArray[np.floating[Any]]) -> float:
     """
     Calculate the unsigned angle between two vectors.
 

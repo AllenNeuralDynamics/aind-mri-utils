@@ -62,11 +62,7 @@ class PlotsTest(unittest.TestCase):
         with managed_subplot(self.f1, projection="3d") as ax3d:
             mrplt.make_3d_ax_look_normal(ax3d)
             box_aspect = ax3d.get_box_aspect()
-            self.assertTrue(
-                np.array_equal(
-                    box_aspect / box_aspect[0], np.ones(3, dtype="float64")
-                )
-            )
+            self.assertTrue(np.array_equal(box_aspect / box_aspect[0], np.ones(3, dtype="float64")))
 
     def test_set_axes_equal(self) -> None:
         """Tests set_axes_equal"""
@@ -105,25 +101,17 @@ class PlotsTest(unittest.TestCase):
         self.assertTrue(np.array_equal(A(0), np.array([1, 1, 1, 1])))
         self.assertTrue(np.array_equal(A(1), np.array([1, 0, 1, 1])))
         # Test colormap creation with reverse
-        A = mrplt.create_single_colormap(
-            "magenta", start_color="white", is_reverse=True
-        )
+        A = mrplt.create_single_colormap("magenta", start_color="white", is_reverse=True)
         self.assertTrue(np.array_equal(A(0), np.array([1, 0, 1, 1])))
         self.assertTrue(np.array_equal(A(1), np.array([1, 1, 1, 1])))
         # Test output length
-        A = mrplt.create_single_colormap(
-            "magenta", start_color="white", N=4192
-        )
+        A = mrplt.create_single_colormap("magenta", start_color="white", N=4192)
         self.assertTrue(len(A) == 4192)
         # Test transparency
-        A = mrplt.create_single_colormap(
-            "magenta", start_color="white", N=4192, is_transparent=True
-        )
+        A = mrplt.create_single_colormap("magenta", start_color="white", N=4192, is_transparent=True)
         self.assertTrue(np.array_equal(A(0), np.array([1, 1, 1, 0])))
         # Tst saturation
-        A = mrplt.create_single_colormap(
-            "magenta", start_color="white", saturation=4
-        )
+        A = mrplt.create_single_colormap("magenta", start_color="white", saturation=4)
         self.assertTrue(np.array_equal(A(254), np.array([1, 0, 1, 1])))
 
 

@@ -274,9 +274,7 @@ def earbar_angles_to_rotation_matrix(
         A 3x3 rotation matrix in RAS that takes head/bregma-frame vectors
         into the stereotax frame.
     """
-    return Rotation.from_euler(
-        "XYZ", [earbar_pitch, earbar_roll, 0], degrees=degrees
-    ).as_matrix()
+    return Rotation.from_euler("XYZ", [earbar_pitch, earbar_roll, 0], degrees=degrees).as_matrix()
 
 
 def arc_angles_to_stereotax_angles(
@@ -370,15 +368,11 @@ def arc_angles_to_stereotax_angles(
         rx -= headframe_rx_in_arc_system
     vec = arc_angles_to_vector(rx, ry, degrees=degrees, invert_rx=invert_rx)
     if earbar_pitch != 0.0 or earbar_roll != 0.0:
-        R = earbar_angles_to_rotation_matrix(
-            earbar_pitch, earbar_roll, degrees=degrees
-        )
+        R = earbar_angles_to_rotation_matrix(earbar_pitch, earbar_roll, degrees=degrees)
         vec = R @ vec
     # arc_angles_to_vector always returns a unit vector, so the conversion
     # below cannot return None.
-    result = vector_to_stereotax_angles(
-        vec, degrees=degrees, zero_rz_to_left=zero_rz_to_left
-    )
+    result = vector_to_stereotax_angles(vec, degrees=degrees, zero_rz_to_left=zero_rz_to_left)
     assert result is not None
     return result
 
@@ -426,9 +420,5 @@ def arc_angles_to_affine(
     if invert_rz:
         rz = -rz
     euler_angles = np.array([rx, ry, rz])
-    R = (
-        Rotation.from_euler("XYZ", euler_angles, degrees=True)
-        .as_matrix()
-        .squeeze()
-    )
+    R = Rotation.from_euler("XYZ", euler_angles, degrees=True).as_matrix().squeeze()
     return ras_to_lps_transform(R)[0]

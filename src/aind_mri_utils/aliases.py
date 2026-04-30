@@ -19,9 +19,7 @@ append_ones_columns = prepare_data_for_homogeneous_transform
 create_rigid_transform = create_homogeneous_from_euler_and_translation
 
 
-def save_sitk_transform(
-    filename: str, T: NDArray[np.floating[Any]], transpose_matrix: bool = False
-) -> None:
+def save_sitk_transform(filename: str, T: NDArray[np.floating[Any]], transpose_matrix: bool = False) -> None:
     """
     This is an alias for `sitk_io.save_sitk_transform` that has the same
     interface as the original function that Yoni wrote.

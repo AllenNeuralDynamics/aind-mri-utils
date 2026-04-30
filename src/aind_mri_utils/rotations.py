@@ -51,16 +51,12 @@ from . import utils as ut
 # Tell mypy the signature; bind the real function at runtime.
 if TYPE_CHECKING:
 
-    def _from_euler(
-        order: str, angles: Sequence[float], *, degrees: bool
-    ) -> Rotation: ...
+    def _from_euler(order: str, angles: Sequence[float], *, degrees: bool) -> Rotation: ...
 else:
     _from_euler: Callable[..., Rotation] = Rotation.from_euler
 
 
-def define_euler_rotation(
-    rx: float, ry: float, rz: float, degrees: bool = True, order: str = "xyz"
-) -> Rotation:
+def define_euler_rotation(rx: float, ry: float, rz: float, degrees: bool = True, order: str = "xyz") -> Rotation:
     """
     Wrapper of scipy.spatial.transform.Rotation.from_euler
 
@@ -261,17 +257,13 @@ def rotation_matrix_from_vectors(
     return rotation_matrix
 
 
-def _rotate_mat_by_single_euler(
-    mat: NDArray[np.floating[Any]], axis: str, angle: float
-) -> NDArray[np.floating[Any]]:
+def _rotate_mat_by_single_euler(mat: NDArray[np.floating[Any]], axis: str, angle: float) -> NDArray[np.floating[Any]]:
     "Helper function that rotates a matrix by a single Euler angle"
     rotation_matrix = Rotation.from_euler(axis, angle).as_matrix().squeeze()
     return mat @ rotation_matrix
 
 
-def roll(
-    input_mat: NDArray[np.floating[Any]], angle: float
-) -> NDArray[np.floating[Any]]:
+def roll(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floating[Any]]:
     """
     Apply a rotation around the x-axis (pilot-convention roll/bank) to the
     input matrix.
@@ -295,9 +287,7 @@ def roll(
     return _rotate_mat_by_single_euler(input_mat, "x", angle)
 
 
-def pitch(
-    input_mat: NDArray[np.floating[Any]], angle: float
-) -> NDArray[np.floating[Any]]:
+def pitch(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floating[Any]]:
     """
     Apply a rotation around the y-axis (pilot-convention pitch/elevation)
     to the input matrix.
@@ -321,9 +311,7 @@ def pitch(
     return _rotate_mat_by_single_euler(input_mat, "y", angle)
 
 
-def yaw(
-    input_mat: NDArray[np.floating[Any]], angle: float
-) -> NDArray[np.floating[Any]]:
+def yaw(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floating[Any]]:
     """
     Apply a rotation around the z-axis (pilot-convention yaw/heading) to
     the input matrix.
@@ -798,9 +786,7 @@ def itk_to_slicer_transform(
         A 1x3 numpy.ndarray representing the translation vector of the Slicer
         transform.
     """
-    R, translation = ras_to_lps_transform(
-        itk_transform[:3, :3], itk_transform[:3, 3]
-    )
+    R, translation = ras_to_lps_transform(itk_transform[:3, :3], itk_transform[:3, 3])
     T = make_homogeneous_transform(R, translation)
     transform_to_parent_RAS = np.linalg.inv(T)
     return transform_to_parent_RAS[:3, :3], transform_to_parent_RAS[:3, 3]

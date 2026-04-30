@@ -69,9 +69,7 @@ def resample(
             interpolator=interpolator,
         )
     else:
-        raise NotImplementedError(
-            "Resample currently only supports 3D transformations"
-        )
+        raise NotImplementedError("Resample currently only supports 3D transformations")
 
 
 def resample3D(
@@ -114,16 +112,12 @@ def resample3D(
             lambda x: inv_transform.TransformPoint(  # Apply inverse transform
                 image.TransformIndexToPhysicalPoint(x)  # To the physical point
             ),
-            itr.product(
-                *map(lambda x: (0, x), image.GetSize())
-            ),  # for all pairs of extreme indices
+            itr.product(*map(lambda x: (0, x), image.GetSize())),  # for all pairs of extreme indices
         )
     )
 
     extrema_arr = np.vstack(extrema_transformed)
-    min_max = np.vstack(
-        list(map(lambda x: x(extrema_arr, axis=0), [np.min, np.max]))
-    )
+    min_max = np.vstack(list(map(lambda x: x(extrema_arr, axis=0), [np.min, np.max])))
 
     #
     if output_spacing is None:
@@ -136,11 +130,7 @@ def resample3D(
 
     # Compute grid size based on the physical size and spacing.
     if output_size is None:
-        output_size = (
-            np.round(np.diff(min_max, axis=0).squeeze() / spacing)
-            .astype(int)
-            .tolist()
-        )
+        output_size = np.round(np.diff(min_max, axis=0).squeeze() / spacing).astype(int).tolist()
 
     resampled_image = sitk.Resample(
         image,

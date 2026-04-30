@@ -13,9 +13,7 @@ def add_cylinder(arr, center, radius, sel_ndx, ndx_range, value):
     all_axes = set([0, 1, 2])
     a, b = all_axes.difference([sel_ndx])
     mask = (ndxs[a] - center[0]) ** 2 + (ndxs[b] - center[1]) ** 2 < radius**2
-    mask = mask & (
-        (ndx_range[0] <= ndxs[sel_ndx]) & (ndxs[sel_ndx] < ndx_range[1])
-    )
+    mask = mask & ((ndx_range[0] <= ndxs[sel_ndx]) & (ndxs[sel_ndx] < ndx_range[1]))
     arr[mask] = value
     return arr
 
@@ -99,23 +97,15 @@ class HeadframeRotationTest(unittest.TestCase):
         coms = hr.slices_centers_of_mass(img, seg_img, 2, 1, 5)
         self.assertEqual(coms.shape, (np_test_img_size[0], 3))
         for i in range(coms.shape[0]):
-            self.assertTrue(
-                np.allclose(coms[i, :2], self.sitk_test_img_center)
-            )
+            self.assertTrue(np.allclose(coms[i, :2], self.sitk_test_img_center))
 
     def test_get_segmentation_pca(self) -> None:
-        seg_img = make_cylinders(
-            self.sitk_test_img_size, self.cylinder_defs, self.seg_vals
-        )
-        axis = hr.get_segmentation_pca(
-            seg_img, list(self.seg_vals_dict["vertical"].values())
-        )
+        seg_img = make_cylinders(self.sitk_test_img_size, self.cylinder_defs, self.seg_vals)
+        axis = hr.get_segmentation_pca(seg_img, list(self.seg_vals_dict["vertical"].values()))
         self.assertTrue(np.allclose(axis, hr.lps_axes["dv"]))
 
     def test_hole_finding_and_orientation(self) -> None:
-        seg_img = make_cylinders(
-            self.sitk_test_img_size, self.cylinder_defs, self.seg_vals
-        )
+        seg_img = make_cylinders(self.sitk_test_img_size, self.cylinder_defs, self.seg_vals)
         img = make_cylinders(
             self.sitk_test_img_size,
             self.cylinder_defs,
@@ -128,9 +118,7 @@ class HeadframeRotationTest(unittest.TestCase):
         self.assertTrue(np.isnan(hole[2]))
         self.assertTrue(np.allclose(hole[:2], list(self.cylinder_defs[0][0])))
 
-        none_hole = hr.find_hole(
-            img, seg_img, 5, these_orient_indices
-        )  # 5 is not a seg value
+        none_hole = hr.find_hole(img, seg_img, 5, these_orient_indices)  # 5 is not a seg value
         self.assertTrue(none_hole is None)
 
         bad_img = make_cylinders(
@@ -152,9 +140,7 @@ class HeadframeRotationTest(unittest.TestCase):
             self.cylinder_defs,
             np.zeros(len(self.seg_vals)),
         )
-        none_hole = hr.find_hole(
-            zero_img, seg_img, this_val, these_orient_indices
-        )
+        none_hole = hr.find_hole(zero_img, seg_img, this_val, these_orient_indices)
         self.assertTrue(none_hole is None)
 
         holes_dict = hr.find_holes_by_orientation(
@@ -195,12 +181,8 @@ class HeadframeRotationTest(unittest.TestCase):
             seg_img,
             self.seg_vals_dict,
         )
-        self.assertTrue(
-            np.allclose(initial_axes["vertical"], hr.lps_axes["dv"])
-        )
-        self.assertTrue(
-            np.allclose(initial_axes["horizontal"], hr.lps_axes["ap"])
-        )
+        self.assertTrue(np.allclose(initial_axes["vertical"], hr.lps_axes["dv"]))
+        self.assertTrue(np.allclose(initial_axes["horizontal"], hr.lps_axes["ap"]))
 
         coms = hr.calculate_centers_of_mass_for_image_and_segmentation(
             img,
@@ -211,30 +193,20 @@ class HeadframeRotationTest(unittest.TestCase):
         com_answer_dict = {
             "vertical": {
                 "anterior": np.array([[16.0, 16.0, x] for x in range(16)]),
-                "posterior": np.array(
-                    [[45.0, 45.0, x] for x in range(16, 32)]
-                ),
+                "posterior": np.array([[45.0, 45.0, x] for x in range(16, 32)]),
             },
             "horizontal": {
                 "anterior": np.array([[45.0, x, 10.0] for x in range(16)]),
-                "posterior": np.array(
-                    [[16.0, x, 20.0] for x in range(48, 64)]
-                ),
+                "posterior": np.array([[16.0, x, 20.0] for x in range(48, 64)]),
             },
         }
         for orient, com_answer_dict_orient in com_answer_dict.items():
             for ap, com_answer in com_answer_dict_orient.items():
                 self.assertTrue(np.allclose(coms[orient][ap], com_answer))
 
-        orient_rotation_matrices, axes = (
-            hr.estimate_axis_rotations_from_centers_of_mass(coms)
-        )
-        self.assertTrue(
-            np.allclose(orient_rotation_matrices["vertical"], np.eye(3))
-        )
-        self.assertTrue(
-            np.allclose(orient_rotation_matrices["horizontal"], np.eye(3))
-        )
+        orient_rotation_matrices, axes = hr.estimate_axis_rotations_from_centers_of_mass(coms)
+        self.assertTrue(np.allclose(orient_rotation_matrices["vertical"], np.eye(3)))
+        self.assertTrue(np.allclose(orient_rotation_matrices["horizontal"], np.eye(3)))
         self.assertTrue(np.allclose(axes["vertical"], hr.lps_axes["dv"]))
         self.assertTrue(np.allclose(axes["horizontal"], hr.lps_axes["ap"]))
 
@@ -259,17 +231,13 @@ class HeadframeRotationTest(unittest.TestCase):
         self.assertTrue(np.allclose(R, np.eye(3)))
         self.assertTrue(np.allclose(offset, np.zeros(3)))
 
-        coms = hr.estimate_coms_from_image_and_segmentation(
-            img, seg_img, self.seg_vals_dict
-        )
+        coms = hr.estimate_coms_from_image_and_segmentation(img, seg_img, self.seg_vals_dict)
         for orient, com_answer_dict_orient in com_answer_dict.items():
             for ap, com_answer in com_answer_dict_orient.items():
                 self.assertTrue(np.allclose(coms[orient][ap], com_answer))
 
-        coms, R, offset = (
-            hr.estimate_rotation_and_coms_from_image_and_segmentation(
-                img, seg_img, self.seg_vals_dict, design_centers=test_centers
-            )
+        coms, R, offset = hr.estimate_rotation_and_coms_from_image_and_segmentation(
+            img, seg_img, self.seg_vals_dict, design_centers=test_centers
         )
         for orient, com_answer_dict_orient in com_answer_dict.items():
             for ap, com_answer in com_answer_dict_orient.items():
