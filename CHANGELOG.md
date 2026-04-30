@@ -1,3 +1,9 @@
+## v0.12.0 (2026-04-30)
+
+### Feat
+
+- **arc_angles**: add arc-to-stereotax conversion and clarify naming
+
 ## v0.11.2 (2025-10-20)
 
 ### Fix
