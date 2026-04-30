@@ -20,7 +20,7 @@ def compute_chemical_shift(
     mag_freq: float = 599.0,
     pixel_bandwidth: float = 500.0,
     frequency_encoding_direction: str = "AP",
-) -> NDArray[np.floating[Any]]:
+) -> float:
     """Calculate the chemical shift for an MRI image or spacing.
 
     The chemical shift is calculated based on the parts per million (ppm),
@@ -78,10 +78,12 @@ def compute_chemical_shift(
         # If it is not, assume it is a spacing value
         spacing = image_or_spacing
     shift = spacing * (ppm * mag_freq) / pixel_bandwidth
-    return shift
+    return float(shift)
 
 
-def chemical_shift_transform(shift: NDArray[np.floating[Any]], readout: str = "AP") -> NDArray[np.floating[Any]]:
+def chemical_shift_transform(
+    shift: NDArray[np.floating[Any]], readout: str = "AP"
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """Create chemical shift transformation matrix.
 
     Creates a transformation matrix that accounts for the chemical

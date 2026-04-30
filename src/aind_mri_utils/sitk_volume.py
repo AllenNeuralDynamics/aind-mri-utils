@@ -123,7 +123,7 @@ def resample3D(
     if output_spacing is None:
         spacing = np.empty(3)
         spacing.fill(np.median(np.array(image.GetSpacing())))
-        output_spacing = tuple(spacing)
+        output_spacing = spacing
 
     if output_origin is None:
         output_origin = min_max[0, :].tolist()

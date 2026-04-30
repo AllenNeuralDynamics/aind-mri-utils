@@ -96,16 +96,18 @@ def revised_error_rotate_compare_weighted_lines(
     n_group = len(pts1)
     if not all(len(lst) == n_group for lst in [pts2, moving, weights]):
         raise ValueError("pts1, pts2, moving, and weights must be same length")
+    resolved_funs: list[Any]
     if group_err_funs is None:
-        group_err_funs = np.full(n_group, dist_point_to_line)
+        resolved_funs = [dist_point_to_line] * n_group
     else:
         if len(group_err_funs) != n_group:
             raise ValueError("group_err_fun must have the same number of groups as pts1")
+        resolved_funs = group_err_funs
 
     R = rot.combine_angles(*theta[0:3])
     translation = theta[3:]
     error = 0.0
-    for f, p1, p2, m, w in zip(group_err_funs, pts1, pts2, moving, weights):
+    for f, p1, p2, m, w in zip(resolved_funs, pts1, pts2, moving, weights):
         transformed = rot.apply_rotate_translate(m, R, translation)
         for pt_no in range(m.shape[0]):
             res = f(p1, p2, transformed[pt_no, :])
@@ -316,7 +318,7 @@ def optimize_transform_labeled_lines(
     """
     weights = _preprocess_weights(weights, positions, normalize, gamma)
 
-    T_frame = opt.fmin(
+    T_frame = opt.fmin(  # type: ignore[call-overload]  # scipy-stubs strict overload, runtime is correct
         cost_function_weighted_labeled_lines,
         init,
         args=(pts1, pts2, positions, labels, weights),
@@ -393,7 +395,7 @@ def optimize_transform_labeled_lines_with_plane(
     """
     weights = _preprocess_weights(weights, positions, normalize, gamma)
 
-    output_a = opt.fmin(
+    output_a = opt.fmin(  # type: ignore[call-overload]  # scipy-stubs strict overload, runtime is correct
         cost_function_weighted_labeled_lines,
         init,
         args=(pts1, pts2, positions, labels, weights),
@@ -402,7 +404,7 @@ def optimize_transform_labeled_lines_with_plane(
         disp=disp,
     )
 
-    output_b = opt.fmin(
+    output_b = opt.fmin(  # type: ignore[call-overload]  # scipy-stubs strict overload, runtime is correct
         cost_function_weighted_labeled_lines_with_plane,
         output_a,
         args=(pts1, pts2, pts_for_line, positions, labels, weights),
@@ -456,8 +458,8 @@ def get_headframe_hole_lines(
         raise ValueError("Coordinate system not supported")
 
     names = []
-    pts1 = []
-    pts2 = []
+    pts1_list: list[NDArray[np.floating[Any]]] = []
+    pts2_list: list[NDArray[np.floating[Any]]] = []
     pt_dict = headframe_hole_locations[version][coordinate_system]
     for name, pts in pt_dict.items():
         if insert_underscores:
@@ -465,13 +467,13 @@ def get_headframe_hole_lines(
         else:
             store_name = name.replace("_", " ")
         names.append(store_name)
-        pts1.append(pts[0, :])
-        pts2.append(pts[1, :])
+        pts1_list.append(pts[0, :])
+        pts2_list.append(pts[1, :])
     if return_plane:
         names.append("plane")
         headframe_pts = headframe_plane_location[version][coordinate_system]
-        pts1.append(headframe_pts[0, :])
-        pts2.append(headframe_pts[1, :])
-    pts1 = np.vstack(pts1)
-    pts2 = np.vstack(pts2)
+        pts1_list.append(headframe_pts[0, :])
+        pts2_list.append(headframe_pts[1, :])
+    pts1 = np.vstack(pts1_list)
+    pts2 = np.vstack(pts2_list)
     return pts1, pts2, names

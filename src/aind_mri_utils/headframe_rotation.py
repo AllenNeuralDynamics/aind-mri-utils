@@ -194,7 +194,7 @@ def find_holes_by_orientation(
     orient_indices: dict[str, list[int]] = def_orient_indices,
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
-) -> dict[str, dict[str, NDArray[np.floating[Any]] | None]]:
+) -> dict[str, dict[str, NDArray[np.floating[Any]]]]:
     """
     Find holes in an image by different orientations and anterior-posterior
     names.
@@ -427,7 +427,7 @@ def estimate_axis_rotations_from_centers_of_mass(
     orient_axes_dict: dict[str, NDArray[np.floating[Any]]] = def_orient_axes_dict,
     orient_names: tuple[str, str] = def_orient_names,
     ap_names: tuple[str, str] = def_ap_names,
-) -> tuple[dict[str, dict[Any, Any]], dict[str, NDArray[np.floating[Any]]]]:
+) -> tuple[dict[str, NDArray[np.floating[Any]]], dict[str, NDArray[np.floating[Any]]]]:
     """
     Estimate axis rotations from centers of mass.
 
@@ -450,7 +450,7 @@ def estimate_axis_rotations_from_centers_of_mass(
     axes : dict
         Dictionary of 3 element vector axes for each orientation.
     """
-    orient_rotation_matrices: dict[str, dict[Any, Any]] = {orient: dict() for orient in orient_names}
+    orient_rotation_matrices: dict[str, NDArray[np.floating[Any]]] = {}
     axes = dict()
     for orient in orient_names:
         # center the coms for each segment separately
@@ -487,7 +487,7 @@ def estimate_axis_rotations_from_centers_of_mass(
 def find_rotation_to_match_hole_angles(
     img: sitk.Image,
     seg_img: sitk.Image,
-    initial_orient_rotation_matrices: dict[str, dict[Any, Any]],
+    initial_orient_rotation_matrices: dict[str, NDArray[np.floating[Any]]],
     axes: dict[str, NDArray[np.floating[Any]]],
     seg_vals_dict: dict[str, dict[str, int]],
     design_centers: dict[str, dict[str, NDArray[np.floating[Any]]]] = def_design_centers,

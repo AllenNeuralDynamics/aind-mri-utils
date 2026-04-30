@@ -114,7 +114,7 @@ def apply_transform_to_trimesh(
 def create_uv_spheres(
     positions: NDArray[np.floating[Any]],
     radius: float = 0.25,
-    color: list[int] = [255, 0, 255, 255],
+    color: list[int] | NDArray[np.integer[Any]] = [255, 0, 255, 255],
 ) -> list[trimesh.Trimesh]:
     """
     Create UV spheres at specified positions with a given radius and color.
@@ -136,6 +136,7 @@ def create_uv_spheres(
     meshes = [trimesh.creation.uv_sphere(radius=radius) for _ in range(len(positions))]
     for i, mesh in enumerate(meshes):
         mesh.apply_translation(positions[i, :])
+        assert isinstance(mesh.visual, trimesh.visual.color.ColorVisuals)
         mesh.visual.vertex_colors = color
     return meshes
 
@@ -171,7 +172,7 @@ def distance_to_all_triangles_in_mesh(
     mesh: trimesh.Trimesh,
     points: NDArray[np.floating[Any]],
     normalize: bool = True,
-) -> tuple[NDArray[np.floating[Any]], NDArray[np.integer[Any]]]:
+) -> tuple[NDArray[np.floating[Any]], list[NDArray[np.floating[Any]]]]:
     """Calculate the distances from points to all triangles in a mesh.
 
     This function computes the minimum distance between a set of points and
@@ -202,13 +203,13 @@ def distance_to_all_triangles_in_mesh(
     distance_to_triangle : Function that calculates distance from points to a
     single triangle
     """
-    distances = []
+    distances_list = []
     nearest_points = []
     for triangle in mesh.triangles:
         this_distance, this_nearest_points = distances_to_triangle(points, triangle)
-        distances.append(this_distance)
+        distances_list.append(this_distance)
         nearest_points.append(this_nearest_points)
-    distances = np.array(distances)
+    distances = np.array(distances_list)
     if normalize:
         distances = distances / len(points)
     return distances, nearest_points
@@ -218,7 +219,7 @@ def distance_to_closest_point_for_each_triangle_in_mesh(
     mesh: trimesh.Trimesh,
     points: NDArray[np.floating[Any]],
     normalize: bool = True,
-) -> tuple[NDArray[np.floating[Any]], NDArray[np.integer[Any]]]:
+) -> tuple[NDArray[np.floating[Any]], list[NDArray[np.floating[Any]]]]:
     """
     Calculate the distance to the closest point for each triangle in a mesh.
 
@@ -247,14 +248,14 @@ def distance_to_closest_point_for_each_triangle_in_mesh(
     used to calculate the distance from a point to a triangle.
     """
     triangles = mesh.triangles
-    distances = []
+    distances_list: list[Any] = []
     nearest_points = []
     for triangle in triangles:
         distances_to_tri, nearest_points_tri = distances_to_triangle(points, triangle)
         min_ndx = np.argmin(distances_to_tri)
-        distances.append(distances_to_tri[min_ndx])
+        distances_list.append(distances_to_tri[min_ndx])
         nearest_points.append(nearest_points_tri[min_ndx, :])
-    distances = np.array(distances)
+    distances = np.array(distances_list)
     if normalize:
         distances = distances / len(triangles)
     return distances, nearest_points

@@ -150,7 +150,7 @@ def arc_angles_to_vector(
             np.cos(ry) * np.cos(rx),  # DV component
         ]
     )
-    return vec / np.linalg.norm(vec)
+    return np.asarray(vec / np.linalg.norm(vec), dtype=float)
 
 
 def vector_to_stereotax_angles(
@@ -242,7 +242,7 @@ def stereotax_angles_to_vector(
             np.cos(ry),  # DV component
         ]
     )
-    return vec / np.linalg.norm(vec)
+    return np.asarray(vec / np.linalg.norm(vec), dtype=float)
 
 
 def earbar_angles_to_rotation_matrix(
@@ -285,7 +285,7 @@ def arc_angles_to_stereotax_angles(
     zero_rz_to_left: bool = False,
     earbar_pitch: float = 0.0,
     earbar_roll: float = 0.0,
-    headframe_rx_in_arc_system: float = 14,
+    headframe_rx_in_arc_system: float | None = None,
 ) -> tuple[float, float]:
     """Convert ephys-rig arc angles to Kopf 1500 off-plane stereotaxic
     angles for a matched insertion.
@@ -364,8 +364,9 @@ def arc_angles_to_stereotax_angles(
         ``degrees=True`` else radians. ``ry_st`` is the polar tilt from
         stereotax-vertical; ``rz_st`` is the azimuthal spin.
     """
-    if headframe_rx_in_arc_system != 0:
-        rx -= headframe_rx_in_arc_system
+    if headframe_rx_in_arc_system is None:
+        headframe_rx_in_arc_system = 14 if degrees else math.radians(14)
+    rx -= headframe_rx_in_arc_system
     vec = arc_angles_to_vector(rx, ry, degrees=degrees, invert_rx=invert_rx)
     if earbar_pitch != 0.0 or earbar_roll != 0.0:
         R = earbar_angles_to_rotation_matrix(earbar_pitch, earbar_roll, degrees=degrees)

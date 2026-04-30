@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from itertools import product
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -190,9 +190,9 @@ def compatible_insertion_pairs(
 
     # Since valid pairs are symmetric, we can mirror the upper triangle to the
     # lower triangle
-    compat_matrix = np.bitwise_or(compat_matrix, compat_matrix.T)
+    result: NDArray[np.bool_] = np.bitwise_or(compat_matrix, compat_matrix.T)
 
-    return compat_matrix
+    return result
 
 
 def is_insertion_valid(compatibility_mat: NDArray[np.bool_], insertion_ndxs: list[int]) -> bool:
@@ -200,7 +200,7 @@ def is_insertion_valid(compatibility_mat: NDArray[np.bool_], insertion_ndxs: lis
     if len(set(insertion_ndxs)) != len(insertion_ndxs):
         # Duplicate insertions are invalid
         return False
-    mask = np.full(compatibility_mat.shape[0], True)
+    mask: NDArray[np.bool_] = np.full(compatibility_mat.shape[0], True)
     for ndx in insertion_ndxs:
         mask = mask & compatibility_mat[ndx, :]
     return bool(np.all(mask[insertion_ndxs]))
@@ -214,7 +214,7 @@ def find_other_compatible_insertions(
     """Return indices in `considered_ndxs` that are compatible with every index in `seed_ndxs`."""
     if considered_ndxs is None:
         considered_ndxs = np.arange(compatibility_mat.shape[0])
-    mask = np.full(compatibility_mat.shape[0], False)
+    mask: NDArray[np.bool_] = np.full(compatibility_mat.shape[0], False)
     mask[considered_ndxs] = True
     for ndx in seed_ndxs:
         mask = mask & compatibility_mat[ndx, :]
@@ -243,7 +243,7 @@ def get_implant_targets(
     """
     label_dict = get_segmented_labels(implant_vol)
 
-    implant_targets = []
+    implant_targets_list: list[Any] = []
     implant_indices = []
 
     for key, label_value in label_dict.items():
@@ -252,12 +252,12 @@ def get_implant_targets(
             continue
 
         mean_position = np.mean(points, axis=0)
-        implant_targets.append(mean_position)
+        implant_targets_list.append(mean_position)
 
         key_index = int(key.split("-")[-1].split("_")[-1])
         implant_indices.append(key_index)
-    if len(implant_targets) > 0:
-        implant_targets = np.vstack(implant_targets)
+    if len(implant_targets_list) > 0:
+        implant_targets = np.vstack(implant_targets_list)
     else:
         implant_targets = np.empty((0, 3))
     return implant_targets, implant_indices
@@ -293,8 +293,8 @@ def apply_transform_and_add_mesh(
         rotation_matrix = trimesh.transformations.euler_matrix(0, 0, np.deg2rad(working_angle))
         apply_transform_to_trimesh(mesh, rotation_matrix)
 
-    transform_matrix = arc_angles_to_affine(ap_angle, -ml_angle, target_loc)
-    apply_transform_to_trimesh(mesh, transform_matrix)
+    transform_matrix = arc_angles_to_affine(ap_angle, -ml_angle)
+    apply_transform_to_trimesh(mesh, transform_matrix, target_loc)
     scene.add_geometry(mesh)
 
 
@@ -370,13 +370,14 @@ def make_final_insertion_scene(
     _add_spheres_to_scene(scene, transformed_implant, transformed_annotation)
     for idx, insertion_idx in enumerate(insert_list):
         mesh_copy = probe_mesh.copy()
+        assert isinstance(mesh_copy.visual, trimesh.visual.color.ColorVisuals)
         mesh_copy.visual.vertex_colors = (np.array(cm(idx * c_step)) * 255).astype(int)
         apply_transform_and_add_mesh(
             scene,
             mesh_copy,
-            df.at[insertion_idx, "ap"],  # type: ignore[arg-type]
-            -df.at[insertion_idx, "ml"],  # type: ignore
-            df.at[insertion_idx, "target_loc"],
+            cast(float, df.at[insertion_idx, "ap"]),
+            -cast(float, df.at[insertion_idx, "ml"]),
+            np.asarray(df.at[insertion_idx, "target_loc"], dtype=float),
             working_angle=working_angle[idx],
         )
 
@@ -427,9 +428,9 @@ def make_scene_for_insertion(
         apply_transform_and_add_mesh(
             scene,
             mesh_copy,
-            df.at[insertion_idx, "ap"],  # type: ignore[arg-type]
-            -df.at[insertion_idx, "ml"],  # type: ignore
-            df.at[insertion_idx, "target_loc"],
+            cast(float, df.at[insertion_idx, "ap"]),
+            -cast(float, df.at[insertion_idx, "ml"]),
+            np.asarray(df.at[insertion_idx, "target_loc"], dtype=float),
         )
 
     return scene
@@ -505,9 +506,9 @@ def _add_meshes_to_collision_manager(
         transformed_mesh = _apply_rotation_and_transform(
             probe_mesh.copy(),
             angles[idx],
-            df.at[insertion_idx, "ap"],  # type: ignore[arg-type]
-            -df.at[insertion_idx, "ml"],  # type: ignore[arg-type,operator]
-            df.at[insertion_idx, "target_loc"],
+            cast(float, df.at[insertion_idx, "ap"]),
+            -cast(float, df.at[insertion_idx, "ml"]),
+            np.asarray(df.at[insertion_idx, "target_loc"], dtype=float),
         )
         CM.add_object(f"mesh{insertion_idx}", transformed_mesh)
 

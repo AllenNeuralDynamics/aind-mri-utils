@@ -254,7 +254,7 @@ def rotation_matrix_from_vectors(
     v = np.cross(na, nb)
     ax = ut.skew_symmetric_cross_product_matrix(v)
     rotation_matrix = np.eye(nd) + ax + ax @ ax * (1 / (1 + c))
-    return rotation_matrix
+    return np.asarray(rotation_matrix, dtype=float)
 
 
 def _rotate_mat_by_single_euler(mat: NDArray[np.floating[Any]], axis: str, angle: float) -> NDArray[np.floating[Any]]:
@@ -351,7 +351,8 @@ def extract_angles(
     tuple of float
         The extracted Euler angles (roll, pitch, yaw) in radians.
     """
-    return tuple(Rotation.from_matrix(mat).as_euler("xyz"))
+    angles = Rotation.from_matrix(mat).as_euler("xyz")
+    return float(angles[0]), float(angles[1]), float(angles[2])
 
 
 def combine_angles(x: float, y: float, z: float) -> NDArray[np.floating[Any]]:
@@ -458,6 +459,7 @@ def prepare_data_for_homogeneous_transform(
         (M+1)-D points with 1 in the last position.
     """
     nd = pts.ndim
+    pts_homog: NDArray[np.floating[Any]]
     if nd == 1:
         M = pts.shape[0]
         pts_homog = np.ones(M + 1)

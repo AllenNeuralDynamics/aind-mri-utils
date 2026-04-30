@@ -32,7 +32,7 @@ def vector_rejection(v: NDArray[np.floating[Any]], n: NDArray[np.floating[Any]])
     ndim = n.size
     nn = norm_vec(n)
     vn = (v.reshape(-1, ndim) @ nn[:, np.newaxis]) * nn[np.newaxis, :]
-    return v - vn
+    return np.asarray(v - vn, dtype=float)
 
 
 def mask_arr_by_annotations(
@@ -76,7 +76,7 @@ def get_first_pca_axis(
     """Find first PC of points"""
     centered = pts - np.mean(pts, axis=0)[np.newaxis, :]
     _, _, vh = linalg.svd(centered, full_matrices=False)
-    return vh[0, :]
+    return np.asarray(vh[0, :], dtype=float)
 
 
 def signed_angle_rh(

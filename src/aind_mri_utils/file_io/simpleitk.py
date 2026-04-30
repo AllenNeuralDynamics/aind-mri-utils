@@ -83,7 +83,7 @@ def save_sitk_transform(
 
 def load_sitk_transform(
     filename: str, homogeneous: bool = False, invert: bool = False
-) -> NDArray[np.floating[Any]] | tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
+) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
     """
     Convert a sitk transform file to a 4x3 numpy array.
 
