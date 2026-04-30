@@ -645,7 +645,6 @@ def find_rotation_to_match_hole_angles(
         )
         for centers in (found_centers, design_centers)
     ]
-    # TODO: verify this works when not all segments are present
     hole_diffs = np.full((4, 3), np.nan)
     for i, (orient, ap) in enumerate(itr.product(orient_names, ap_names)):
         if ap in found_centers[orient]:
