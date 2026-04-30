@@ -1,14 +1,14 @@
-# aind-mri-utils
+# AIND MRI Utils
 
-[![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
-![Code Style](https://img.shields.io/badge/code%20style-ruff-black)
+![CI](https://github.com/AllenNeuralDynamics/aind-mri-utils/actions/workflows/ci-call.yml/badge.svg)
+[![PyPI - Version](https://img.shields.io/pypi/v/aind-mri-utils)](https://pypi.org/project/aind-mri-utils/)
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
-![Interrogate](https://img.shields.io/badge/interrogate-98.2%25-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-63%25-red?logo=codecov)
-![Python](https://img.shields.io/badge/python->=3.9-blue?logo=python)
-![MyPy](https://img.shields.io/badge/mypy-typed-blue)
+[![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
+[![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-grayscale-inverted-border.json)](https://github.com/copier-org/copier)
 
-MRI utilities toolkit for neuroscience experiment planning developed by Allen Institute for Neural Dynamics.
+MRI utilities library for aind teams.
 
 ## Installation
 
@@ -16,11 +16,11 @@ MRI utilities toolkit for neuroscience experiment planning developed by Allen In
 pip install aind-mri-utils
 ```
 
-For development:
+For development, clone the repository and run:
 ```bash
 git clone https://github.com/AllenNeuralDynamics/aind-mri-utils
 cd aind-mri-utils
-uv sync --group dev
+uv sync
 ```
 
 ## Usage
@@ -53,39 +53,35 @@ dicom_volume = read_dicom("dicom_folder/")
 write_nii(processed_volume, "output.nii")
 ```
 
-## Contributing
+## Development
 
-### Development workflow
+Please test your changes using the full linting and testing suite:
 
 ```bash
-# Setup development environment
-uv sync --group dev
+./scripts/run_linters_and_checks.sh -c
+```
 
-# Run linting and formatting
-uv run ruff check
-uv run ruff format
-
-# Run type checking
-uv run mypy src/
-
-# Run tests with coverage
-uv run pytest
-
-# Run all checks
-./scripts/run_linters_and_checks.sh --checks
+Or run individual commands:
+```bash
+uv run --frozen ruff format          # Code formatting
+uv run --frozen ruff check           # Linting
+uv run --frozen mypy                 # Type checking
+uv run --frozen interrogate -v src   # Documentation coverage
+uv run --frozen codespell --check-filenames  # Spell checking
+uv run --frozen pytest --cov aind_mri_utils # Tests with coverage
 ```
 
 ### Pull requests
 
-For internal members, please create a branch. For external members, please fork the repository and open a pull request from the fork. We'll primarily use [Angular](https://github.com/angular/angular/blob/main/CONTRIBUTING.md#commit) style for commit messages. Roughly, they should follow the pattern:
+For internal members, please create a branch. For external members, please fork the repository and open a pull request from the fork. We use [Angular](https://github.com/angular/angular/blob/main/CONTRIBUTING.md#commit) style commit messages, roughly:
 ```text
 <type>(<scope>): <short summary>
 ```
 
 where scope (optional) describes the packages affected by the code changes and type (mandatory) is one of:
 
-- **build**: Changes that affect build tools or external dependencies (example scopes: pyproject.toml, setup.py)
-- **ci**: Changes to our CI configuration files and scripts (examples: .github/workflows/ci.yml)
+- **build**: Changes that affect build tools or external dependencies (example scopes: pyproject.toml)
+- **ci**: Changes to our CI configuration files and scripts (examples: .github/workflows/ci-call.yml)
 - **docs**: Documentation only changes
 - **feat**: A new feature
 - **fix**: A bugfix
@@ -93,9 +89,6 @@ where scope (optional) describes the packages affected by the code changes and t
 - **refactor**: A code change that neither fixes a bug nor adds a feature
 - **test**: Adding missing tests or correcting existing tests
 
-### Documentation
-To build documentation:
-```bash
-uv sync --group docs
-uv run mkdocs serve
-```
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
