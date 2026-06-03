@@ -134,9 +134,7 @@ class OptimizationTest(unittest.TestCase):
         pts_for_line[-1] = False
         # Test with all no weights added
         init = np.zeros((6,))
-        trans, T_frame = optimize_transform_labeled_lines_with_plane(
-            init, pts1, pts2, pts_for_line, move_pts, labels
-        )
+        trans, T_frame = optimize_transform_labeled_lines_with_plane(init, pts1, pts2, pts_for_line, move_pts, labels)
 
         self.assertTrue(T_frame[-1] - 1 < 1e-6)
         self.assertTrue(trans[-1, -1] - 1 < 1e-6)

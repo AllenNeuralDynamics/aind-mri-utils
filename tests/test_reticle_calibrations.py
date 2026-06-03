@@ -35,15 +35,20 @@ logger.addHandler(logging.NullHandler())
 
 
 class CalibrationTest(unittest.TestCase):
+    # test-data lives at the repo root, not inside the package, so it is not
+    # shipped with the installed wheel. Skip when it isn't available (e.g. the
+    # smoke-test job that copies tests/ next to an installed wheel).
     test_data_dir = Path(__file__).parent / "../test-data/"
     reticle_data_path = test_data_dir / "reticle"
-    manual_calibration_file = (
-        reticle_data_path / "calibration_info_np2_2025_03_11T13_42_00.xlsx"
-    )
+    manual_calibration_file = reticle_data_path / "calibration_info_np2_2025_03_11T13_42_00.xlsx"
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        if not cls.test_data_dir.exists():
+            raise unittest.SkipTest(f"Test data not found at {cls.test_data_dir.resolve()}")
+
     parallax_calibration_path = reticle_data_path / "log_20250311_110408"
-    parallax_example_file = (
-        parallax_calibration_path / "points_SN46105_20250311_111453.csv"
-    )
+    parallax_example_file = parallax_calibration_path / "points_SN46105_20250311_111453.csv"
     man_calibration_pts = {
         46116: (
             np.array(
@@ -191,9 +196,7 @@ class CalibrationTest(unittest.TestCase):
         )
     }
     man_cal_errs = {
-        46116: np.array(
-            [0.00529405, 0.00310946, 0.0082168, 0.00732138, 0.00295256]
-        ),
+        46116: np.array([0.00529405, 0.00310946, 0.0082168, 0.00732138, 0.00295256]),
     }
     par_cal_errs = {
         46105: np.array(
@@ -261,26 +264,16 @@ class CalibrationTest(unittest.TestCase):
         for handler in self.old_handlers:
             self.root_logger.addHandler(handler)
 
-    def helper_test_transforms(
-        self, R, t, bregma_pt, probe_pt, atol=1e-03, rtol=1e-03
-    ):
+    def helper_test_transforms(self, R, t, bregma_pt, probe_pt, atol=1e-03, rtol=1e-03):
         received_probe_pt = transform_bregma_to_probe(bregma_pt, R, t)
-        self.assertTrue(
-            np.allclose(received_probe_pt, probe_pt, atol=atol, rtol=rtol)
-        )
+        self.assertTrue(np.allclose(received_probe_pt, probe_pt, atol=atol, rtol=rtol))
         received_bregma_pt = transform_probe_to_bregma(probe_pt, R, t)
-        self.assertTrue(
-            np.allclose(received_bregma_pt, bregma_pt, atol=atol, rtol=rtol)
-        )
+        self.assertTrue(np.allclose(received_bregma_pt, bregma_pt, atol=atol, rtol=rtol))
 
-    def helper_test_calibration(
-        self, cal_by_probe, test_pair_by_probe, *args, **kwargs
-    ):
+    def helper_test_calibration(self, cal_by_probe, test_pair_by_probe, *args, **kwargs):
         for probe, (bregma_pt, probe_pt) in test_pair_by_probe.items():
             R, t = cal_by_probe[probe]
-            self.helper_test_transforms(
-                R, t, bregma_pt, probe_pt, *args, **kwargs
-            )
+            self.helper_test_transforms(R, t, bregma_pt, probe_pt, *args, **kwargs)
 
     def test_fit_rotation_params(self) -> None:
         """Tests for fit_rotation_params"""
@@ -294,9 +287,7 @@ class CalibrationTest(unittest.TestCase):
             reticle_pts_scaled,
             probe_pts_scaled,
         )
-        self.helper_test_transforms(
-            R, t, *self.parallax_test_pairs[46105], atol=atol, rtol=rtol
-        )
+        self.helper_test_transforms(R, t, *self.parallax_test_pairs[46105], atol=atol, rtol=rtol)
 
     def test_read_manual_reticle_calibration(self) -> None:
         """Tests for read_manual_reticle_calibration"""
@@ -308,8 +299,7 @@ class CalibrationTest(unittest.TestCase):
         ) = read_manual_reticle_calibration(self.manual_calibration_file)
         for k, v in self.man_calibration_pts.items():
             self.assertTrue(
-                np.allclose(v[0], adjusted_pairs_by_probe[k][0])
-                and np.allclose(v[1], adjusted_pairs_by_probe[k][1])
+                np.allclose(v[0], adjusted_pairs_by_probe[k][0]) and np.allclose(v[1], adjusted_pairs_by_probe[k][1])
             )
         self.assertTrue(
             np.allclose(global_offset, self.global_offset)
@@ -319,14 +309,10 @@ class CalibrationTest(unittest.TestCase):
 
     def test_fit_rotation_params_from_manual_calibration(self) -> None:
         """Tests for fit_rotation_params_from_manual_calibration"""
-        cal_by_probe, R_reticle_to_bregma, global_offset = (
-            fit_rotation_params_from_manual_calibration(
-                self.manual_calibration_file
-            )
+        cal_by_probe, R_reticle_to_bregma, global_offset = fit_rotation_params_from_manual_calibration(
+            self.manual_calibration_file
         )
-        self.helper_test_calibration(
-            cal_by_probe, self.manual_test_pairs, atol=1e-2
-        )
+        self.helper_test_calibration(cal_by_probe, self.manual_test_pairs, atol=1e-2)
         self.assertTrue(np.array_equal(R_reticle_to_bregma, np.eye(3)))
         self.assertTrue(np.array_equal(global_offset, self.global_offset))
 
@@ -340,13 +326,9 @@ class CalibrationTest(unittest.TestCase):
             errs_by_probe,
         ) = debug_manual_calibration(self.manual_calibration_file)
 
-        self.helper_test_calibration(
-            cal_by_probe, self.manual_test_pairs, atol=1e-2
-        )
+        self.helper_test_calibration(cal_by_probe, self.manual_test_pairs, atol=1e-2)
         self.assertTrue(np.array_equal(R_reticle_to_bregma, np.eye(3)))
-        self.assertTrue(
-            np.array_equal(t_reticle_to_bregma, self.global_offset)
-        )
+        self.assertTrue(np.array_equal(t_reticle_to_bregma, self.global_offset))
         test_probe = 46116
         pts_close = True
         tst_pair = adjusted_pairs_by_probe[test_probe]
@@ -381,30 +363,22 @@ class CalibrationTest(unittest.TestCase):
             self.global_rotation_degrees,
         )
 
-        self.helper_test_calibration(
-            cal_by_probe, self.parallax_test_pairs, atol=1e-2
-        )
+        self.helper_test_calibration(cal_by_probe, self.parallax_test_pairs, atol=1e-2)
         self.assertTrue(np.array_equal(R_reticle_to_bregma, np.eye(3)))
         for k, v in self.parallax_corrected_calibration_pts.items():
             reticle_pts, probe_pts = v
-            received_reticle_pts, received_probe_pts = adjusted_pairs_by_probe[
-                k
-            ]
+            received_reticle_pts, received_probe_pts = adjusted_pairs_by_probe[k]
             self.assertTrue(
                 np.allclose(reticle_pts, received_reticle_pts, atol=1e-1)
                 and np.allclose(probe_pts, received_probe_pts, atol=1e-1)
             )
         # Assuming errs_by_probe is a dictionary with probe IDs as keys
         for probe_id, errs in self.par_cal_errs.items():
-            self.assertTrue(
-                np.allclose(errs, errs_by_probe[probe_id], atol=1e-1)
-            )
+            self.assertTrue(np.allclose(errs, errs_by_probe[probe_id], atol=1e-1))
 
     def test_read_parallel_calibration_file(self) -> None:
         """Tests for read_parallax_calibration_file"""
-        mats_by_controller = read_parallax_calibration_file(
-            self.parallax_example_file
-        )
+        mats_by_controller = read_parallax_calibration_file(self.parallax_example_file)
         reticle_pts, probe_pts = mats_by_controller[46105]
         self.assertTrue(
             np.allclose(reticle_pts, self.parallax_calibration_pts[46105][0])
@@ -413,9 +387,7 @@ class CalibrationTest(unittest.TestCase):
 
     def test_read_parallax_calibration_dir(self) -> None:
         """Tests for read_parallax_calibration_dir"""
-        mat_pairs_by_probe = read_parallax_calibration_dir(
-            self.parallax_calibration_path
-        )
+        mat_pairs_by_probe = read_parallax_calibration_dir(self.parallax_calibration_path)
         for k, v in self.parallax_calibration_pts.items():
             reticle_pts, probe_pts = v
             received_reticle_pts, received_probe_pts = mat_pairs_by_probe[k]
@@ -446,9 +418,7 @@ class CalibrationTest(unittest.TestCase):
             self.global_offset,
             self.global_rotation_degrees,
         )
-        self.helper_test_calibration(
-            cal_by_probe, self.parallax_test_pairs, atol=1e-2
-        )
+        self.helper_test_calibration(cal_by_probe, self.parallax_test_pairs, atol=1e-2)
         self.assertTrue(np.array_equal(R_reticle_to_bregma, np.eye(3)))
 
     def test_find_probe_insertion_vector(self) -> None:
@@ -499,18 +469,12 @@ class CalibrationTest(unittest.TestCase):
 
     def test_combine_parallax_and_manual_calibrations(self) -> None:
         """Tests for combine_parallax_and_manual_calibrations"""
-        cal_by_probe_combined, R_reticle_to_bregma, global_offset = (
-            combine_parallax_and_manual_calibrations(
-                self.manual_calibration_file,
-                self.parallax_calibration_path,
-            )
+        cal_by_probe_combined, R_reticle_to_bregma, global_offset = combine_parallax_and_manual_calibrations(
+            self.manual_calibration_file,
+            self.parallax_calibration_path,
         )
-        self.helper_test_calibration(
-            cal_by_probe_combined, self.manual_test_pairs, atol=1e-1
-        )
-        self.helper_test_calibration(
-            cal_by_probe_combined, self.parallax_test_pairs, atol=1e-1
-        )
+        self.helper_test_calibration(cal_by_probe_combined, self.manual_test_pairs, atol=1e-1)
+        self.helper_test_calibration(cal_by_probe_combined, self.parallax_test_pairs, atol=1e-1)
         self.assertTrue(np.array_equal(R_reticle_to_bregma, np.eye(3)))
         self.assertTrue(np.array_equal(global_offset, self.global_offset))
 
@@ -526,29 +490,19 @@ class CalibrationTest(unittest.TestCase):
             self.manual_calibration_file,
             self.parallax_calibration_path,
         )
-        self.helper_test_calibration(
-            combined_cal_by_probe, self.manual_test_pairs, atol=1e-2
-        )
-        self.helper_test_calibration(
-            combined_cal_by_probe, self.parallax_test_pairs, atol=1e-2
-        )
+        self.helper_test_calibration(combined_cal_by_probe, self.manual_test_pairs, atol=1e-2)
+        self.helper_test_calibration(combined_cal_by_probe, self.parallax_test_pairs, atol=1e-2)
         self.assertTrue(np.array_equal(R_reticle_to_bregma, np.eye(3)))
-        self.assertTrue(
-            np.array_equal(t_reticle_to_bregma, self.global_offset)
-        )
+        self.assertTrue(np.array_equal(t_reticle_to_bregma, self.global_offset))
         for k, v in self.parallax_corrected_calibration_pts.items():
             reticle_pts, probe_pts = v
-            received_reticle_pts, received_probe_pts = combined_pairs_by_probe[
-                k
-            ]
+            received_reticle_pts, received_probe_pts = combined_pairs_by_probe[k]
             self.assertTrue(
                 np.allclose(reticle_pts, received_reticle_pts, atol=1e-1)
                 and np.allclose(probe_pts, received_probe_pts, atol=1e-1)
             )
         for probe_id, errs in self.par_cal_errs.items():
-            self.assertTrue(
-                np.allclose(errs, errs_by_probe[probe_id], atol=1e-1)
-            )
+            self.assertTrue(np.allclose(errs, errs_by_probe[probe_id], atol=1e-1))
 
     def test_find_similarity_reflection(self):
         """Test reflections."""

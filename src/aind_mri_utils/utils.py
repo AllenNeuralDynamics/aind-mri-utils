@@ -1,4 +1,4 @@
-"""Utility functions"""
+"""Utility functions."""
 
 from __future__ import annotations
 
@@ -15,26 +15,24 @@ if TYPE_CHECKING:
 def skew_symmetric_cross_product_matrix(
     v: NDArray[np.floating[Any]],
 ) -> NDArray[np.floating[Any]]:
-    """Find the cross product matrix for a vector v"""
+    """Find the cross product matrix for a vector v."""
     return np.cross(v, np.identity(v.shape[0]) * -1)
 
 
 def norm_vec(vec: NDArray[np.floating[Any]]) -> NDArray[np.floating[Any]]:
-    """Normalize input vector"""
+    """Normalize input vector."""
     n = np.linalg.norm(vec)
     if n == 0:
         raise ValueError("Input has norm of zero")
     return vec / n
 
 
-def vector_rejection(
-    v: NDArray[np.floating[Any]], n: NDArray[np.floating[Any]]
-) -> NDArray[np.floating[Any]]:
-    """Find the component of v orthogonal to n"""
+def vector_rejection(v: NDArray[np.floating[Any]], n: NDArray[np.floating[Any]]) -> NDArray[np.floating[Any]]:
+    """Find the component of v orthogonal to n."""
     ndim = n.size
     nn = norm_vec(n)
     vn = (v.reshape(-1, ndim) @ nn[:, np.newaxis]) * nn[np.newaxis, :]
-    return v - vn
+    return np.asarray(v - vn, dtype=float)
 
 
 def mask_arr_by_annotations(
@@ -43,7 +41,7 @@ def mask_arr_by_annotations(
     seg_vals: list[int],
     default_val: float = 0,
 ) -> NDArray[np.floating[Any]]:
-    """Sets entries of arr to default_val if anno_arr not in target set
+    """Set entries of arr to default_val if anno_arr not in target set.
 
     This function will return a copy of `arr` where the output is either
     the same as `arr` if the corresponding element of `anno_arr` is one of
@@ -65,7 +63,6 @@ def mask_arr_by_annotations(
     masked_vol : numpy.ndarray
         Copy of `arr` masked by whether `anno_arr` is one of `seg_vals`
     """
-
     masked_arr = np.zeros_like(arr)
     masked_arr.fill(default_val)
     mask = np.isin(anno_arr, seg_vals)
@@ -76,10 +73,10 @@ def mask_arr_by_annotations(
 def get_first_pca_axis(
     pts: NDArray[np.floating[Any]],
 ) -> NDArray[np.floating[Any]]:
-    """Find first PC of points"""
+    """Find first PC of points."""
     centered = pts - np.mean(pts, axis=0)[np.newaxis, :]
     _, _, vh = linalg.svd(centered, full_matrices=False)
-    return vh[0, :]
+    return np.asarray(vh[0, :], dtype=float)
 
 
 def signed_angle_rh(
@@ -87,9 +84,10 @@ def signed_angle_rh(
     b: NDArray[np.floating[Any]],
     n: NDArray[np.floating[Any]],
 ) -> float:
-    """find right-handed angle between two vectors
+    """Find right-handed angle between two vectors.
+
     Find the right-handled angle between a and b in the plane normal to n,
-    by rotating a to b
+    by rotating a to b.
     """
     # Function by Adrian Leonhard: https://stackoverflow.com/a/33920320
     # Let alpha be the direct angle between the vectors (0° to 180°) and beta
@@ -122,16 +120,14 @@ def signed_angle_lh(
     b: NDArray[np.floating[Any]],
     n: NDArray[np.floating[Any]],
 ) -> float:
-    """find left-handed angle between two vectors
+    """Find left-handed angle between two vectors.
 
-    See `signed_angle_rh`
+    See `signed_angle_rh`.
     """
     return signed_angle_rh(b, a, n)
 
 
-def unsigned_angle(
-    a: NDArray[np.floating[Any]], b: NDArray[np.floating[Any]]
-) -> float:
+def unsigned_angle(a: NDArray[np.floating[Any]], b: NDArray[np.floating[Any]]) -> float:
     """
     Calculate the unsigned angle between two vectors.
 

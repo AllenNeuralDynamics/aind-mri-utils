@@ -49,13 +49,13 @@ main() {
     run ruff check
     echo "+ mypy"
     run mypy
-    echo "+ interrogate -v"
-    run interrogate -v
+    echo "+ interrogate -v src"
+    run interrogate -v src
     echo "+ codespell --check-filenames"
     run codespell --check-filenames
-    echo "+ pytest$([ -n "$PYTEST_ARGS" ] && printf ' -- %s' "$PYTEST_ARGS")"
+    echo "+ pytest --cov aind_mri_utils$([ -n "$PYTEST_ARGS" ] && printf ' -- %s' "$PYTEST_ARGS")"
     # shellcheck disable=SC2086
-    run pytest $PYTEST_ARGS
+    run pytest --cov aind_mri_utils $PYTEST_ARGS
   else
     echo "(checks skipped; pass -c or --checks to enable)"
   fi

@@ -51,18 +51,13 @@ from . import utils as ut
 # Tell mypy the signature; bind the real function at runtime.
 if TYPE_CHECKING:
 
-    def _from_euler(
-        order: str, angles: Sequence[float], *, degrees: bool
-    ) -> Rotation: ...
+    def _from_euler(order: str, angles: Sequence[float], *, degrees: bool) -> Rotation: ...
 else:
     _from_euler: Callable[..., Rotation] = Rotation.from_euler
 
 
-def define_euler_rotation(
-    rx: float, ry: float, rz: float, degrees: bool = True, order: str = "xyz"
-) -> Rotation:
-    """
-    Wrapper of scipy.spatial.transform.Rotation.from_euler
+def define_euler_rotation(rx: float, ry: float, rz: float, degrees: bool = True, order: str = "xyz") -> Rotation:
+    """Wrap scipy.spatial.transform.Rotation.from_euler.
 
     Parameters
     ----------
@@ -258,23 +253,17 @@ def rotation_matrix_from_vectors(
     v = np.cross(na, nb)
     ax = ut.skew_symmetric_cross_product_matrix(v)
     rotation_matrix = np.eye(nd) + ax + ax @ ax * (1 / (1 + c))
-    return rotation_matrix
+    return np.asarray(rotation_matrix, dtype=float)
 
 
-def _rotate_mat_by_single_euler(
-    mat: NDArray[np.floating[Any]], axis: str, angle: float
-) -> NDArray[np.floating[Any]]:
-    "Helper function that rotates a matrix by a single Euler angle"
+def _rotate_mat_by_single_euler(mat: NDArray[np.floating[Any]], axis: str, angle: float) -> NDArray[np.floating[Any]]:
+    """Rotate a matrix by a single Euler angle."""
     rotation_matrix = Rotation.from_euler(axis, angle).as_matrix().squeeze()
     return mat @ rotation_matrix
 
 
-def roll(
-    input_mat: NDArray[np.floating[Any]], angle: float
-) -> NDArray[np.floating[Any]]:
-    """
-    Apply a rotation around the x-axis (pilot-convention roll/bank) to the
-    input matrix.
+def roll(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floating[Any]]:
+    """Apply a rotation around the x-axis (pilot-convention roll/bank) to the input matrix.
 
     For mouse-RAS data, the x-axis is ML — so this rotation is a
     physical *pitch* of the mouse (nose up/down), not a roll. See module
@@ -295,12 +284,8 @@ def roll(
     return _rotate_mat_by_single_euler(input_mat, "x", angle)
 
 
-def pitch(
-    input_mat: NDArray[np.floating[Any]], angle: float
-) -> NDArray[np.floating[Any]]:
-    """
-    Apply a rotation around the y-axis (pilot-convention pitch/elevation)
-    to the input matrix.
+def pitch(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floating[Any]]:
+    """Apply a rotation around the y-axis (pilot-convention pitch/elevation) to the input matrix.
 
     For mouse-RAS data, the y-axis is AP — so this rotation is a physical
     *roll* of the mouse (left/right ear up), not a pitch. See module
@@ -321,12 +306,8 @@ def pitch(
     return _rotate_mat_by_single_euler(input_mat, "y", angle)
 
 
-def yaw(
-    input_mat: NDArray[np.floating[Any]], angle: float
-) -> NDArray[np.floating[Any]]:
-    """
-    Apply a rotation around the z-axis (pilot-convention yaw/heading) to
-    the input matrix.
+def yaw(input_mat: NDArray[np.floating[Any]], angle: float) -> NDArray[np.floating[Any]]:
+    """Apply a rotation around the z-axis (pilot-convention yaw/heading) to the input matrix.
 
     For mouse-RAS data the z-axis is DV — yaw lines up between the two
     conventions, so this is also a physical yaw (turning left/right) of
@@ -363,7 +344,8 @@ def extract_angles(
     tuple of float
         The extracted Euler angles (roll, pitch, yaw) in radians.
     """
-    return tuple(Rotation.from_matrix(mat).as_euler("xyz"))
+    angles = Rotation.from_matrix(mat).as_euler("xyz")
+    return float(angles[0]), float(angles[1]), float(angles[2])
 
 
 def combine_angles(x: float, y: float, z: float) -> NDArray[np.floating[Any]]:
@@ -392,8 +374,7 @@ def make_homogeneous_transform(
     translation: NDArray[np.floating[Any]],
     scaling: NDArray[np.floating[Any]] | None = None,
 ) -> NDArray[np.floating[Any]]:
-    """
-    Combines a rotation matrix and translation into a homogeneous transform.
+    """Combine a rotation matrix and translation into a homogeneous transform.
 
     Parameters
     ----------
@@ -470,6 +451,7 @@ def prepare_data_for_homogeneous_transform(
         (M+1)-D points with 1 in the last position.
     """
     nd = pts.ndim
+    pts_homog: NDArray[np.floating[Any]]
     if nd == 1:
         M = pts.shape[0]
         pts_homog = np.ones(M + 1)
@@ -655,9 +637,7 @@ def invert_rotate_translate(
 def create_homogeneous_from_euler_and_translation(
     rx: float, ry: float, rz: float, tx: float, ty: float, tz: float
 ) -> NDArray[np.floating[Any]]:
-    """
-    Create a homogeneous transformation matrix from Euler angles and
-    translation.
+    """Create a homogeneous transformation matrix from Euler angles and translation.
 
     Parameters
     ----------
@@ -688,9 +668,7 @@ def ras_to_lps_transform(
     R: NDArray[np.floating[Any]],
     translation: NDArray[np.floating[Any]] | None = None,
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Transforms a rotation matrix and translation vector from RAS to LPS
-    coordinate system, or vice-versa.
+    """Transform a rotation matrix and translation vector from RAS to LPS coordinate system, or vice-versa.
 
     Parameters
     ----------
@@ -777,8 +755,7 @@ def compose_transforms(
 def itk_to_slicer_transform(
     itk_transform: NDArray[np.floating[Any]],
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Converts an ITK transform to a Slicer transform.
+    """Convert an ITK transform to a Slicer transform.
 
     This function converts a given ITK transform, which uses the LPS coordinate
     system, to a Slicer transform, which uses the RAS coordinate system. The
@@ -798,9 +775,7 @@ def itk_to_slicer_transform(
         A 1x3 numpy.ndarray representing the translation vector of the Slicer
         transform.
     """
-    R, translation = ras_to_lps_transform(
-        itk_transform[:3, :3], itk_transform[:3, 3]
-    )
+    R, translation = ras_to_lps_transform(itk_transform[:3, :3], itk_transform[:3, 3])
     T = make_homogeneous_transform(R, translation)
     transform_to_parent_RAS = np.linalg.inv(T)
     return transform_to_parent_RAS[:3, :3], transform_to_parent_RAS[:3, 3]

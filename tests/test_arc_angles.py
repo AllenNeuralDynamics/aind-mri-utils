@@ -31,9 +31,7 @@ def _angle_close(a, b, tol=1e-7):
 
 def _vec_close(v1, v2, tol=1e-7):
     """Compare two vectors disregarding overall scale (both are normalized)."""
-    return np.allclose(
-        v1 / np.linalg.norm(v1), v2 / np.linalg.norm(v2), atol=tol
-    )
+    return np.allclose(v1 / np.linalg.norm(v1), v2 / np.linalg.norm(v2), atol=tol)
 
 
 # ---------------------------------------------------------------------
@@ -54,9 +52,7 @@ class TestVectorToArcAngles(unittest.TestCase):
         self.assertTrue(_angle_close(ry, 45))
 
         # Pure AP (posterior) tilt is 10°  about x
-        rx, ry = aa.vector_to_arc_angles(
-            [0, math.sin(math.radians(10)), math.cos(math.radians(10))]
-        )
+        rx, ry = aa.vector_to_arc_angles([0, math.sin(math.radians(10)), math.cos(math.radians(10))])
         self.assertTrue(_angle_close(rx, 10))
         self.assertTrue(_angle_close(ry, 0))
 
@@ -85,9 +81,7 @@ class TestArcAnglesToVector(unittest.TestCase):
         # 30° ML, 45° AP        (degrees=True default)
         v_deg = aa.arc_angles_to_vector(rx=45, ry=30)
         # same in radians        (degrees=False)
-        v_rad = aa.arc_angles_to_vector(
-            rx=math.radians(45), ry=math.radians(30), degrees=False
-        )
+        v_rad = aa.arc_angles_to_vector(rx=math.radians(45), ry=math.radians(30), degrees=False)
         self.assertTrue(_vec_close(v_deg, v_rad))
 
     def test_invert_rx_flag(self):
@@ -119,9 +113,7 @@ class TestVectorToStereotaxAngles(unittest.TestCase):
 
         # Compound rotation
         z = math.cos(math.radians(45))
-        ry, rz = aa.vector_to_stereotax_angles(
-            [math.cos(math.radians(10)) * z, math.sin(math.radians(10)) * z, z]
-        )
+        ry, rz = aa.vector_to_stereotax_angles([math.cos(math.radians(10)) * z, math.sin(math.radians(10)) * z, z])
         self.assertTrue(_angle_close(ry, 45))
         self.assertTrue(_angle_close(rz, 10))
 
@@ -149,16 +141,12 @@ class TestStereotaxAnglesToVector(unittest.TestCase):
         # 30° ML, 45° AP        (degrees=True default)
         v_deg = aa.stereotax_angles_to_vector(45, 30)
         # same in radians        (degrees=False)
-        v_rad = aa.stereotax_angles_to_vector(
-            math.radians(45), math.radians(30), degrees=False
-        )
+        v_rad = aa.stereotax_angles_to_vector(math.radians(45), math.radians(30), degrees=False)
         self.assertTrue(_vec_close(v_deg, v_rad))
 
     def test_zero_rz_to_the_left_flag(self):
         """Flipping zero_rz_to_left changes the rotation component sign."""
-        v_default = aa.stereotax_angles_to_vector(
-            20, 10
-        )  # zero_rz_to_left=True
+        v_default = aa.stereotax_angles_to_vector(20, 10)  # zero_rz_to_left=True
         v_flip = aa.stereotax_angles_to_vector(20, -170, zero_rz_to_left=True)
         # Only the rotation (z) component should differ in sign
         self.assertAlmostEqual(v_default[0], v_flip[0], places=7)
@@ -175,15 +163,9 @@ class TestArcAnglesToAffine(unittest.TestCase):
         AP, ML, ROT = 20, 30, 10
 
         # Expected rotation (after sign inversions inside the function)
-        expected_R = (
-            Rotation.from_euler("XYZ", [-AP, ML, -ROT], degrees=True)
-            .as_matrix()
-            .squeeze()
-        )
+        expected_R = Rotation.from_euler("XYZ", [-AP, ML, -ROT], degrees=True).as_matrix().squeeze()
 
-        affine_R = ras_to_lps_transform(aa.arc_angles_to_affine(AP, ML, ROT))[
-            0
-        ]
+        affine_R = ras_to_lps_transform(aa.arc_angles_to_affine(AP, ML, ROT))[0]
 
         self.assertTrue(
             np.allclose(affine_R, expected_R, atol=1e-9),

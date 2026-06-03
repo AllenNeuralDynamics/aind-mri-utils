@@ -1,16 +1,16 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-name = "aind_mri_utils"
+name = "aind-mri-utils"
 description = "MRI utilities library for aind teams."
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-  { name = "Allen Institute for Neural Dynamics" },
   { name = "Galen Lynch", email = "galen@galenlynch.com" },
   { name = "Yoni Browning", email = "yoni.browning@alleninstitute.org" },
+  { name = "Allen Institute for Neural Dynamics" },
 ]
 classifiers = ["Programming Language :: Python :: 3"]
 readme = "README.md"
@@ -35,43 +35,28 @@ Issues = "https://github.com/AllenNeuralDynamics/aind-mri-utils/issues"
 Changelog = "https://github.com/AllenNeuralDynamics/aind-mri-utils/blob/main/CHANGELOG.md"
 
 [dependency-groups]
-typing = [
-  'mypy',
-  'types-openpyxl',
-  'scipy-stubs',
-  'pandas-stubs',
-]
-dev = [{ include-group = 'typing'}, 'codespell', 'pytest', 'pytest-cov', 'ruff', 'interrogate']
-jupyter = [{include-group = 'dev'}, 'ipykernel', 'pip']
-docs = [
-  {include-group = 'dev'},
-  'mkdocs',
-  'mkdocs-material',
-  'mkdocstrings[python]',
-  'pymdown-extensions',
-  'ruff',
-]
+types = ["mypy", "types-openpyxl", "scipy-stubs", "pandas-stubs"]
+dev = [{ include-group = "types" }, "codespell", "pytest", "pytest-cov", "ruff", "interrogate"]
+jupyter = [{ include-group = "dev" }, "ipykernel", "pip"]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-data]
-"aind_mri_utils" = ["py.typed"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/aind_mri_utils"]
 
 [tool.ruff]
-line-length = 79
-target-version = 'py310'
+line-length = 120
+target-version = "py310"
+extend-exclude = ["scratch"]
 
 [tool.ruff.lint]
-extend-select = ["Q", "RUF100", "C90", "I", "F", "E", "W", "UP", "ANN", "PYI"]
+extend-select = ["Q", "RUF100", "C90", "I", "F", "E", "W", "D", "UP", "ANN", "PYI"]
 extend-ignore = ["ANN401"]
-per-file-ignores = { "tests/*.py" = ["ANN"], "docs/**/*.py" = ["ANN"], "notebooks/*.py" = ["ANN"] }
+per-file-ignores = { "tests/*.py" = ["ANN", "D"] }
 mccabe = { max-complexity = 14 }
 pydocstyle = { convention = "numpy" }
 
 [tool.codespell]
-skip = '.git,*.pdf,*.svg,./bonsai,*.bonsai,./docs/_build,uv.lock,./doc_template'
-ignore-words-list = 'nd'
+skip = ".git,*.pdf,*.svg,./docs/build,uv.lock,scratch"
+ignore-words-list = "nd"
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers --tb=short --cov=src --cov-report=term-missing --cov-fail-under=0"
@@ -98,10 +83,10 @@ exclude = [
   "tests",
   "docs",
   "build",
-  "dist",
-  "setup.py",
   "examples",
   "site",
+  "scratch",
+  ".venv",
 ]
 
 [tool.commitizen]
@@ -114,9 +99,10 @@ major_version_zero = true
 
 [tool.mypy]
 files = ["src/aind_mri_utils"]
-# Pinned to 3.9 to suppress numpy/scipy-stubs return-Any noise that surfaces
-# at 3.10+. Bump and fix the resulting errors as a separate cleanup.
-python_version = "3.9"
+exclude = ["scratch"]
+# TODO: switch to strict = true once the remaining numpy/scipy-stubs and
+# untyped-call warnings (currently masked by this explicit flag list)
+# have been triaged.
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -136,11 +122,7 @@ module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
-# Ignore import-untyped errors for libraries without good stub support
-# or requiring newer Python versions than this project supports
+# Libraries without type stubs.
 [[tool.mypy.overrides]]
-module = [
-  "pywavefront.*",
-  "mpl_toolkits.*",
-]
+module = ["pywavefront.*", "mpl_toolkits.*"]
 ignore_missing_imports = true

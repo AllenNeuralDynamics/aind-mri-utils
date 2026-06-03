@@ -1,7 +1,4 @@
-"""
-Functions for optimizing volume fits.
-
-"""
+"""Functions for optimizing volume fits."""
 
 from __future__ import annotations
 
@@ -22,13 +19,9 @@ logger = logging.getLogger(__name__)
 headframe_hole_locations = {
     "0.1": {
         "RAS": {
-            "anterior_horizontal": np.array(
-                [[6.34, 0, 2.5], [6.34, -6.5, 2.5]]
-            ),
+            "anterior_horizontal": np.array([[6.34, 0, 2.5], [6.34, -6.5, 2.5]]),
             "anterior_vertical": np.array([[5.1, -3.2, -1], [5.1, -3.2, 4]]),
-            "posterior_horizontal": np.array(
-                [[5.04, -6.5, 1], [5.04, -12, 1]]
-            ),
+            "posterior_horizontal": np.array([[5.04, -6.5, 1], [5.04, -12, 1]]),
             "posterior_vertical": np.array([[6.85, -9.9, 0], [6.85, -9.9, 5]]),
         }
     }
@@ -42,15 +35,13 @@ for version in headframe_hole_locations:
     for key, val in headframe_hole_locations[version]["RAS"].items():
         lps_dict[key] = val * RAS_LPS_conversion_factor
     headframe_hole_locations[version]["LPS"] = lps_dict
-    headframe_plane_location[version]["LPS"] = (
-        RAS_LPS_conversion_factor * headframe_plane_location[version]["RAS"]
-    )
+    headframe_plane_location[version]["LPS"] = RAS_LPS_conversion_factor * headframe_plane_location[version]["RAS"]
 
 
 def _unpack_theta_apply_transform(
     theta: NDArray[np.floating[Any]], moving: NDArray[np.floating[Any]]
 ) -> NDArray[np.floating[Any]]:
-    """Helper function to apply a transform to a set of points."""
+    """Apply a transform to a set of points."""
     R = rot.combine_angles(*theta[0:3])
     return rot.apply_rotate_translate(moving, R, theta[3:])
 
@@ -63,10 +54,9 @@ def revised_error_rotate_compare_weighted_lines(
     weights: list[NDArray[np.floating[Any]]],
     group_err_funs: list[Any] | None = None,
 ) -> float:
-    """
-    Calculate the error of rotating and translating the `moving` points to
-    align with `pts1` and `pts2`, taking into account the weights assigned to
-    each point.
+    """Calculate the error of rotating and translating the `moving` points to align with `pts1` and `pts2`.
+
+    Takes into account the weights assigned to each point.
 
     Parameters
     ----------
@@ -102,18 +92,18 @@ def revised_error_rotate_compare_weighted_lines(
     n_group = len(pts1)
     if not all(len(lst) == n_group for lst in [pts2, moving, weights]):
         raise ValueError("pts1, pts2, moving, and weights must be same length")
+    resolved_funs: list[Any]
     if group_err_funs is None:
-        group_err_funs = np.full(n_group, dist_point_to_line)
+        resolved_funs = [dist_point_to_line] * n_group
     else:
         if len(group_err_funs) != n_group:
-            raise ValueError(
-                "group_err_fun must have the same number of groups as pts1"
-            )
+            raise ValueError("group_err_fun must have the same number of groups as pts1")
+        resolved_funs = group_err_funs
 
     R = rot.combine_angles(*theta[0:3])
     translation = theta[3:]
     error = 0.0
-    for f, p1, p2, m, w in zip(group_err_funs, pts1, pts2, moving, weights):
+    for f, p1, p2, m, w in zip(resolved_funs, pts1, pts2, moving, weights):
         transformed = rot.apply_rotate_translate(m, R, translation)
         for pt_no in range(m.shape[0]):
             res = f(p1, p2, transformed[pt_no, :])
@@ -161,12 +151,7 @@ def cost_function_weighted_labeled_lines(
     for ii in range(pts1.shape[0]):
         lst = np.nonzero(labels == ii)[0]
         for jj in range(len(lst)):
-            D[lst[jj]] = (
-                dist_point_to_line(
-                    pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]
-                )
-                * weights[lst[jj]]
-            )
+            D[lst[jj]] = dist_point_to_line(pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]) * weights[lst[jj]]
 
     return np.sum(D)
 
@@ -180,9 +165,7 @@ def cost_function_weighted_labeled_lines_with_plane(
     labels: NDArray[np.integer[Any]],
     weights: NDArray[np.floating[Any]],
 ) -> float:
-    """
-    Cost function for optimizing a rigid transform on weighted points;
-    includes labeled lines and labeled planes.
+    """Cost function for optimizing a rigid transform on weighted points; includes labeled lines and labeled planes.
 
     Parameters
     ----------
@@ -214,20 +197,10 @@ def cost_function_weighted_labeled_lines_with_plane(
         lst = np.where(labels == ii)[0]
         if pts_for_line[ii]:
             for jj in range(len(lst)):
-                D[lst[jj]] = (
-                    dist_point_to_line(
-                        pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]
-                    )
-                    * weights[lst[jj]]
-                )
+                D[lst[jj]] = dist_point_to_line(pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]) * weights[lst[jj]]
         else:
             for jj in range(len(lst)):
-                D[lst[jj]] = (
-                    dist_point_to_plane(
-                        pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]
-                    )
-                    * weights[lst[jj]]
-                )
+                D[lst[jj]] = dist_point_to_plane(pts1[ii, :], pts2[ii, :], transformed[lst[jj], :]) * weights[lst[jj]]
 
     return np.sum(D)
 
@@ -238,9 +211,7 @@ def _preprocess_weights(
     normalize: bool,
     gamma: float | None,
 ) -> NDArray[np.floating[Any]]:
-    """
-    Preprocess weights for use in optimization functions
-    """
+    """Preprocess weights for use in optimization functions."""
     if weights is None:
         weights = np.ones((positions.shape[0], 1))
     else:
@@ -261,7 +232,7 @@ def _preprocess_weights(
 def unpack_theta(
     T: NDArray[np.floating[Any]],
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """Helper function to unpack theta to a rigid transform."""
+    """Unpack theta to a rigid transform."""
     R = rot.combine_angles(*T[0:3])
     translation = T[3:]
     return R, translation
@@ -270,7 +241,7 @@ def unpack_theta(
 def unpack_theta_to_homogeneous(
     T: NDArray[np.floating[Any]],
 ) -> NDArray[np.floating[Any]]:
-    """Helper function to unpack theta to a homogeneous transform."""
+    """Unpack theta to a homogeneous transform."""
     R_homog = rot.make_homogeneous_transform(*unpack_theta(T))
     return R_homog
 
@@ -288,10 +259,8 @@ def optimize_transform_labeled_lines(
     gamma: float | None = None,
     disp: int = 0,
 ) -> Any:
-    """
-    Function for optimizing a rigid transform on
-    weighted points by minimizing distance
-    from each point to a specified line.
+    """Optimize a rigid transform on weighted points by minimizing distance from each point to a specified line.
+
     Multiple lines can be specified by using labels.
 
     Parameters
@@ -337,10 +306,9 @@ def optimize_transform_labeled_lines(
         (see retol in scipy.optimize.fmin documentation)
 
     """
-
     weights = _preprocess_weights(weights, positions, normalize, gamma)
 
-    T_frame = opt.fmin(
+    T_frame = opt.fmin(  # type: ignore[call-overload]  # scipy-stubs strict overload, runtime is correct
         cost_function_weighted_labeled_lines,
         init,
         args=(pts1, pts2, positions, labels, weights),
@@ -368,10 +336,8 @@ def optimize_transform_labeled_lines_with_plane(
     gamma: float | None = None,
     disp: int = 0,
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]]]:
-    """
-    Function for optimizing a rigid transform on
-    weighted points by minimizing distance
-    between each point and a specified line or plane.
+    """Optimize a rigid transform on weighted points by minimizing distance to a specified line or plane.
+
     Multiple lines/planes can be specified by using labels.
 
     Parameters
@@ -417,7 +383,7 @@ def optimize_transform_labeled_lines_with_plane(
     """
     weights = _preprocess_weights(weights, positions, normalize, gamma)
 
-    output_a = opt.fmin(
+    output_a = opt.fmin(  # type: ignore[call-overload]  # scipy-stubs strict overload, runtime is correct
         cost_function_weighted_labeled_lines,
         init,
         args=(pts1, pts2, positions, labels, weights),
@@ -426,7 +392,7 @@ def optimize_transform_labeled_lines_with_plane(
         disp=disp,
     )
 
-    output_b = opt.fmin(
+    output_b = opt.fmin(  # type: ignore[call-overload]  # scipy-stubs strict overload, runtime is correct
         cost_function_weighted_labeled_lines_with_plane,
         output_a,
         args=(pts1, pts2, pts_for_line, positions, labels, weights),
@@ -446,9 +412,7 @@ def get_headframe_hole_lines(
     coordinate_system: str = "LPS",
     return_plane: bool = False,
 ) -> tuple[NDArray[np.floating[Any]], NDArray[np.floating[Any]], list[str]]:
-    """
-    Return the lines for the headframe holes,
-    in a format that can be used by the cost function.
+    """Return the lines for the headframe holes in a format that can be used by the cost function.
 
     Parameters
     ----------
@@ -480,8 +444,8 @@ def get_headframe_hole_lines(
         raise ValueError("Coordinate system not supported")
 
     names = []
-    pts1 = []
-    pts2 = []
+    pts1_list: list[NDArray[np.floating[Any]]] = []
+    pts2_list: list[NDArray[np.floating[Any]]] = []
     pt_dict = headframe_hole_locations[version][coordinate_system]
     for name, pts in pt_dict.items():
         if insert_underscores:
@@ -489,13 +453,13 @@ def get_headframe_hole_lines(
         else:
             store_name = name.replace("_", " ")
         names.append(store_name)
-        pts1.append(pts[0, :])
-        pts2.append(pts[1, :])
+        pts1_list.append(pts[0, :])
+        pts2_list.append(pts[1, :])
     if return_plane:
         names.append("plane")
         headframe_pts = headframe_plane_location[version][coordinate_system]
-        pts1.append(headframe_pts[0, :])
-        pts2.append(headframe_pts[1, :])
-    pts1 = np.vstack(pts1)
-    pts2 = np.vstack(pts2)
+        pts1_list.append(headframe_pts[0, :])
+        pts2_list.append(headframe_pts[1, :])
+    pts1 = np.vstack(pts1_list)
+    pts2 = np.vstack(pts2_list)
     return pts1, pts2, names

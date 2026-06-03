@@ -45,9 +45,7 @@ class ObjFilesTest(unittest.TestCase):
         #
         # To be clear this is just for the coverage, and is not a meaningful
         # test
-        with patch(
-            "aind_mri_utils.file_io.obj_files.pywavefront.Wavefront"
-        ) as mock:
+        with patch("aind_mri_utils.file_io.obj_files.pywavefront.Wavefront") as mock:
             mock.return_value = True
             self.assertTrue(of.load_obj_wavefront("foobar"))
 
@@ -57,16 +55,12 @@ class ObjFilesTest(unittest.TestCase):
         self.assertTrue(np.array_equal(vertices, self.expected_vertices))
         self.assertEqual(len(faces), 2)
         self.assertTrue(np.array_equal(faces[1], self.expected_faces_per_mesh))
-        with patch(
-            "aind_mri_utils.file_io.obj_files.pywavefront.Wavefront"
-        ) as mock:
+        with patch("aind_mri_utils.file_io.obj_files.pywavefront.Wavefront") as mock:
             mock.return_value = self.scene_mock
             vertices, faces = of.get_vertices_and_faces("foobar")
             self.assertTrue(np.array_equal(vertices, self.expected_vertices))
             self.assertEqual(len(faces), 2)
-            self.assertTrue(
-                np.array_equal(faces[1], self.expected_faces_per_mesh)
-            )
+            self.assertTrue(np.array_equal(faces[1], self.expected_faces_per_mesh))
 
 
 if __name__ == "__main__":

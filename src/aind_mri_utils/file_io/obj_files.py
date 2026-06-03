@@ -1,4 +1,4 @@
-"""Functions for working with obj files"""
+"""Functions for working with obj files."""
 
 from __future__ import annotations
 
@@ -15,15 +15,14 @@ if TYPE_CHECKING:
 def get_vertices_and_faces(
     scene: Any,
 ) -> tuple[NDArray[np.floating[Any]], list[NDArray[np.integer[Any]]]]:
-    """
-    Collect vertices and faces for a pywavefront object
+    """Collect vertices and faces for a pywavefront object.
 
     Parameters
-    ==========
+    ----------
     scene - a Wavefront object made with `collect_materials=True`
 
     Returns
-    =======
+    -------
     vertices - np.ndarray (floating point N x 3) array of N 3d points
     faces - list[np.ndarray], list of (int M x 3) array of M triangles, where
             each element corresponds to the index of a vertex in `vertices`.
@@ -39,18 +38,15 @@ def get_vertices_and_faces(
 
 
 def load_obj_wavefront(filename: str | Path) -> Any:
-    """
-    Wrapper for loading a pywavefront scene
+    """Load a pywavefront scene.
 
     Parameters
-    ==========
+    ----------
     filename - name of file to load
 
     Returns
-    =======
+    -------
     scene - scene with default params so I don't need to remember to type them
     """
-    scene = pywavefront.Wavefront(
-        filename, strict=False, create_materials=True, collect_faces=True
-    )
+    scene = pywavefront.Wavefront(filename, strict=False, create_materials=True, collect_faces=True)
     return scene

@@ -18,9 +18,7 @@ class SITKTest(unittest.TestCase):
         R = np.eye(3)
         translation = np.zeros(3)
         si.save_sitk_transform(test_save_path, R, translation)
-        load_trans, load_translation, load_center = si.load_sitk_transform(
-            test_save_path
-        )
+        load_trans, load_translation, load_center = si.load_sitk_transform(test_save_path)
         self.assertTrue(np.allclose(R, load_trans))
 
         # Test that the above can work from 6x1

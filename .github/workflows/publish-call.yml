@@ -18,7 +18,7 @@ jobs:
     uses: AllenNeuralDynamics/galen-uv-workflows/.github/workflows/publish.yml@v2
     with:
       tag-name: ${{ github.ref_name }}
-      python-version: "3.13"
+      python-version: "3.10"
       publish-to-pypi: true
     secrets:
       repo-token: ${{ secrets.GITHUB_TOKEN }}
