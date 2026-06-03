@@ -46,6 +46,7 @@ class CalibrationTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         if not cls.test_data_dir.exists():
             raise unittest.SkipTest(f"Test data not found at {cls.test_data_dir.resolve()}")
+
     parallax_calibration_path = reticle_data_path / "log_20250311_110408"
     parallax_example_file = parallax_calibration_path / "points_SN46105_20250311_111453.csv"
     man_calibration_pts = {
