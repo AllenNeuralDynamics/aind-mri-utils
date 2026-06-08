@@ -295,8 +295,17 @@ def mask_to_trimesh(sitk_mask: sitk.Image, level: float = 0.5, smooth_iters: int
     # Get voxel data as a NumPy array
     mask_array = sitk.GetArrayFromImage(sitk_mask)  # Shape: (Z, Y, X)
 
+    # Zero-pad a one-voxel border so marching cubes can close the surface where
+    # the mask reaches the volume boundary. Without this, an object touching the
+    # array edge (e.g. a brain mask that fills the field of view) yields an open,
+    # non-watertight mesh — there is no zero voxel beyond the edge to close
+    # against. Shifting the resulting vertex indices back by one undoes the pad
+    # offset, so the mesh stays in the original image's physical space.
+    mask_array = np.pad(mask_array, 1, mode="constant", constant_values=0)
+
     # Extract surface mesh using Marching Cubes
     ndxs, faces, normals, _ = marching_cubes(mask_array, level=level)
+    ndxs = ndxs - 1  # undo the one-voxel pad → original array index space
     ndxs_sitk = ndxs[:, ::-1]
 
     # Convert voxel indices to physical space
