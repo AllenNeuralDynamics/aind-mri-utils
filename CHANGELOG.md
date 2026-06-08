@@ -1,3 +1,9 @@
+## v0.12.1 (2026-06-08)
+
+### Fix
+
+- **meshes**: zero-pad mask before marching cubes for watertight output
+
 ## v0.12.0 (2026-04-30)
 
 ### Feat
