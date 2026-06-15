@@ -62,6 +62,11 @@ if TYPE_CHECKING:
 
 from aind_mri_utils.rotations import ras_to_lps_transform
 
+# Euler sequence (intrinsic) defining the arc-angle rotation convention. Used by
+# both the forward (arc_angles_to_rotation) and inverse (vector_to_arc_angles)
+# so the order is stated exactly once.
+_ARC_EULER_SEQ = "XYZ"
+
 
 def arc_angles_to_rotation(
     rx: float,
@@ -108,7 +113,7 @@ def arc_angles_to_rotation(
         rx = -rx
     if invert_rz:
         rz = -rz
-    return Rotation.from_euler("XYZ", [rx, ry, rz], degrees=degrees)
+    return Rotation.from_euler(_ARC_EULER_SEQ, [rx, ry, rz], degrees=degrees)
 
 
 def vector_to_arc_angles(
@@ -142,14 +147,13 @@ def vector_to_arc_angles(
     if np.dot(vec, [0, 0, 1]) < 0:
         vec = -vec
     nv = vec / np.linalg.norm(vec)
-    # Invert the intrinsic-XYZ convention of arc_angles_to_vector, whose image
-    # of [0, 0, 1] is [sin(ry), -cos(ry) sin(rx), cos(ry) cos(rx)] (in the
-    # internal, pre-sign-flip angles).
-    ry = np.arcsin(nv[0])
-    rx = np.arctan2(-nv[1], nv[2])
-    if degrees:
-        rx = math.degrees(rx)
-        ry = math.degrees(ry)
+    # Invert arc_angles_to_rotation by decomposing, through scipy, the rotation
+    # that carries the probe's neutral axis [0, 0, 1] onto nv. The spin (rz) is
+    # unconstrained by a single vector, but rx/ry are fixed by the image of
+    # [0, 0, 1] alone, so the same Euler sequence is the single source of truth
+    # for both directions and they cannot drift apart.
+    R, _ = Rotation.align_vectors([nv], [[0.0, 0.0, 1.0]])
+    rx, ry, _ = R.as_euler(_ARC_EULER_SEQ, degrees=degrees)
     if invert_rx:
         rx = -rx
     return rx, ry
