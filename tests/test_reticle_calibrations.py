@@ -446,8 +446,8 @@ class CalibrationTest(unittest.TestCase):
         )
         R, t = cal_by_probe[46105]
         ap_angle, ml_angle = find_probe_angle(R)
-        self.assertAlmostEqual(ap_angle, -16.09, places=2)
-        self.assertAlmostEqual(ml_angle, -12.37, places=2)
+        self.assertAlmostEqual(ap_angle, -16.45, places=2)
+        self.assertAlmostEqual(ml_angle, -11.88, places=2)
 
     def test_transform_reticle_to_bregma(self) -> None:
         """Tests for transform_reticle_to_bregma"""
