@@ -1,3 +1,9 @@
+## v0.12.2 (2026-06-15)
+
+### Fix
+
+- fix arc to vector discrepancy
+
 ## v0.12.1 (2026-06-08)
 
 ### Fix
