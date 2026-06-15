@@ -154,6 +154,36 @@ class TestStereotaxAnglesToVector(unittest.TestCase):
         self.assertAlmostEqual(v_default[2], v_flip[2], places=7)
 
 
+class TestArcAngleConsistency(unittest.TestCase):
+    """The vector, inverse, and affine paths must agree on the probe direction.
+
+    They share :func:`arc_angles_to_rotation`, so a compound (rx != 0 and
+    ry != 0) insertion must produce one and only one direction. A prior bug
+    had ``arc_angles_to_vector`` and ``arc_angles_to_affine`` applying rx and
+    ry in opposite orders, so they disagreed for compound angles while still
+    passing single-axis tests.
+    """
+
+    COMPOUND_ANGLES = [(14, 20), (30, 30), (45, 20), (-25, 15), (10, -40)]
+
+    def test_vector_matches_affine_direction(self):
+        for rx, ry in self.COMPOUND_ANGLES:
+            vec = aa.arc_angles_to_vector(rx, ry)
+            # Third column of the (RAS) affine is the image of [0, 0, 1].
+            affine_dir = ras_to_lps_transform(aa.arc_angles_to_affine(rx, ry))[0][:, 2]
+            self.assertTrue(
+                _vec_close(vec, affine_dir),
+                msg=f"vector vs affine disagree at (rx={rx}, ry={ry}): {vec} vs {affine_dir}",
+            )
+
+    def test_compound_round_trip(self):
+        for rx, ry in self.COMPOUND_ANGLES:
+            vec = aa.arc_angles_to_vector(rx, ry)
+            rx_rt, ry_rt = aa.vector_to_arc_angles(vec)
+            self.assertTrue(_angle_close(rx, rx_rt), msg=f"rx round-trip {rx} -> {rx_rt}")
+            self.assertTrue(_angle_close(ry, ry_rt), msg=f"ry round-trip {ry} -> {ry_rt}")
+
+
 class TestArcAnglesToAffine(unittest.TestCase):
     def test_affine_matrix_contents(self):
         """

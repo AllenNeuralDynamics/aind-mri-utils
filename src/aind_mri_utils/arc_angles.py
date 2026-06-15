@@ -63,6 +63,54 @@ if TYPE_CHECKING:
 from aind_mri_utils.rotations import ras_to_lps_transform
 
 
+def arc_angles_to_rotation(
+    rx: float,
+    ry: float,
+    rz: float = 0.0,
+    degrees: bool = True,
+    invert_rx: bool = True,
+    invert_rz: bool = True,
+) -> Rotation:
+    """Build the RAS rotation for arc angles (rx, ry, rz).
+
+    This is the single source of truth for the arc-angle rotation
+    convention. :func:`arc_angles_to_vector` and :func:`arc_angles_to_affine`
+    are both derived from it, so they cannot drift apart.
+
+    The angles are composed as intrinsic XYZ Euler rotations (``Rx`` outermost,
+    ``Ry``, then ``Rz``), after the AIND non-right-handed sign flips. Applied
+    to the probe's neutral axis ``[0, 0, 1]`` (straight up in RAS), this yields
+    the probe direction returned by :func:`arc_angles_to_vector`.
+
+    Parameters
+    ----------
+    rx : float
+        Rotation about the x/ML axis. Alias: AP angle, pitch.
+    ry : float
+        Rotation about the y/AP axis. Alias: ML angle, roll.
+    rz : float, optional
+        Rotation about the z/DV axis. Alias: spin, yaw. Default 0.
+    degrees : bool, optional
+        If True, input angles are in degrees; otherwise radians (default True).
+    invert_rx : bool, optional
+        If True, apply the AIND non-right-handed sign convention to rx
+        (default True). See module docstring.
+    invert_rz : bool, optional
+        If True, apply the AIND non-right-handed sign convention to rz
+        (default True).
+
+    Returns
+    -------
+    scipy.spatial.transform.Rotation
+        The rotation, in RAS, described by the arc angles.
+    """
+    if invert_rx:
+        rx = -rx
+    if invert_rz:
+        rz = -rz
+    return Rotation.from_euler("XYZ", [rx, ry, rz], degrees=degrees)
+
+
 def vector_to_arc_angles(
     vec: NDArray[np.floating[Any]],
     degrees: bool = True,
@@ -94,9 +142,11 @@ def vector_to_arc_angles(
     if np.dot(vec, [0, 0, 1]) < 0:
         vec = -vec
     nv = vec / np.linalg.norm(vec)
-    # using trig identity to get the angle from vertical
-    rx = -np.arcsin(nv[1])
-    ry = np.arctan2(nv[0], nv[2])
+    # Invert the intrinsic-XYZ convention of arc_angles_to_vector, whose image
+    # of [0, 0, 1] is [sin(ry), -cos(ry) sin(rx), cos(ry) cos(rx)] (in the
+    # internal, pre-sign-flip angles).
+    ry = np.arcsin(nv[0])
+    rx = np.arctan2(-nv[1], nv[2])
     if degrees:
         rx = math.degrees(rx)
         ry = math.degrees(ry)
@@ -135,19 +185,10 @@ def arc_angles_to_vector(
     numpy.ndarray
         A unit 3-vector with (ML, AP, DV) components in RAS.
     """
-    if degrees:
-        rx = math.radians(rx)
-        ry = math.radians(ry)
-    if invert_rx:
-        rx = -rx
-
-    vec = np.array(
-        [
-            np.sin(ry) * np.cos(rx),  # ML component
-            -np.sin(rx),  # AP component using trig identity
-            np.cos(ry) * np.cos(rx),  # DV component
-        ]
-    )
+    R = arc_angles_to_rotation(rx, ry, degrees=degrees, invert_rx=invert_rx)
+    # The probe's neutral axis is straight up (+DV); its image under the
+    # arc rotation is the probe direction.
+    vec = R.apply([0.0, 0.0, 1.0])
     return np.asarray(vec / np.linalg.norm(vec), dtype=float)
 
 
@@ -409,14 +450,8 @@ def arc_angles_to_affine(
 
     Notes
     -----
-    Composes the angles as intrinsic XYZ Euler rotations
-    ``Rotation.from_euler("XYZ", [rx, ry, rz])`` after applying the AIND
-    sign-flips. The result is then converted RAS → LPS.
+    Builds the RAS rotation via :func:`arc_angles_to_rotation` (intrinsic XYZ
+    Euler rotations after the AIND sign-flips) and converts it RAS → LPS.
     """
-    if invert_rx:
-        rx = -rx
-    if invert_rz:
-        rz = -rz
-    euler_angles = np.array([rx, ry, rz])
-    R = Rotation.from_euler("XYZ", euler_angles, degrees=True).as_matrix().squeeze()
+    R = arc_angles_to_rotation(rx, ry, rz, degrees=True, invert_rx=invert_rx, invert_rz=invert_rz).as_matrix()
     return ras_to_lps_transform(R)[0]
