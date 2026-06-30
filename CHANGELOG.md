@@ -1,3 +1,9 @@
+## v0.12.3 (2026-06-30)
+
+### Fix
+
+- make vector_to_arc_angles use scipy (#142)
+
 ## v0.12.2 (2026-06-15)
 
 ### Fix
