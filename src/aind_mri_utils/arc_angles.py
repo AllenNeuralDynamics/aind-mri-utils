@@ -52,7 +52,7 @@ ITK/Slicer interop), unlike the rest of this module which is RAS-centric.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -65,7 +65,7 @@ from aind_mri_utils.rotations import ras_to_lps_transform
 # Euler sequence (intrinsic) defining the arc-angle rotation convention. Used by
 # both the forward (arc_angles_to_rotation) and inverse (vector_to_arc_angles)
 # so the order is stated exactly once.
-_ARC_EULER_SEQ = "XYZ"
+_ARC_EULER_SEQ: Final = "XYZ"
 
 
 def arc_angles_to_rotation(
@@ -156,7 +156,7 @@ def vector_to_arc_angles(
     rx, ry, _ = R.as_euler(_ARC_EULER_SEQ, degrees=degrees)
     if invert_rx:
         rx = -rx
-    return rx, ry
+    return float(rx), float(ry)
 
 
 def arc_angles_to_vector(
