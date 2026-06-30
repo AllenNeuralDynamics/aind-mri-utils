@@ -52,6 +52,7 @@ ITK/Slicer interop), unlike the rest of this module which is RAS-centric.
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
@@ -66,6 +67,10 @@ from aind_mri_utils.rotations import ras_to_lps_transform
 # both the forward (arc_angles_to_rotation) and inverse (vector_to_arc_angles)
 # so the order is stated exactly once.
 _ARC_EULER_SEQ: Final = "XYZ"
+
+# A residual Kopf polar tilt below this (radians) is treated as "vertical
+# reached" when reporting whether the earbar fully absorbed the insertion tilt.
+_VERTICAL_TILT_TOL_RAD: Final = math.radians(0.05)
 
 
 def arc_angles_to_rotation(
@@ -418,6 +423,236 @@ def arc_angles_to_stereotax_angles(
     result = vector_to_stereotax_angles(vec, degrees=degrees, zero_rz_to_left=zero_rz_to_left)
     assert result is not None
     return result
+
+
+@dataclass(frozen=True)
+class EarbarStereotaxSolution:
+    """Earbar pose and Kopf off-plane angles for a matched insertion.
+
+    Angles are in degrees if the producing call used ``degrees=True`` (the
+    default), otherwise radians.
+
+    Attributes
+    ----------
+    earbar_pitch : float
+        Chosen earbar pitch about the x/ML axis ("nose up" positive).
+    earbar_roll : float
+        Chosen earbar roll about the y/AP axis ("left side up" positive).
+    kopf_ry : float
+        Kopf 1500 off-plane polar tilt from stereotax-vertical. This is the
+        residual tilt the earbar could not absorb, and is what the solver
+        minimizes.
+    kopf_rz : float
+        Kopf 1500 off-plane azimuthal spin.
+    vertical_achievable : bool
+        True if the earbar (within its bounds) could bring the insertion
+        essentially vertical (``kopf_ry`` ~ 0). False means a bound was
+        binding and the Kopf tool must take up the remaining ``kopf_ry``.
+    """
+
+    earbar_pitch: float
+    earbar_roll: float
+    kopf_ry: float
+    kopf_rz: float
+    vertical_achievable: bool
+
+
+def _earbar_pose_minimizing_tilt(
+    v_head: NDArray[np.floating[Any]],
+    pitch_bounds: tuple[float, float],
+    roll_bounds: tuple[float, float],
+) -> tuple[float, float, float]:
+    """Search the earbar (pitch, roll) box for the pose closest to vertical.
+
+    Maximizes the absolute DV component of ``R_eb @ v_head`` (equivalently,
+    minimizes the polar tilt) by successively refined grid search. Bounds are
+    in radians; the returned pose is in radians.
+
+    Parameters
+    ----------
+    v_head : numpy.ndarray
+        Unit insertion direction (ML, AP, DV) in the head/bregma RAS frame.
+    pitch_bounds, roll_bounds : tuple of float
+        ``(low, high)`` earbar pitch / roll limits, in radians.
+
+    Returns
+    -------
+    tuple of float
+        ``(pitch_rad, roll_rad, abs_dv)`` — the best earbar pose and the
+        absolute DV component it achieves (1.0 = perfectly vertical).
+    """
+    p_lo0, p_hi0 = pitch_bounds
+    r_lo0, r_hi0 = roll_bounds
+    p_lo, p_hi, r_lo, r_hi = p_lo0, p_hi0, r_lo0, r_hi0
+    best_p, best_r, best_z = 0.0, 0.0, -1.0
+    n = 25
+    for _ in range(3):
+        for pp in np.linspace(p_lo, p_hi, n):
+            for rr in np.linspace(r_lo, r_hi, n):
+                R = earbar_angles_to_rotation_matrix(float(pp), float(rr), degrees=False)
+                z = abs(float((R @ v_head)[2]))
+                if z > best_z:
+                    best_z, best_p, best_r = z, float(pp), float(rr)
+        dp = (p_hi - p_lo) / (n - 1)
+        dr = (r_hi - r_lo) / (n - 1)
+        p_lo, p_hi = max(p_lo0, best_p - dp), min(p_hi0, best_p + dp)
+        r_lo, r_hi = max(r_lo0, best_r - dr), min(r_hi0, best_r + dr)
+    return best_p, best_r, best_z
+
+
+def solve_earbar_for_vertical(
+    v_head: NDArray[np.floating[Any]],
+    *,
+    pitch_bounds: tuple[float, float] = (-10.0, 10.0),
+    roll_bounds: tuple[float, float] = (-15.0, 15.0),
+    degrees: bool = True,
+    zero_rz_to_left: bool = False,
+) -> EarbarStereotaxSolution:
+    """Find the earbar pose bringing a head insertion vector closest to vertical.
+
+    Given an insertion direction expressed relative to the head (the
+    head/bregma RAS frame), choose the earbar gimbal pose — within its
+    mechanical limits — that makes the insertion as close to stereotax-vertical
+    as possible, then report the Kopf 1500 off-plane angles for the residual.
+    The earbar absorbs as much tilt as its bounds allow; whatever remains
+    becomes the Kopf polar tilt ``kopf_ry``.
+
+    The earbar has two degrees of freedom, applied as intrinsic rotations first
+    about the x/ML axis (pitch) then the y/AP axis (roll); see
+    :func:`earbar_angles_to_rotation_matrix`. Two DOF can null any tilt unless a
+    bound binds, so ``vertical_achievable`` is True whenever no bound is active.
+
+    Parameters
+    ----------
+    v_head : numpy.ndarray
+        Insertion direction with (ML, AP, DV) components in the head/bregma RAS
+        frame. Need not be unit length; only its direction matters.
+    pitch_bounds : tuple of float, optional
+        ``(low, high)`` earbar pitch (about x/ML) limits. Default the safe
+        ``(-10, 10)``; the mechanical hard limit is ``(-12, 12)``. Units follow
+        ``degrees``.
+    roll_bounds : tuple of float, optional
+        ``(low, high)`` earbar roll (about y/AP) limits. Default the safe
+        ``(-15, 15)``; the mechanical hard limit is ``(-30, 30)``. Units follow
+        ``degrees``.
+    degrees : bool, optional
+        If True, all input bounds and output angles are in degrees; otherwise
+        radians (default True).
+    zero_rz_to_left : bool, optional
+        If True, the zero of the returned ``kopf_rz`` points to the subject's
+        left; otherwise right (default False).
+
+    Returns
+    -------
+    EarbarStereotaxSolution
+        The chosen earbar pose, the resulting Kopf off-plane angles, and
+        whether vertical was reachable.
+
+    Raises
+    ------
+    ValueError
+        If ``v_head`` is the zero vector.
+    """
+    v = np.asarray(v_head, dtype=float)
+    norm = float(np.linalg.norm(v))
+    if norm == 0.0:
+        raise ValueError("v_head must be a nonzero direction vector")
+    v = v / norm
+
+    if degrees:
+        p_bounds = (math.radians(pitch_bounds[0]), math.radians(pitch_bounds[1]))
+        r_bounds = (math.radians(roll_bounds[0]), math.radians(roll_bounds[1]))
+    else:
+        p_bounds = (float(pitch_bounds[0]), float(pitch_bounds[1]))
+        r_bounds = (float(roll_bounds[0]), float(roll_bounds[1]))
+    p_bounds = (min(p_bounds), max(p_bounds))
+    r_bounds = (min(r_bounds), max(r_bounds))
+
+    pitch_rad, roll_rad, abs_dv = _earbar_pose_minimizing_tilt(v, p_bounds, r_bounds)
+
+    R = earbar_angles_to_rotation_matrix(pitch_rad, roll_rad, degrees=False)
+    kopf = vector_to_stereotax_angles(R @ v, degrees=degrees, zero_rz_to_left=zero_rz_to_left)
+    assert kopf is not None  # R @ v is a unit vector
+    kopf_ry, kopf_rz = kopf
+
+    vertical_achievable = math.acos(min(1.0, abs_dv)) <= _VERTICAL_TILT_TOL_RAD
+    if degrees:
+        pitch_out, roll_out = math.degrees(pitch_rad), math.degrees(roll_rad)
+    else:
+        pitch_out, roll_out = pitch_rad, roll_rad
+
+    return EarbarStereotaxSolution(
+        earbar_pitch=pitch_out,
+        earbar_roll=roll_out,
+        kopf_ry=kopf_ry,
+        kopf_rz=kopf_rz,
+        vertical_achievable=vertical_achievable,
+    )
+
+
+def arc_angles_to_earbar_stereotax(
+    rx: float,
+    ry: float,
+    *,
+    pitch_bounds: tuple[float, float] = (-10.0, 10.0),
+    roll_bounds: tuple[float, float] = (-15.0, 15.0),
+    invert_rx: bool = True,
+    degrees: bool = True,
+    zero_rz_to_left: bool = False,
+    headframe_rx_in_arc_system: float | None = None,
+) -> EarbarStereotaxSolution:
+    """Solve for the earbar pose and Kopf angles matching an ephys-rig arc reading.
+
+    Convenience wrapper over :func:`solve_earbar_for_vertical`: takes an arc
+    reading ``(rx, ry)`` in the ephys-rig frame, removes the fixed headframe
+    pitch to recover the head-relative insertion vector (as in
+    :func:`arc_angles_to_stereotax_angles`), then solves for the earbar pose
+    that brings the off-plane insertion closest to vertical.
+
+    Parameters
+    ----------
+    rx : float
+        Arc rx in the ephys-rig frame (what the arc reads); conceptually
+        ``plan_rx + headframe_rx_in_arc_system``. Alias: AP angle, pitch.
+    ry : float
+        Arc ry in the ephys-rig frame (equal to plan ry). Alias: ML angle.
+    pitch_bounds : tuple of float, optional
+        Earbar pitch limits. Default the safe ``(-10, 10)`` (hard ``(-12, 12)``).
+        Units follow ``degrees``.
+    roll_bounds : tuple of float, optional
+        Earbar roll limits. Default the safe ``(-15, 15)`` (hard ``(-30, 30)``).
+        Units follow ``degrees``.
+    invert_rx : bool, optional
+        If True, apply the AIND non-right-handed sign convention to rx
+        (default True). See module docstring.
+    degrees : bool, optional
+        If True, all input and output angles are in degrees; otherwise radians
+        (default True).
+    zero_rz_to_left : bool, optional
+        If True, the zero of the returned ``kopf_rz`` points left; otherwise
+        right (default False).
+    headframe_rx_in_arc_system : float, optional
+        Arc rx at which a probe vertical in the headframe appears on the ephys
+        rig (``arc_rx = plan_rx + headframe_rx_in_arc_system``). Default 14.
+        Units follow ``degrees``.
+
+    Returns
+    -------
+    EarbarStereotaxSolution
+        The chosen earbar pose, resulting Kopf off-plane angles, and whether
+        vertical was reachable.
+    """
+    if headframe_rx_in_arc_system is None:
+        headframe_rx_in_arc_system = 14 if degrees else math.radians(14)
+    plan_rx = rx - headframe_rx_in_arc_system
+    v_head = arc_angles_to_vector(plan_rx, ry, degrees=degrees, invert_rx=invert_rx)
+    return solve_earbar_for_vertical(
+        v_head,
+        pitch_bounds=pitch_bounds,
+        roll_bounds=roll_bounds,
+        degrees=degrees,
+        zero_rz_to_left=zero_rz_to_left,
+    )
 
 
 def arc_angles_to_affine(
