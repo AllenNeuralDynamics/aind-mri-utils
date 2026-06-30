@@ -1,3 +1,9 @@
+## v0.13.0 (2026-06-30)
+
+### Feat
+
+- **arc_angles**: solve earbar pose minimizing Kopf off-plane tilt
+
 ## v0.12.3 (2026-06-30)
 
 ### Fix
