@@ -203,5 +203,77 @@ class TestArcAnglesToAffine(unittest.TestCase):
         )
 
 
+class TestSolveEarbarForVertical(unittest.TestCase):
+    # Arc readings (rx, ry) in the ephys-rig frame to exercise the solver.
+    ARC_READINGS = [
+        (14.0, 0.0),  # plan-vertical: already straight down
+        (14.0, 10.0),  # pure ML tilt (earbar roll can null it)
+        (20.0, 0.0),  # mild AP tilt (within earbar pitch range)
+        (5.0, -8.0),  # compound, nose-down past plan-vertical
+        (34.0, 0.0),  # steep AP tilt (beyond earbar pitch range)
+        (24.0, 20.0),  # steep compound
+    ]
+
+    def test_zero_vector_raises(self):
+        with self.assertRaises(ValueError):
+            aa.solve_earbar_for_vertical(np.zeros(3))
+
+    def test_pose_within_bounds(self):
+        for rx, ry in self.ARC_READINGS:
+            sol = aa.arc_angles_to_earbar_stereotax(rx, ry)
+            self.assertGreaterEqual(sol.earbar_pitch, -10.0 - 1e-6)
+            self.assertLessEqual(sol.earbar_pitch, 10.0 + 1e-6)
+            self.assertGreaterEqual(sol.earbar_roll, -15.0 - 1e-6)
+            self.assertLessEqual(sol.earbar_roll, 15.0 + 1e-6)
+
+    def test_matches_forward_model(self):
+        # The solved earbar pose, fed back through the forward model, must
+        # reproduce the reported Kopf angles. Ties the solver to existing code.
+        for rx, ry in self.ARC_READINGS:
+            sol = aa.arc_angles_to_earbar_stereotax(rx, ry)
+            ry_fwd, rz_fwd = aa.arc_angles_to_stereotax_angles(
+                rx, ry, earbar_pitch=sol.earbar_pitch, earbar_roll=sol.earbar_roll
+            )
+            self.assertAlmostEqual(sol.kopf_ry, ry_fwd, places=6, msg=f"kopf_ry at ({rx}, {ry})")
+            self.assertTrue(_angle_close(sol.kopf_rz, rz_fwd, tol=1e-5), msg=f"kopf_rz at ({rx}, {ry})")
+
+    def test_no_worse_than_no_earbar(self):
+        # Optimizing the earbar can only reduce (or match) the Kopf polar tilt
+        # relative to leaving the earbar flat.
+        for rx, ry in self.ARC_READINGS:
+            sol = aa.arc_angles_to_earbar_stereotax(rx, ry)
+            ry_flat, _ = aa.arc_angles_to_stereotax_angles(rx, ry)
+            self.assertLessEqual(sol.kopf_ry, ry_flat + 1e-6, msg=f"at ({rx}, {ry})")
+
+    def test_ml_tilt_nulled_by_roll(self):
+        # A pure ML tilt within range is fully absorbed by earbar roll.
+        sol = aa.arc_angles_to_earbar_stereotax(14.0, 10.0)
+        self.assertTrue(sol.vertical_achievable)
+        self.assertAlmostEqual(sol.kopf_ry, 0.0, places=3)
+        self.assertAlmostEqual(sol.earbar_pitch, 0.0, places=3)
+        self.assertAlmostEqual(abs(sol.earbar_roll), 10.0, places=2)
+
+    def test_steep_ap_tilt_saturates_pitch(self):
+        # A 20 deg head-frame AP tilt exceeds the 10 deg pitch range, leaving a
+        # ~10 deg residual on the Kopf tool with the earbar pinned at its bound.
+        sol = aa.arc_angles_to_earbar_stereotax(34.0, 0.0)  # plan_rx = 20
+        self.assertFalse(sol.vertical_achievable)
+        self.assertAlmostEqual(abs(sol.earbar_pitch), 10.0, places=2)
+        self.assertAlmostEqual(sol.kopf_ry, 10.0, places=2)
+
+    def test_radians_matches_degrees(self):
+        sol_deg = aa.arc_angles_to_earbar_stereotax(24.0, 20.0)
+        sol_rad = aa.arc_angles_to_earbar_stereotax(
+            math.radians(24.0),
+            math.radians(20.0),
+            pitch_bounds=(math.radians(-10.0), math.radians(10.0)),
+            roll_bounds=(math.radians(-15.0), math.radians(15.0)),
+            degrees=False,
+        )
+        self.assertAlmostEqual(sol_deg.earbar_pitch, math.degrees(sol_rad.earbar_pitch), places=4)
+        self.assertAlmostEqual(sol_deg.earbar_roll, math.degrees(sol_rad.earbar_roll), places=4)
+        self.assertAlmostEqual(sol_deg.kopf_ry, math.degrees(sol_rad.kopf_ry), places=4)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
