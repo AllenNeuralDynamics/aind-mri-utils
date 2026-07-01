@@ -457,16 +457,31 @@ class EarbarStereotaxSolution:
     vertical_achievable: bool
 
 
-def _earbar_pose_minimizing_tilt(
+def _clip(x: float, lo: float, hi: float) -> float:
+    """Clamp ``x`` to the closed interval ``[lo, hi]``."""
+    return lo if x < lo else hi if x > hi else x
+
+
+def _earbar_pose_closest_to_vertical(
     v_head: NDArray[np.floating[Any]],
     pitch_bounds: tuple[float, float],
     roll_bounds: tuple[float, float],
 ) -> tuple[float, float, float]:
-    """Search the earbar (pitch, roll) box for the pose closest to vertical.
+    """Closed-form earbar (pitch, roll) bringing an insertion closest to vertical.
 
-    Maximizes the absolute DV component of ``R_eb @ v_head`` (equivalently,
-    minimizes the polar tilt) by successively refined grid search. Bounds are
-    in radians; the returned pose is in radians.
+    The DV component of ``R_eb(p, r) @ v_head`` is
+    ``f(p, r) = v_y sin p + cos p (v_z cos r - v_x sin r)``. Writing the roll
+    term as ``C cos(r - psi)`` with ``C = hypot(v_x, v_z)`` and
+    ``psi = atan2(-v_x, v_z)``, and noting ``cos p > 0`` over the reachable box,
+    the roll that maximizes ``|f|`` is *independent of pitch*. The problem
+    therefore separates into two 1-D unimodal maximizations, each solved exactly
+    by clipping the unconstrained peak to its bound (the box spans < pi, so the
+    objective is monotonic outside any contained peak, making the clip the true
+    constrained maximizer). Both "point up / point down" branches (``s = +-1``)
+    are evaluated and the one with the larger ``|f|`` is kept.
+
+    Bounds are in radians; the returned pose is in radians. This is an exact
+    replacement for the former successively-refined grid search.
 
     Parameters
     ----------
@@ -481,23 +496,75 @@ def _earbar_pose_minimizing_tilt(
         ``(pitch_rad, roll_rad, abs_dv)`` — the best earbar pose and the
         absolute DV component it achieves (1.0 = perfectly vertical).
     """
-    p_lo0, p_hi0 = pitch_bounds
-    r_lo0, r_hi0 = roll_bounds
-    p_lo, p_hi, r_lo, r_hi = p_lo0, p_hi0, r_lo0, r_hi0
-    best_p, best_r, best_z = 0.0, 0.0, -1.0
-    n = 25
-    for _ in range(3):
-        for pp in np.linspace(p_lo, p_hi, n):
-            for rr in np.linspace(r_lo, r_hi, n):
-                R = earbar_angles_to_rotation_matrix(float(pp), float(rr), degrees=False)
-                z = abs(float((R @ v_head)[2]))
-                if z > best_z:
-                    best_z, best_p, best_r = z, float(pp), float(rr)
-        dp = (p_hi - p_lo) / (n - 1)
-        dr = (r_hi - r_lo) / (n - 1)
-        p_lo, p_hi = max(p_lo0, best_p - dp), min(p_hi0, best_p + dp)
-        r_lo, r_hi = max(r_lo0, best_r - dr), min(r_hi0, best_r + dr)
-    return best_p, best_r, best_z
+    vx, vy, vz = float(v_head[0]), float(v_head[1]), float(v_head[2])
+    p_lo, p_hi = pitch_bounds
+    r_lo, r_hi = roll_bounds
+    amp_r = math.hypot(vx, vz)
+    psi = math.atan2(-vx, vz)
+    best_p, best_r, best_abs = 0.0, 0.0, -1.0
+    for s in (1.0, -1.0):
+        # Roll maximizing s * C * cos(r - psi): peak at psi (s=+1) or psi+pi
+        # (s=-1), wrapped to (-pi, pi] then clipped to the roll bound.
+        r_star = psi if s > 0 else psi + math.pi
+        r_star = (r_star + math.pi) % (2 * math.pi) - math.pi
+        r_hat = _clip(r_star, r_lo, r_hi)
+        g_r = amp_r * math.cos(r_hat - psi)
+        # Pitch maximizing s * (v_y sin p + g_r cos p): peak at atan2(s v_y, s g_r).
+        p_hat = _clip(math.atan2(s * vy, s * g_r), p_lo, p_hi)
+        f = vy * math.sin(p_hat) + g_r * math.cos(p_hat)
+        if abs(f) > best_abs:
+            best_abs, best_p, best_r = abs(f), p_hat, r_hat
+    return best_p, best_r, best_abs
+
+
+def _settable_grid(bounds: tuple[float, float], step: float) -> NDArray[np.floating[Any]]:
+    """Dial positions: multiples of ``step`` lying within ``bounds`` (radians).
+
+    Falls back to the in-box value nearest zero if no multiple of ``step`` fits.
+    """
+    lo, hi = bounds
+    lo_k = math.ceil(lo / step - 1e-9)
+    hi_k = math.floor(hi / step + 1e-9)
+    if hi_k < lo_k:
+        return np.array([_clip(0.0, lo, hi)], dtype=float)
+    return np.arange(lo_k, hi_k + 1, dtype=float) * step
+
+
+def _earbar_pose_rounded(
+    v_head: NDArray[np.floating[Any]],
+    pitch_bounds: tuple[float, float],
+    roll_bounds: tuple[float, float],
+    step: float,
+) -> tuple[float, float, float]:
+    """Best earbar pose restricted to dial positions spaced ``step`` apart.
+
+    Evaluates the exact DV objective on the (small) grid of settable pitch/roll
+    positions within the bounds and returns the maximizer. This is the true
+    optimum over the positions the gimbal can physically be dialed to, not a
+    rounding of the continuous solution. Bounds and ``step`` are in radians; the
+    returned pose is in radians.
+
+    Parameters
+    ----------
+    v_head : numpy.ndarray
+        Unit insertion direction (ML, AP, DV) in the head/bregma RAS frame.
+    pitch_bounds, roll_bounds : tuple of float
+        ``(low, high)`` earbar pitch / roll limits, in radians.
+    step : float
+        Dial increment (radians); settable positions are its multiples.
+
+    Returns
+    -------
+    tuple of float
+        ``(pitch_rad, roll_rad, abs_dv)`` — the best settable earbar pose and
+        the absolute DV component it achieves (1.0 = perfectly vertical).
+    """
+    vx, vy, vz = float(v_head[0]), float(v_head[1]), float(v_head[2])
+    grid_p = _settable_grid(pitch_bounds, step)[:, None]
+    grid_r = _settable_grid(roll_bounds, step)[None, :]
+    f = vy * np.sin(grid_p) + np.cos(grid_p) * (vz * np.cos(grid_r) - vx * np.sin(grid_r))
+    ip, ir = np.unravel_index(int(np.argmax(np.abs(f))), f.shape)
+    return float(grid_p[ip, 0]), float(grid_r[0, ir]), float(abs(f[ip, ir]))
 
 
 def solve_earbar_for_vertical(
@@ -507,6 +574,7 @@ def solve_earbar_for_vertical(
     roll_bounds: tuple[float, float] = (-15.0, 15.0),
     degrees: bool = True,
     zero_rz_to_left: bool = False,
+    round_to: float | None = None,
 ) -> EarbarStereotaxSolution:
     """Find the earbar pose bringing a head insertion vector closest to vertical.
 
@@ -541,6 +609,13 @@ def solve_earbar_for_vertical(
     zero_rz_to_left : bool, optional
         If True, the zero of the returned ``kopf_rz`` points to the subject's
         left; otherwise right (default False).
+    round_to : float, optional
+        If given, restrict the earbar pitch/roll to dial positions that are
+        multiples of this increment (units follow ``degrees``; e.g. ``1`` or
+        ``5`` degrees) and return the best *settable* pose. The reported
+        ``kopf_ry``/``kopf_rz`` and ``vertical_achievable`` then reflect the
+        residual left by that rounded pose. If None (default), the continuous
+        closed-form optimum is returned.
 
     Returns
     -------
@@ -551,7 +626,7 @@ def solve_earbar_for_vertical(
     Raises
     ------
     ValueError
-        If ``v_head`` is the zero vector.
+        If ``v_head`` is the zero vector, or ``round_to`` is not positive.
     """
     v = np.asarray(v_head, dtype=float)
     norm = float(np.linalg.norm(v))
@@ -568,7 +643,13 @@ def solve_earbar_for_vertical(
     p_bounds = (min(p_bounds), max(p_bounds))
     r_bounds = (min(r_bounds), max(r_bounds))
 
-    pitch_rad, roll_rad, abs_dv = _earbar_pose_minimizing_tilt(v, p_bounds, r_bounds)
+    if round_to is None:
+        pitch_rad, roll_rad, abs_dv = _earbar_pose_closest_to_vertical(v, p_bounds, r_bounds)
+    else:
+        step = math.radians(round_to) if degrees else float(round_to)
+        if step <= 0:
+            raise ValueError("round_to must be a positive angular increment")
+        pitch_rad, roll_rad, abs_dv = _earbar_pose_rounded(v, p_bounds, r_bounds, step)
 
     R = earbar_angles_to_rotation_matrix(pitch_rad, roll_rad, degrees=False)
     kopf = vector_to_stereotax_angles(R @ v, degrees=degrees, zero_rz_to_left=zero_rz_to_left)
@@ -600,6 +681,7 @@ def arc_angles_to_earbar_stereotax(
     degrees: bool = True,
     zero_rz_to_left: bool = False,
     headframe_rx_in_arc_system: float | None = None,
+    round_to: float | None = None,
 ) -> EarbarStereotaxSolution:
     """Solve for the earbar pose and Kopf angles matching an ephys-rig arc reading.
 
@@ -635,6 +717,11 @@ def arc_angles_to_earbar_stereotax(
         Arc rx at which a probe vertical in the headframe appears on the ephys
         rig (``arc_rx = plan_rx + headframe_rx_in_arc_system``). Default 14.
         Units follow ``degrees``.
+    round_to : float, optional
+        If given, restrict the earbar pitch/roll to dial positions that are
+        multiples of this increment (units follow ``degrees``; e.g. ``1`` or
+        ``5``) and return the best settable pose. Passed through to
+        :func:`solve_earbar_for_vertical`. Default None (continuous optimum).
 
     Returns
     -------
@@ -652,6 +739,7 @@ def arc_angles_to_earbar_stereotax(
         roll_bounds=roll_bounds,
         degrees=degrees,
         zero_rz_to_left=zero_rz_to_left,
+        round_to=round_to,
     )
 
 
