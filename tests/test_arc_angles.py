@@ -275,5 +275,81 @@ class TestSolveEarbarForVertical(unittest.TestCase):
         self.assertAlmostEqual(sol_deg.kopf_ry, math.degrees(sol_rad.kopf_ry), places=4)
 
 
+class TestEarbarSolverGlobalOptimality(unittest.TestCase):
+    """The closed-form solver must be the global optimum, matching brute force."""
+
+    ARC_READINGS = TestSolveEarbarForVertical.ARC_READINGS + [(40.0, -25.0)]
+    P_BOUNDS = (-10.0, 10.0)
+    R_BOUNDS = (-15.0, 15.0)
+
+    @staticmethod
+    def _abs_dv(v, pitch_deg, roll_deg):
+        R = aa.earbar_angles_to_rotation_matrix(pitch_deg, roll_deg, degrees=True)
+        return abs(float((R @ v)[2]))
+
+    def _v_head(self, rx, ry):
+        return aa.arc_angles_to_vector(rx - 14.0, ry, degrees=True, invert_rx=True)
+
+    def test_closed_form_matches_dense_brute_force(self):
+        # The continuous solution must be at least as vertical as any pose on a
+        # fine grid over the whole box (i.e. it is the global optimum).
+        ps = np.arange(self.P_BOUNDS[0], self.P_BOUNDS[1] + 1e-9, 0.1)
+        rs = np.arange(self.R_BOUNDS[0], self.R_BOUNDS[1] + 1e-9, 0.1)
+        for rx, ry in self.ARC_READINGS:
+            v = self._v_head(rx, ry)
+            sol = aa.arc_angles_to_earbar_stereotax(rx, ry)
+            got = self._abs_dv(v, sol.earbar_pitch, sol.earbar_roll)
+            brute = max(self._abs_dv(v, p, r) for p in ps for r in rs)
+            self.assertGreaterEqual(got, brute - 1e-6, msg=f"not global optimum at ({rx}, {ry})")
+
+    def test_rounded_pose_is_multiple_of_step(self):
+        for step in (1.0, 5.0):
+            for rx, ry in self.ARC_READINGS:
+                sol = aa.arc_angles_to_earbar_stereotax(rx, ry, round_to=step)
+                self.assertAlmostEqual(sol.earbar_pitch / step, round(sol.earbar_pitch / step), places=6)
+                self.assertAlmostEqual(sol.earbar_roll / step, round(sol.earbar_roll / step), places=6)
+
+    def test_rounded_pose_is_best_settable_position(self):
+        # The rounded solution must be the exact optimum over settable dial
+        # positions (exhaustive search of the discrete grid).
+        for step in (1.0, 5.0):
+            for rx, ry in self.ARC_READINGS:
+                v = self._v_head(rx, ry)
+                sol = aa.arc_angles_to_earbar_stereotax(rx, ry, round_to=step)
+                got = self._abs_dv(v, sol.earbar_pitch, sol.earbar_roll)
+                ps = np.arange(math.ceil(self.P_BOUNDS[0] / step), math.floor(self.P_BOUNDS[1] / step) + 1) * step
+                rs = np.arange(math.ceil(self.R_BOUNDS[0] / step), math.floor(self.R_BOUNDS[1] / step) + 1) * step
+                brute = max(self._abs_dv(v, p, r) for p in ps for r in rs)
+                self.assertGreaterEqual(got, brute - 1e-9, msg=f"not best settable at ({rx}, {ry})")
+
+    def test_rounded_within_bounds(self):
+        for rx, ry in self.ARC_READINGS:
+            sol = aa.arc_angles_to_earbar_stereotax(rx, ry, round_to=1.0)
+            self.assertGreaterEqual(sol.earbar_pitch, -10.0 - 1e-6)
+            self.assertLessEqual(sol.earbar_pitch, 10.0 + 1e-6)
+            self.assertGreaterEqual(sol.earbar_roll, -15.0 - 1e-6)
+            self.assertLessEqual(sol.earbar_roll, 15.0 + 1e-6)
+
+    def test_rounded_matches_forward_model(self):
+        # Kopf angles reported for a rounded pose must match feeding that exact
+        # rounded pose back through the forward model.
+        for rx, ry in self.ARC_READINGS:
+            sol = aa.arc_angles_to_earbar_stereotax(rx, ry, round_to=1.0)
+            ry_fwd, rz_fwd = aa.arc_angles_to_stereotax_angles(
+                rx, ry, earbar_pitch=sol.earbar_pitch, earbar_roll=sol.earbar_roll
+            )
+            self.assertAlmostEqual(sol.kopf_ry, ry_fwd, places=6)
+            # The azimuth kopf_rz is undefined at zero polar tilt; only compare
+            # it when the insertion is meaningfully off-vertical.
+            if sol.kopf_ry > 1e-3:
+                self.assertTrue(_angle_close(sol.kopf_rz, rz_fwd, tol=1e-5))
+
+    def test_invalid_round_to_raises(self):
+        with self.assertRaises(ValueError):
+            aa.arc_angles_to_earbar_stereotax(14.0, 0.0, round_to=0.0)
+        with self.assertRaises(ValueError):
+            aa.arc_angles_to_earbar_stereotax(14.0, 0.0, round_to=-5.0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
