@@ -1,3 +1,9 @@
+## v0.13.1 (2026-07-01)
+
+### Fix
+
+- replace grid search with closed form
+
 ## v0.13.0 (2026-06-30)
 
 ### Feat

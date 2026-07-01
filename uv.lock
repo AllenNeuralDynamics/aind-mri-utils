@@ -34,7 +34,7 @@ wheels = [
 
 [[package]]
 name = "aind-mri-utils"
-version = "0.13.0"
+version = "0.13.1"
 source = { editable = "." }
 dependencies = [
     { name = "aind-anatomical-utils" },
