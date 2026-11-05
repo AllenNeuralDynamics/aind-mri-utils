@@ -348,6 +348,11 @@ def read_parallax_calibration_dir(
     """
     Read parallax calibration data from a directory of CSV files.
 
+    A directory may hold several runs of one manipulator, one file each
+    (``points_SN<serial>_<YYYYMMDD>_<HHMMSS>.csv``). Only each serial's latest
+    run is read: a manipulator recalibrated after it moved has points from two
+    poses, and no one transform fits both.
+
     Parameters
     ----------
     parallax_points_dir : str
@@ -364,6 +369,12 @@ def read_parallax_calibration_dir(
     dict
         Keys are controller numbers, values are tuples of arrays (global_pts,
         manipulator_pts).
+
+    Raises
+    ------
+    ValueError
+        If a serial has several files and one lacks the timestamp that orders
+        them.
     """
     pairs_by_controller: dict[
         int,
@@ -375,11 +386,38 @@ def read_parallax_calibration_dir(
         ],
     ] = {}
     p_path = Path(parallax_points_dir)
-    for filename in p_path.iterdir():
-        if filename.is_file() and re.search(sn_filename_regexp, filename.name):
-            _append_parallax_calibration_file(pairs_by_controller, filename, *args, **kwargs)
+    matched = [f for f in p_path.iterdir() if f.is_file() and re.search(sn_filename_regexp, f.name)]
+    for filename in _latest_run_per_serial(matched):
+        _append_parallax_calibration_file(pairs_by_controller, filename, *args, **kwargs)
     mats_by_controller = {k: _combine_pairs(v) for k, v in pairs_by_controller.items()}
     return mats_by_controller
+
+
+_RUN_FILENAME = re.compile(r"(?i)SN(\d+)(?:_(\d{8}_\d{6}))?")
+
+
+def _latest_run_per_serial(files: list[Path]) -> list[Path]:
+    """Keep each serial's newest file by the timestamp in its name.
+
+    A file whose name carries no serial is kept.
+    """
+    by_serial: dict[str, list[tuple[str | None, Path]]] = {}
+    kept = []
+    for f in files:
+        m = _RUN_FILENAME.search(f.name)
+        if m is None:
+            kept.append(f)
+        else:
+            by_serial.setdefault(m.group(1), []).append((m.group(2), f))
+    for serial, runs in by_serial.items():
+        if len(runs) > 1 and any(stamp is None for stamp, _ in runs):
+            names = sorted(f.name for _, f in runs)
+            raise ValueError(f"serial {serial} has several runs, not all timestamped: {names}")
+        runs.sort(key=lambda r: r[0] or "")
+        if len(runs) > 1:
+            logger.info(f"serial {serial}: reading {runs[-1][1].name}, the latest of {len(runs)} runs")
+        kept.append(runs[-1][1])
+    return kept
 
 
 def read_parallax_calibration_file(

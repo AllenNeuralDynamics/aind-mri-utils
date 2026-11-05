@@ -3,6 +3,8 @@ Test suite for reticle_calibrations.py
 """
 
 import logging
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -395,6 +397,27 @@ class CalibrationTest(unittest.TestCase):
                 np.allclose(reticle_pts, received_reticle_pts, atol=1e-2)
                 and np.allclose(probe_pts, received_probe_pts, atol=1e-2)
             )
+
+    def test_read_parallax_calibration_dir_reads_each_serials_latest_run(self) -> None:
+        """A serial recalibrated in the same directory is read from its last run only."""
+        src = self.parallax_calibration_path / "points_SN50197_20250311_110600.csv"
+        with tempfile.TemporaryDirectory() as d:
+            shutil.copyfile(src, Path(d) / src.name)
+            # An earlier run at another pose: every manipulator point moved.
+            rows = src.read_text().splitlines()
+            lx = rows[0].split(",").index("local_x")
+            moved = [rows[0]]
+            for row in rows[1:]:
+                cells = row.split(",")
+                cells[lx] = str(float(cells[lx]) + 5000.0)
+                moved.append(",".join(cells))
+            (Path(d) / "points_SN50197_20250311_100000.csv").write_text("\n".join(moved) + "\n")
+            got = read_parallax_calibration_dir(d)[50197]
+            want = read_parallax_calibration_file(src)[50197]
+            self.assertTrue(np.allclose(got[0], want[0]) and np.allclose(got[1], want[1]))
+            (Path(d) / "points_SN50197.csv").write_text(src.read_text())
+            with self.assertRaisesRegex(ValueError, "not all timestamped"):
+                read_parallax_calibration_dir(d)
 
     def test_read_parallax_calibration_dir_and_correct(self) -> None:
         """Tests for read_parallax_calibration_dir"""
