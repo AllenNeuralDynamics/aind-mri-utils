@@ -1,3 +1,9 @@
+## v0.13.2 (2026-11-05)
+
+### Fix
+
+- **reticle_calibrations**: read only each serial's latest parallax run
+
 ## v0.13.1 (2026-07-01)
 
 ### Fix
